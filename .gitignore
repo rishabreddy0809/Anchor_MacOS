@@ -1,0 +1,67 @@
+# --- Anchor: Zoom credential safety net ---
+# No source file holds a literal secret. Anchor/Utils/BotCredentials.swift did,
+# and was deleted on 2026-08-07 after its Client Secret was rotated and written
+# to the Keychain; it was never committed, so the history is clean. Every
+# credential now lives in the Keychain only — see ZOOM_INTEGRATION.md §3.
+# Keep it that way: a secret committed once stays recoverable from any clone
+# forever, and deleting it in a later commit does not remove it.
+BotCredentials.swift
+BotCredentials.local.swift
+*.credentials.json
+*.secrets.json
+.env
+.env.local
+.env.*.local
+*.xcuserstate
+xcuserdata/
+backend/.env
+backend/*.env
+*.keychain-export
+
+# --- Vendored Zoom Meeting SDK ---
+# ~669 MB across ~7,000 files, none of it ours. Nothing in it exceeds GitHub's
+# 100 MB per-file hard limit, so it *would* push — but it would bloat the repo
+# permanently, since git keeps every blob forever. Download it from the Zoom
+# marketplace instead; see ZOOM_INTEGRATION.md.
+ZoomSDK/
+
+# --- Xcode / build output ---
+build/
+DerivedData/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# --- Swift Package Manager ---
+.build/
+.swiftpm/
+Package.resolved
+
+# --- macOS ---
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# --- Editors ---
+.vscode/
+.idea/
+*.swp
+*~
+
+# --- Python (retraining/) ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# --- Scratch ---
+*.bak
+*.log
