@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Everything Xcode can generate on its own (bundle name, version, the usage
+	  descriptions in the build settings) is still generated: this target keeps
+	  GENERATE_INFOPLIST_FILE = YES and merges those keys into this file. Only
+	  what has no INFOPLIST_KEY_ equivalent lives here.
+
+	  CFBundleURLTypes is exactly that. It registers "anchor://" with Launch
+	  Services, which is what lets the browser hand an OAuth redirect back to
+	  the app after a teacher signs in:
+
+	      anchor://oauth/zoom     Zoom sign-in     (ZoomOAuthClient)
+
+	  The redirect URI registered with the provider has to match one of these
+	  character for character. Google is deliberately absent — it refuses custom
+	  URI schemes for Desktop OAuth clients and redirects to a loopback port
+	  instead (see LoopbackRedirectListener).
+
+	  Launch Services learns the scheme when the built app is registered, which
+	  happens on first launch of a build. After changing this list, launch the
+	  new build once before testing a redirect, or macOS will still route
+	  anchor:// to the previous copy.
+	-->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>Rishab-Reddy.Anchor.oauth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>anchor</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

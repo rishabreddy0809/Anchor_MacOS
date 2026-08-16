@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<!--
+  Zoom OAuth redirect bounce page.
+
+  Deploy at exactly https://anchor-oauth-bounce.vercel.app/oauth/zoom — the same string held by
+  ZoomOAuthConfig.bounceURL and registered on the Marketplace app as both the
+  OAuth Redirect URL and an OAuth allow list entry. Zoom matches character for
+  character.
+
+  Why this exists: Zoom will not honour an http:// numeric-loopback redirect.
+  Its Marketplace form stores one, but the OAuth service never accepts it — the
+  app's effective redirect list stays empty and every redirect_uri comes back
+  "Invalid redirect URL". An HTTPS redirect authorises normally. See
+  ZOOM_INTEGRATION.md §2a for the evidence.
+
+  All this page does is hand Zoom's query string (code + state) to the local
+  listener Anchor is already running. Nothing is stored, and no network request
+  leaves the browser.
+
+  The authorization code passes through here, so:
+    - serve it over HTTPS only,
+    - do not log query strings on this path,
+    - keep it static; do not add analytics, tag managers, or third-party
+      scripts, all of which would be able to read the code.
+  The code is single-use, short-lived, and PKCE-bound to a verifier that never
+  leaves the Mac, so interception alone does not yield tokens — but there is no
+  reason to widen the window.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Connecting to Anchor…</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    margin: 0; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: #fff; color: #1a1a1a; padding: 24px;
+  }
+  @media (prefers-color-scheme: dark) { body { background: #151517; color: #ececee; } }
+  .card { max-width: 26rem; text-align: center; }
+  h1 { font-size: 1.15rem; font-weight: 600; margin: 0 0 .5rem; }
+  p { margin: 0 0 .75rem; opacity: .8; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .85em; opacity: .75;
+  }
+  a { color: inherit; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1 id="headline">Connecting to Anchor…</h1>
+    <p id="detail">You can close this tab once Anchor says it's connected.</p>
+    <p id="fallback" hidden>
+      If nothing happens, make sure Anchor is running and
+      <a id="manual" href="#">open this link</a>.
+    </p>
+  </div>
+<script>
+(function () {
+  "use strict";
+
+  // Anchor's LoopbackRedirectListener. Fixed port, matching
+  // ZoomOAuthConfig.loopbackPort — a kernel-assigned port could not be
+  // registered with Zoom ahead of time.
+  var TARGET = "http://127.0.0.1:51789/oauth/zoom";
+
+  // Forward only the parameters the OAuth flow defines. Copying the query
+  // string wholesale would relay anything an attacker appended to the URL.
+  var ALLOWED = ["code", "state", "error", "error_description"];
+
+  var incoming = new URLSearchParams(window.location.search);
+  var out = new URLSearchParams();
+  ALLOWED.forEach(function (key) {
+    var value = incoming.get(key);
+    if (value !== null) out.append(key, value);
+  });
+
+  // No code and no error means this page was opened directly rather than by
+  // Zoom. Say so rather than firing a meaningless request at the listener.
+  if (!out.has("code") && !out.has("error")) {
+    document.getElementById("headline").textContent = "Nothing to connect";
+    document.getElementById("detail").textContent =
+      "Open Anchor and choose Settings → Zoom → Connect Zoom to start sign-in.";
+    return;
+  }
+
+  var destination = TARGET + "?" + out.toString();
+
+  // Offer a manual escape hatch: the listener is one-shot and only alive
+  // during a sign-in, so a slow hand-off should not look like a dead end.
+  var manual = document.getElementById("manual");
+  manual.setAttribute("href", destination);
+  setTimeout(function () {
+    document.getElementById("fallback").hidden = false;
+  }, 2500);
+
+  // replace() keeps the code out of this page's session history.
+  window.location.replace(destination);
+})();
+</script>
+</body>
+</html>

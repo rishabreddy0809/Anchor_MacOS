@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Anchor runs with Hardened Runtime enabled. The Zoom Meeting SDK ships
+	  ~35 frameworks and dylibs signed by Zoom, not by us, and it loads several
+	  of them lazily during sdkAuth. Library validation refuses to load code
+	  signed by a different Team ID, so without the entitlement below the SDK
+	  fails *locally* — sdkAuth returns ZoomSDKError_Failed before a single
+	  network request is made, which is indistinguishable from a bad JWT.
+	-->
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+
+	<!--
+	  The Meeting SDK opens mic and camera devices during join even when the
+	  bot publishes neither (isNoVideo / isNoAudio only suppress transmission).
+	  Paired with NSMicrophoneUsageDescription / NSCameraUsageDescription,
+	  which are already in Info.plist.
+	-->
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
+	<key>com.apple.security.device.camera</key>
+	<true/>
+
+	<key>com.apple.security.network.client</key>
+	<true/>
+</dict>
+</plist>
