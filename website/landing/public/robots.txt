@@ -1,0 +1,17 @@
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: *
+Allow: /
+
+# Regenerate with `npm run sitemap` after changing SITE_URL in src/lib/site.ts
+Sitemap: https://anchorteach.vercel.app/sitemap.xml

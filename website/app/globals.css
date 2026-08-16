@@ -1,0 +1,581 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --ink: #0b0b0c;
+  --muted: #62626a;
+  --line: rgba(11, 11, 12, 0.09);
+  --paper: #ffffff;
+  --paper-2: #f5f4f1;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection { background: #0b0b0c; color: #fff; }
+
+a { text-underline-offset: 0.2em; }
+
+/* ---------- shell ---------- */
+
+.shell { margin-inline: auto; width: 100%; max-width: 76rem; padding-inline: 1.25rem; }
+
+.section { padding-block: 6rem; }
+
+@media (min-width: 768px) {
+  .shell { padding-inline: 2rem; }
+  .section { padding-block: 8.5rem; }
+}
+
+/* ---------- type ---------- */
+
+/* Serif display face. Set at 400 with near-neutral tracking — tightening a
+   high-contrast serif the way you would a grotesk closes the counters up. */
+.display {
+  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
+  font-size: clamp(3rem, 8vw, 6.6rem);
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.headline {
+  font-size: clamp(2.1rem, 4.4vw, 3.6rem);
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+
+.headline-sm {
+  font-size: clamp(1.85rem, 2.6vw, 2.5rem);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.subhead {
+  font-size: clamp(1rem, 1.15vw, 1.18rem);
+  line-height: 1.6;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+
+.kicker {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.muted { color: var(--muted); }
+
+/* ---------- nav ---------- */
+
+/* Floats the bar out of flow so the hero sky starts at the very top of the
+   page and the nav rides over it. */
+.nav-wrap {
+  position: fixed;
+  inset: 0.75rem 0 auto;
+  z-index: 50;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0.55rem 0.6rem 0.55rem 1.15rem;
+  box-shadow: 0 1px 2px rgba(11, 11, 12, 0.04), 0 12px 34px rgba(11, 11, 12, 0.05);
+  backdrop-filter: blur(16px) saturate(1.6);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+}
+
+.nav {
+  transition: background-color 220ms ease, border-color 220ms ease, box-shadow 220ms ease,
+    color 220ms ease;
+}
+
+.nav-link {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--muted);
+  transition: color 160ms ease;
+}
+.nav-link:hover { color: var(--ink); }
+
+
+.wordmark {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+
+/* ---------- buttons ---------- */
+
+.btn {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 9999px;
+  padding-inline: 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 550;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  transition: background-color 170ms ease, color 170ms ease, border-color 170ms ease,
+    transform 170ms ease, box-shadow 170ms ease;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn:focus-visible, a:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.btn-dark { background: var(--ink); color: #fff; box-shadow: 0 6px 18px rgba(11, 11, 12, 0.14); }
+.btn-dark:hover { background: #26262b; box-shadow: 0 10px 26px rgba(11, 11, 12, 0.18); }
+
+.btn-light { border: 1px solid var(--line); background: #fff; color: var(--ink); }
+.btn-light:hover { border-color: rgba(11, 11, 12, 0.25); background: var(--paper-2); }
+
+.btn-invert { background: #fff; color: var(--ink); box-shadow: 0 8px 24px rgba(11, 40, 80, 0.16); }
+.btn-invert:hover { background: #eef4fb; }
+
+/* Saturated blue against the pale horizon — the one high-contrast element in
+   the hero, so it carries the click. */
+.btn-blue {
+  background: #2f6fe4;
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(35, 88, 190, 0.42);
+}
+.btn-blue:hover { background: #3a7cf0; box-shadow: 0 14px 38px rgba(35, 88, 190, 0.5); }
+
+.hero-link {
+  font-weight: 500;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: rgba(11, 11, 12, 0.3);
+  transition: text-decoration-color 160ms ease;
+}
+.hero-link:hover { text-decoration-color: var(--ink); }
+
+.btn-lg { min-height: 3.15rem; padding-inline: 1.6rem; font-size: 0.98rem; }
+
+/* ---------- pills ---------- */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 9999px;
+  background: #fff;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.pill-dot {
+  height: 0.42rem;
+  width: 0.42rem;
+  border-radius: 9999px;
+  background: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.16);
+}
+
+/* ---------- hero / product stage ---------- */
+
+/* Animated WebGL hero background. Sits behind the hero copy only — the solid
+   sections below scroll up over it. Held at 0 until the effect reports ready
+   so a WebGL failure leaves a clean white hero rather than a flash. */
+.vanta-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 900ms ease;
+}
+
+.vanta-bg[data-ready="true"] { opacity: 1; }
+
+/* Clears the top of the hero so the headline sits on plain paper rather than
+   on top of the field. Without this the effect wins and the copy loses. */
+.vanta-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 46%;
+  background: linear-gradient(180deg, var(--paper) 18%, rgba(255,255,255,0.72) 62%, rgba(255,255,255,0) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Fades the effect into the page so it does not end on a hard edge. */
+.vanta-bg::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 32%;
+  background: linear-gradient(180deg, rgba(255,255,255,0) 0%, var(--paper) 92%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hero {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+  overflow: clip;
+  display: flex;
+  min-height: 92svh;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding-top: 6.5rem;
+  padding-bottom: 4rem;
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .hero { padding-top: 9rem; }
+}
+
+.hero > .shell { position: relative; z-index: 1; }
+
+/* ---------- cards ---------- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 1.75rem;
+  background: #fff;
+  padding: 1.75rem;
+  transition: transform 260ms ease, box-shadow 260ms ease, border-color 260ms ease;
+}
+.card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(11, 11, 12, 0.16);
+  box-shadow: 0 18px 46px rgba(11, 11, 12, 0.08);
+}
+
+@media (min-width: 768px) {
+  .card { padding: 2.15rem; }
+}
+
+.card-tint { border-color: transparent; }
+.tint-violet { background: #eeebff; }
+.tint-rose { background: #ffe9f1; }
+.tint-sky { background: #e3efff; }
+.tint-sand { background: var(--paper-2); }
+
+.card-icon {
+  display: grid;
+  height: 2.9rem;
+  width: 2.9rem;
+  place-items: center;
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: inset 0 0 0 1px rgba(11, 11, 12, 0.06);
+}
+
+/* ---------- device mockups ---------- */
+
+.stage {
+  position: relative;
+  display: grid;
+  gap: 1.25rem;
+  align-items: center;
+  justify-items: center;
+}
+
+@media (min-width: 900px) {
+  .stage { grid-template-columns: minmax(0, 1fr) 17rem; justify-items: stretch; }
+}
+
+.phone {
+  width: 17rem;
+  border-radius: 2.4rem;
+  background: #0b0b0c;
+  padding: 0.5rem;
+  box-shadow: 0 30px 70px rgba(11, 11, 12, 0.24), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.phone-screen {
+  position: relative;
+  overflow: hidden;
+  border-radius: 2rem;
+  background: linear-gradient(180deg, #191920 0%, #0d0d11 100%);
+  padding: 1.5rem 1.1rem 1.25rem;
+  color: #f4f4f5;
+}
+
+.phone-notch {
+  margin: 0 auto 1.1rem;
+  height: 0.3rem;
+  width: 4.5rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.recap-line {
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.dashboard {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 1.75rem;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(11, 11, 12, 0.1);
+}
+
+.dashboard-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper-2);
+  padding: 0.8rem 1rem;
+}
+
+.dashboard-dot { height: 0.5rem; width: 0.5rem; border-radius: 9999px; background: rgba(11, 11, 12, 0.16); }
+
+.bars { display: flex; height: 8.5rem; align-items: flex-end; gap: 0.55rem; }
+.bars > span {
+  flex: 1;
+  border-radius: 0.4rem 0.4rem 0.15rem 0.15rem;
+  background: linear-gradient(180deg, #8b7aff, #b6acff);
+}
+.bars > span[data-peak="true"] { background: linear-gradient(180deg, #ff6d9e, #ffa8c4); }
+
+.wave { display: flex; height: 3.25rem; align-items: center; gap: 0.28rem; }
+.wave > span { flex: 1; border-radius: 9999px; background: rgba(255, 255, 255, 0.55); }
+
+/* Bars carry their final height inline and grow into it from the baseline.
+   Kept in CSS rather than framer-motion: these live inside a variant-driven
+   <Reveal> parent, which overrides a motion child's own whileInView. */
+.bars > span, .wave > span {
+  transform-origin: bottom;
+  animation: grow-bar 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+
+@keyframes grow-bar {
+  from { transform: scaleY(0.06); }
+  to { transform: scaleY(1); }
+}
+
+/* ---------- video ---------- */
+
+/* Fixed 16:9 box so the placeholder and the real <video> occupy identical
+   space — swapping one for the other never shifts the page. */
+.video-frame {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 1.75rem;
+  background: linear-gradient(160deg, #eef4fc 0%, var(--paper-2) 100%);
+  box-shadow: 0 26px 70px rgba(11, 40, 80, 0.12);
+}
+
+.video-media {
+  display: block;
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+}
+
+.video-empty {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.video-play {
+  display: grid;
+  height: 3.75rem;
+  width: 3.75rem;
+  place-items: center;
+  border-radius: 9999px;
+  margin-bottom: 0.9rem;
+  background: var(--ink);
+  color: #fff;
+  box-shadow: 0 10px 28px rgba(11, 11, 12, 0.2);
+}
+
+.video-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.video-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.video-hint code {
+  border-radius: 0.35rem;
+  background: rgba(11, 11, 12, 0.06);
+  padding: 0.1rem 0.35rem;
+  font-size: 0.78rem;
+}
+
+/* ---------- marquee ---------- */
+
+.marquee {
+  overflow: hidden;
+  border-block: 1px solid var(--line);
+  padding-block: 1.35rem;
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  gap: 3.5rem;
+  animation: marquee 34s linear infinite;
+}
+
+.marquee-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+@keyframes marquee {
+  to { transform: translateX(-50%); }
+}
+
+/* ---------- steps ---------- */
+
+.steps { display: grid; gap: 1px; overflow: hidden; border: 1px solid var(--line); border-radius: 1.75rem; background: var(--line); }
+
+@media (min-width: 768px) {
+  .steps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.step { background: #fff; padding: 2rem; }
+
+.step-num {
+  display: grid;
+  height: 2rem;
+  width: 2rem;
+  place-items: center;
+  border-radius: 9999px;
+  background: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* ---------- faq ---------- */
+
+.faq-item { border-bottom: 1px solid var(--line); }
+
+.faq-item summary {
+  display: flex;
+  cursor: pointer;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-block: 1.4rem;
+  font-size: 1.05rem;
+  font-weight: 550;
+  letter-spacing: -0.02em;
+  list-style: none;
+}
+.faq-item summary::-webkit-details-marker { display: none; }
+
+.faq-sign { flex: 0 0 auto; transition: transform 220ms ease; }
+.faq-item[open] .faq-sign { transform: rotate(45deg); }
+
+.faq-item p { padding-bottom: 1.5rem; margin: 0; max-width: 46rem; }
+
+/* ---------- closing band ---------- */
+
+.band {
+  position: relative;
+  overflow: hidden;
+  border-radius: 2.25rem;
+  background: var(--ink);
+  padding: 4rem 1.75rem;
+  text-align: center;
+  color: #fff;
+}
+
+.band::after {
+  content: "";
+  position: absolute;
+  inset: auto -20% -70%;
+  height: 26rem;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(139, 122, 255, 0.4), transparent 70%);
+  filter: blur(20px);
+}
+
+.band > * { position: relative; z-index: 1; }
+
+@media (min-width: 768px) {
+  .band { padding: 6rem 3rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .marquee-track { animation: none; }
+  .bars > span, .wave > span { animation: none; }
+  .btn, .card { transition: none; }
+  .btn:hover, .card:hover { transform: none; }
+}
+
+/* Everything from the video down is solid page. It scrolls up over the pinned
+   stage and covers it for good — without an opaque background the laptop would
+   show through every section below. */
+.page-solid,
+.marquee,
+.section,
+footer {
+  position: relative;
+  z-index: 1;
+  background: var(--paper);
+}
