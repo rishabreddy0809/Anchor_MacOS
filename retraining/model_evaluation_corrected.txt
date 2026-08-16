@@ -1,0 +1,73 @@
+==================================================================
+ANCHOR STRUGGLE MODEL — CORRECTED TRAINING RUN
+==================================================================
+Data:       training_data_10k_CORRECTED.csv
+Algorithm:  RandomForestClassifier (n_estimators=300)
+Rows:       10000
+
+------------------------------------------------------------------
+FEATURE RANGE CONFIRMATION (must match FeatureCalculator.swift)
+------------------------------------------------------------------
+grade_trend:         min=70 max=130   expected 70-130 (100=no change)  -> PASS
+missing_assignments: min=0 max=4   expected 0-4                     -> PASS
+
+Label balance: 3028 struggling (30.3%), 6972 engaged (69.7%)
+
+Split: 8000 train / 2000 test (held out, stratified, unseen during fit)
+
+==================================================================
+HELD-OUT TEST SET METRICS (not in-sample)
+==================================================================
+Test rows:                 2000
+Always-'coping' baseline:  69.70%
+Accuracy:                  86.75%
+Precision (struggling):    82.73%
+Recall (struggling):       71.12%
+F1 (struggling):           0.765
+ROC AUC:                   0.843
+
+  Below 90% — deliberately. This data carries 12% irreducible label 
+  noise (see generate_corrected_data.py), simulating real classroom 
+  ambiguity a Zoom+Classroom feature set can't resolve. That noise 
+  caps ANY classifier at roughly 88% accuracy on these labels — this 
+  model is landing close to that ceiling (86.8%), not underperforming. 
+  A 90%+ number on this kind of data is the thing to be suspicious of, 
+  not the thing to chase — see the first (deterministic-label) version 
+  of this dataset, which hit 97.8% by reconstructing its own labeling 
+  rule rather than learning anything generalizable.
+
+Per-class detail:
+              precision    recall  f1-score   support
+
+      coping       0.88      0.94      0.91      1394
+  struggling       0.83      0.71      0.76       606
+
+    accuracy                           0.87      2000
+   macro avg       0.85      0.82      0.84      2000
+weighted avg       0.87      0.87      0.86      2000
+
+Confusion matrix (rows=actual, cols=predicted):
+                 pred coping   pred struggling
+  actual coping       1304              90
+  actual struggling    175             431
+
+------------------------------------------------------------------
+FEATURE IMPORTANCE
+------------------------------------------------------------------
+  grade_trend          0.3756  #####################################  <- academic
+  missing_assignments  0.1474  ##############  <- academic
+  time_unmuted         0.1018  ##########
+  confidence_level     0.0979  #########
+  speaking_duration    0.0753  #######
+  message_length       0.0752  #######
+  hesitation_count     0.0316  ###
+  camera_on            0.0290  ##
+  hand_raise_count     0.0274  ##
+  is_muted             0.0112  #
+  is_speaking          0.0100  #
+  has_question         0.0093  
+  hand_raised          0.0083  
+
+Academic features' combined importance: 52.3% of total
+
+Wrote StudentStruggleModel_CORRECTED.mlmodel

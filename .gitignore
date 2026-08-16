@@ -62,6 +62,18 @@ __pycache__/
 venv/
 .ipynb_checkpoints/
 
+# --- Retraining artefacts ---
+# Pre-retrain snapshots. Useful locally for a one-command revert, but they are
+# whole copies of the model and data — 12 MB a run — and git would keep every
+# one of them forever.
+retraining/.backup_*/
+# Superseded models kept for reference only; nothing loads them.
+retraining/archive/
+# The shipping models live in Anchor/, which is what StruggleDetectionService
+# loads. The copies the training script writes next to itself are byte-identical
+# duplicates, so tracking both would put 13 MB of the same blobs in history.
+retraining/*.mlmodel
+
 # --- Scratch ---
 *.bak
 *.log

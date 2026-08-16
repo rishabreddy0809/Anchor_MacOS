@@ -1,0 +1,35 @@
+==============================================================================
+ANCHOR STRUGGLE MODEL — PRODUCTION SCENARIO TEST (12% label noise, honest accuracy)
+==============================================================================
+
+SCENARIO A: Obviously struggling  (expect > 80%)
+  OLD model:         56.3%  [FAIL]
+  CORRECTED model:   96.5%  [PASS]
+
+SCENARIO B: Quiet but fine  (expect < 30%)
+  OLD model:          0.0%  [PASS]
+  CORRECTED model:   22.7%  [PASS]
+
+SCENARIO C: Introvert engaged  (expect < 20%)
+  OLD model:          0.0%  [PASS]
+  CORRECTED model:   23.0%  [FAIL]
+
+SCENARIO D: Contradictory (speaks a lot but failing)  (expect > 60%)
+  OLD model:          0.0%  [FAIL]
+  CORRECTED model:   93.6%  [PASS]
+
+==============================================================================
+CORRECTED model FAILED at least one scenario.
+
+NOTE on Scenario C (23.0% vs expected <20%):
+This dataset now carries 12% deliberate label noise to simulate real classroom
+ambiguity (see generate_corrected_data.py) rather than a deterministic,
+100%-clean label rule. The tradeoff: the model is very slightly less
+overconfident on clean-looking cases too, including this one. This is a
+false-positive-direction miss (over-cautious on a fine student), not a missed
+struggling student — per RecommendationGenerator/AcademicEscalation's own
+stated philosophy, a false alarm costs a teacher one question, while a missed
+struggling student is the failure this product exists to prevent. Not re-tuned
+back under 20% on purpose: doing so by further weighting this exact scenario
+would reintroduce the same overfitting-to-test-points problem the first
+(deterministic) version of this dataset had.
