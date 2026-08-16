@@ -6,8 +6,176 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		052817FDF4E84AED9F3C4630 /* libcares.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 03350F52BD904CD3A282594B /* libcares.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		09CCCAACCE7B49E58838D643 /* zUnifyWebViewApp.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 0A87DBD0D1534F7ABD44E088 /* zUnifyWebViewApp.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		101E60C29D4843BCA53DDF14 /* util.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = E3E2716FF95F41B9ADF40CED /* util.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		118D7BB32A1045B68CC717FE /* zChatBase.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = C5452B2B2171422E97BCB740 /* zChatBase.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		11C4B0AA19D9410598A1E2FF /* ZMDB.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = F4AF8D5638F34F1297160FB9 /* ZMDB.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		15AEEDCDF6E044C69B7E26F7 /* ZoomKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = E25B527917A9442E855BD8BE /* ZoomKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		17168A584C9543EBBD470778 /* ZoomTask.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = EF9C3B08A035443897822268 /* ZoomTask.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		1AC8D727A3524AB08894EA12 /* zUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B6E012444E504067831B0C0F /* zUI.framework */; };
+		1BB8631B04CF4A36B386B3DB /* ZoomMeetingBridge.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 7DAF95C9042744BC8DA787DA /* ZoomMeetingBridge.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		1C88BAD081F243A0A46C669C /* tp.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 1105B7FA413A48BAAAA0E308 /* tp.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		1D6AFFC4CF054AA8A63B3189 /* protobuf.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = AF890D26254845EFA49C2D2F /* protobuf.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		267536471C9C4E3D888574CD /* zUI.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = B6E012444E504067831B0C0F /* zUI.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		30361451481A4030B6886688 /* zChatBase.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C5452B2B2171422E97BCB740 /* zChatBase.framework */; };
+		37D2F5D39C2E4DA5BCD089DD /* zVideoUIBridge.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A68150B615E944F4905DD123 /* zVideoUIBridge.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		39566793BCDE487BBBAFB32B /* ZoomTask.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EF9C3B08A035443897822268 /* ZoomTask.framework */; };
+		3E2F6F5F28664EFB93F16102 /* curl64.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 00BB67165A2A420FA2EDD822 /* curl64.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		40D0AA2B87A74D7B9D75E508 /* Prism.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 62EFB0AAF7984E81A18649A4 /* Prism.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		4631F068D6ED40DEB9A3A48E /* libzmbTranscode.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 3947FBA8527A42B6B5ACB2D4 /* libzmbTranscode.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		4B298DD36D3D4EBA9EA977D8 /* zBusinessUIComponent.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 89FAA89BC8D849F7AD4BF6F4 /* zBusinessUIComponent.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		50C1604B9E664B9F8A11578A /* zbt.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 712FBF07C07A4CEEB8EB688C /* zbt.dylib */; };
+		519883CB261147E7AB2EFDB4 /* ZoomUnit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 46A32461F3854618A32B4647 /* ZoomUnit.framework */; };
+		59B75603EB4C4950B3D522CD /* ZoomSettingEx.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FD590C2E4B6F4B2D8E3C244F /* ZoomSettingEx.framework */; };
+		5C5839EC2FD2451B94944EFF /* zVideoUIEx.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = EB58DDA9B468421D9D8CE975 /* zVideoUIEx.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		5F9ADBB90E53427F9978EEF7 /* ZoomSetting.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 6C7F7DF17B2140BD98AAE529 /* ZoomSetting.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		60749A936DBE40BE86875083 /* cmmlib.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 1650905AD9F64FA18D11AB15 /* cmmlib.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		62160AADEA1541E191CD4FDB /* zUIClient.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 380EE77C3C44423496A4EFFA /* zUIClient.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		63E79DE96FDE4BB6814FF187 /* protobuf.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AF890D26254845EFA49C2D2F /* protobuf.framework */; };
+		64665B4B06B544DC9931B788 /* liblooper.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 748DA631B1A6405981E4920E /* liblooper.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		669339DD6DA24EB39BE39602 /* zChatComponent.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7A7FF16B47F546689CC71DAF /* zChatComponent.framework */; };
+		6905ACA636D448DAB46E21E8 /* ZoomKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E25B527917A9442E855BD8BE /* ZoomKit.framework */; };
+		6F08DF68A0104406A2EA89FC /* ZoomMeetingBridge.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7DAF95C9042744BC8DA787DA /* ZoomMeetingBridge.framework */; };
+		71D2FDB36C6849AEA73FBC21 /* libzmbRecord.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 6890B2EF98C64DDBA949E194 /* libzmbRecord.dylib */; };
+		799D471C8DE947AA90C5E76C /* libjson.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = C6493392CBE945A3B85E41A9 /* libjson.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		7B3844F3CEB641D0A5B39959 /* ZoomSettingEx.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = FD590C2E4B6F4B2D8E3C244F /* ZoomSettingEx.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		7CCCDCB642C74D7A8FFC01B7 /* libcares.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 03350F52BD904CD3A282594B /* libcares.dylib */; };
+		828E3C73A58F4060925135B5 /* libjson.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = C6493392CBE945A3B85E41A9 /* libjson.dylib */; };
+		88F5625373534671A58A11A8 /* libssl.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B7882EE41504F158510B782 /* libssl.dylib */; };
+		8EE948F03B5D41C9A73F6C21 /* libminizip.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = B9210D9C2EB9441E84B3A084 /* libminizip.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		97E4B7E9893B4330ADADE1E4 /* zbt.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 712FBF07C07A4CEEB8EB688C /* zbt.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		9886E05CAD8E42C6877C1179 /* libzmbRecord.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 6890B2EF98C64DDBA949E194 /* libzmbRecord.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		9C2FB1FB183C4B1B9CC63E04 /* liblooper.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 748DA631B1A6405981E4920E /* liblooper.dylib */; };
+		A537415209DA4C7383066D3E /* zVideoUIEx.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EB58DDA9B468421D9D8CE975 /* zVideoUIEx.framework */; };
+		A84A1E5559104E749FB6166B /* libzContext.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 40C8F7D163784BFFBA421AAC /* libzContext.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		AE8FD2777B2645D6A86067C0 /* cmmbiz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5D7E802DF8544D2DBED618F7 /* cmmbiz.framework */; };
+		B5BAD0525C8A49DE90D94877 /* libcrypto.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A85C73C050045ABB1036D67 /* libcrypto.dylib */; };
+		B71F62B910434568AA1B1E14 /* zBusinessUIComponent.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 89FAA89BC8D849F7AD4BF6F4 /* zBusinessUIComponent.framework */; };
+		B7F09C67BAB0457C8D287B43 /* ZoomSDKCustomVideoUI.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D1BCE986B3B7405E865F26EC /* ZoomSDKCustomVideoUI.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		BB55315239E54A84808156DE /* ZoomSDK.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 1516618259C84712A5CF90A3 /* ZoomSDK.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		C27CE452EDA74D3C8B98B1EC /* libzContext.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 40C8F7D163784BFFBA421AAC /* libzContext.dylib */; };
+		C280CF2E5BAE4A949AC02010 /* libzoombase_crypto_shared.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 112340F185AB424B91BB9813 /* libzoombase_crypto_shared.dylib */; };
+		C37D52BFDB414541A60F410D /* zm_conf_universal_ui_plugin.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 988BB19EDAF242AA81BEB1CC /* zm_conf_universal_ui_plugin.framework */; };
+		C439D7E1F0F8462D8D415F03 /* zNetUtils.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5558EC4C259D45BB9A380C8C /* zNetUtils.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		C91927ECD6DE49998C832ADC /* ZoomSetting.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6C7F7DF17B2140BD98AAE529 /* ZoomSetting.framework */; };
+		C9E4FB0FBAD5430B83D68A91 /* ZoomSDKCustomVideoUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1BCE986B3B7405E865F26EC /* ZoomSDKCustomVideoUI.framework */; };
+		CDE1845932CB40558C668C27 /* libcrypto.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9A85C73C050045ABB1036D67 /* libcrypto.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		D30D03D77BA34AECA806E9CD /* zm_conf_universal_ui_plugin.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 988BB19EDAF242AA81BEB1CC /* zm_conf_universal_ui_plugin.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		D62BB10613BF493D84DEFD6F /* cmmbiz.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5D7E802DF8544D2DBED618F7 /* cmmbiz.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		D72EA643664B43E59A60EA36 /* zChatComponent.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 7A7FF16B47F546689CC71DAF /* zChatComponent.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		D81B91DAD09642388CD9638A /* curl64.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 00BB67165A2A420FA2EDD822 /* curl64.framework */; };
+		D9D6696B96734A0FB030579A /* zUIClient.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 380EE77C3C44423496A4EFFA /* zUIClient.framework */; };
+		DAEF1C321B734CC287A1DDA8 /* libzmbTranscode.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 3947FBA8527A42B6B5ACB2D4 /* libzmbTranscode.dylib */; };
+		DB79894EC01C41A5AD4C6364 /* zUnifyWebViewApp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A87DBD0D1534F7ABD44E088 /* zUnifyWebViewApp.framework */; };
+		DE3B21C55E7D476DAC583C23 /* libminizip.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = B9210D9C2EB9441E84B3A084 /* libminizip.dylib */; };
+		DEB8C2D2171243B49F3BDCFE /* ZoomSDK.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1516618259C84712A5CF90A3 /* ZoomSDK.framework */; };
+		E088BF51104C4DD5A5951D6A /* util.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E3E2716FF95F41B9ADF40CED /* util.framework */; };
+		E491BB2E0FAD4FB781DA0DEB /* libzoombase_crypto_shared.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 112340F185AB424B91BB9813 /* libzoombase_crypto_shared.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		E4EC1CE5BA1949E78F5FB216 /* cmmlib.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1650905AD9F64FA18D11AB15 /* cmmlib.framework */; };
+		E9D092E1A5EB48BFBFCA33F7 /* zNetUtils.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5558EC4C259D45BB9A380C8C /* zNetUtils.framework */; };
+		EB63E3BFAB93442FA9645D31 /* ZMDB.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F4AF8D5638F34F1297160FB9 /* ZMDB.framework */; };
+		EB8E23D6A309407AA8492CE5 /* tp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1105B7FA413A48BAAAA0E308 /* tp.framework */; };
+		EC2EF4D76E974B7CBAAC1B56 /* PTUIBridge.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A4E4A7E5A57D4CCCAC336FF6 /* PTUIBridge.framework */; };
+		ED9F5BEE58C14047A012DAFE /* Prism.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 62EFB0AAF7984E81A18649A4 /* Prism.framework */; };
+		EEDE9631EB09400488DC66D4 /* libssl.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 7B7882EE41504F158510B782 /* libssl.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		F2138EAE3BCE49B8B52863A0 /* PTUIBridge.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A4E4A7E5A57D4CCCAC336FF6 /* PTUIBridge.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		F90E89806BB34A20BAAD48F3 /* zVideoUIBridge.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A68150B615E944F4905DD123 /* zVideoUIBridge.framework */; };
+		FEB58559513E438EA1EC524E /* ZoomUnit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 46A32461F3854618A32B4647 /* ZoomUnit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		C4AEBDCB2C264A4F9AC6FBC2 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				BB55315239E54A84808156DE /* ZoomSDK.framework in Embed Frameworks */,
+				7B3844F3CEB641D0A5B39959 /* ZoomSettingEx.framework in Embed Frameworks */,
+				5C5839EC2FD2451B94944EFF /* zVideoUIEx.framework in Embed Frameworks */,
+				D30D03D77BA34AECA806E9CD /* zm_conf_universal_ui_plugin.framework in Embed Frameworks */,
+				052817FDF4E84AED9F3C4630 /* libcares.dylib in Embed Frameworks */,
+				CDE1845932CB40558C668C27 /* libcrypto.dylib in Embed Frameworks */,
+				799D471C8DE947AA90C5E76C /* libjson.dylib in Embed Frameworks */,
+				64665B4B06B544DC9931B788 /* liblooper.dylib in Embed Frameworks */,
+				8EE948F03B5D41C9A73F6C21 /* libminizip.dylib in Embed Frameworks */,
+				EEDE9631EB09400488DC66D4 /* libssl.dylib in Embed Frameworks */,
+				A84A1E5559104E749FB6166B /* libzContext.dylib in Embed Frameworks */,
+				9886E05CAD8E42C6877C1179 /* libzmbRecord.dylib in Embed Frameworks */,
+				4631F068D6ED40DEB9A3A48E /* libzmbTranscode.dylib in Embed Frameworks */,
+				E491BB2E0FAD4FB781DA0DEB /* libzoombase_crypto_shared.dylib in Embed Frameworks */,
+				97E4B7E9893B4330ADADE1E4 /* zbt.dylib in Embed Frameworks */,
+				11C4B0AA19D9410598A1E2FF /* ZMDB.framework in Embed Frameworks */,
+				3E2F6F5F28664EFB93F16102 /* curl64.framework in Embed Frameworks */,
+				1C88BAD081F243A0A46C669C /* tp.framework in Embed Frameworks */,
+				1D6AFFC4CF054AA8A63B3189 /* protobuf.framework in Embed Frameworks */,
+				D62BB10613BF493D84DEFD6F /* cmmbiz.framework in Embed Frameworks */,
+				60749A936DBE40BE86875083 /* cmmlib.framework in Embed Frameworks */,
+				40D0AA2B87A74D7B9D75E508 /* Prism.framework in Embed Frameworks */,
+				F2138EAE3BCE49B8B52863A0 /* PTUIBridge.framework in Embed Frameworks */,
+				101E60C29D4843BCA53DDF14 /* util.framework in Embed Frameworks */,
+				C439D7E1F0F8462D8D415F03 /* zNetUtils.framework in Embed Frameworks */,
+				15AEEDCDF6E044C69B7E26F7 /* ZoomKit.framework in Embed Frameworks */,
+				1BB8631B04CF4A36B386B3DB /* ZoomMeetingBridge.framework in Embed Frameworks */,
+				B7F09C67BAB0457C8D287B43 /* ZoomSDKCustomVideoUI.framework in Embed Frameworks */,
+				5F9ADBB90E53427F9978EEF7 /* ZoomSetting.framework in Embed Frameworks */,
+				17168A584C9543EBBD470778 /* ZoomTask.framework in Embed Frameworks */,
+				FEB58559513E438EA1EC524E /* ZoomUnit.framework in Embed Frameworks */,
+				267536471C9C4E3D888574CD /* zUI.framework in Embed Frameworks */,
+				62160AADEA1541E191CD4FDB /* zUIClient.framework in Embed Frameworks */,
+				09CCCAACCE7B49E58838D643 /* zUnifyWebViewApp.framework in Embed Frameworks */,
+				37D2F5D39C2E4DA5BCD089DD /* zVideoUIBridge.framework in Embed Frameworks */,
+				4B298DD36D3D4EBA9EA977D8 /* zBusinessUIComponent.framework in Embed Frameworks */,
+				118D7BB32A1045B68CC717FE /* zChatBase.framework in Embed Frameworks */,
+				D72EA643664B43E59A60EA36 /* zChatComponent.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		00BB67165A2A420FA2EDD822 /* curl64.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = curl64.framework; sourceTree = "<group>"; };
+		03350F52BD904CD3A282594B /* libcares.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libcares.dylib; sourceTree = "<group>"; };
+		0A87DBD0D1534F7ABD44E088 /* zUnifyWebViewApp.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = zUnifyWebViewApp.framework; sourceTree = "<group>"; };
+		1105B7FA413A48BAAAA0E308 /* tp.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = tp.framework; sourceTree = "<group>"; };
+		112340F185AB424B91BB9813 /* libzoombase_crypto_shared.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libzoombase_crypto_shared.dylib; sourceTree = "<group>"; };
+		1516618259C84712A5CF90A3 /* ZoomSDK.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ZoomSDK.framework; sourceTree = "<group>"; };
+		1650905AD9F64FA18D11AB15 /* cmmlib.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = cmmlib.framework; sourceTree = "<group>"; };
+		380EE77C3C44423496A4EFFA /* zUIClient.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = zUIClient.framework; sourceTree = "<group>"; };
+		3947FBA8527A42B6B5ACB2D4 /* libzmbTranscode.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libzmbTranscode.dylib; sourceTree = "<group>"; };
+		40C8F7D163784BFFBA421AAC /* libzContext.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libzContext.dylib; sourceTree = "<group>"; };
+		46A32461F3854618A32B4647 /* ZoomUnit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ZoomUnit.framework; sourceTree = "<group>"; };
+		5558EC4C259D45BB9A380C8C /* zNetUtils.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = zNetUtils.framework; sourceTree = "<group>"; };
+		5D7E802DF8544D2DBED618F7 /* cmmbiz.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = cmmbiz.framework; sourceTree = "<group>"; };
+		62EFB0AAF7984E81A18649A4 /* Prism.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Prism.framework; sourceTree = "<group>"; };
+		6890B2EF98C64DDBA949E194 /* libzmbRecord.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libzmbRecord.dylib; sourceTree = "<group>"; };
+		6C7F7DF17B2140BD98AAE529 /* ZoomSetting.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ZoomSetting.framework; sourceTree = "<group>"; };
+		712FBF07C07A4CEEB8EB688C /* zbt.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = zbt.dylib; sourceTree = "<group>"; };
+		748DA631B1A6405981E4920E /* liblooper.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = liblooper.dylib; sourceTree = "<group>"; };
+		7A7FF16B47F546689CC71DAF /* zChatComponent.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = zChatComponent.framework; sourceTree = "<group>"; };
+		7B7882EE41504F158510B782 /* libssl.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libssl.dylib; sourceTree = "<group>"; };
+		7DAF95C9042744BC8DA787DA /* ZoomMeetingBridge.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ZoomMeetingBridge.framework; sourceTree = "<group>"; };
+		89FAA89BC8D849F7AD4BF6F4 /* zBusinessUIComponent.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = zBusinessUIComponent.framework; sourceTree = "<group>"; };
+		988BB19EDAF242AA81BEB1CC /* zm_conf_universal_ui_plugin.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = zm_conf_universal_ui_plugin.framework; sourceTree = "<group>"; };
+		9A85C73C050045ABB1036D67 /* libcrypto.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libcrypto.dylib; sourceTree = "<group>"; };
+		A4E4A7E5A57D4CCCAC336FF6 /* PTUIBridge.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = PTUIBridge.framework; sourceTree = "<group>"; };
+		A68150B615E944F4905DD123 /* zVideoUIBridge.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = zVideoUIBridge.framework; sourceTree = "<group>"; };
 		AB1DB2BB301D13CF00900A4E /* Anchor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Anchor.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AF890D26254845EFA49C2D2F /* protobuf.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = protobuf.framework; sourceTree = "<group>"; };
+		B6E012444E504067831B0C0F /* zUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = zUI.framework; sourceTree = "<group>"; };
+		B9210D9C2EB9441E84B3A084 /* libminizip.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libminizip.dylib; sourceTree = "<group>"; };
+		C5452B2B2171422E97BCB740 /* zChatBase.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = zChatBase.framework; sourceTree = "<group>"; };
+		C6493392CBE945A3B85E41A9 /* libjson.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libjson.dylib; sourceTree = "<group>"; };
+		D1BCE986B3B7405E865F26EC /* ZoomSDKCustomVideoUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ZoomSDKCustomVideoUI.framework; sourceTree = "<group>"; };
+		E25B527917A9442E855BD8BE /* ZoomKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ZoomKit.framework; sourceTree = "<group>"; };
+		E3E2716FF95F41B9ADF40CED /* util.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = util.framework; sourceTree = "<group>"; };
+		EB58DDA9B468421D9D8CE975 /* zVideoUIEx.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = zVideoUIEx.framework; sourceTree = "<group>"; };
+		EF9C3B08A035443897822268 /* ZoomTask.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ZoomTask.framework; sourceTree = "<group>"; };
+		F4AF8D5638F34F1297160FB9 /* ZMDB.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ZMDB.framework; sourceTree = "<group>"; };
+		FD590C2E4B6F4B2D8E3C244F /* ZoomSettingEx.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ZoomSettingEx.framework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -23,16 +191,100 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DEB8C2D2171243B49F3BDCFE /* ZoomSDK.framework in Frameworks */,
+				59B75603EB4C4950B3D522CD /* ZoomSettingEx.framework in Frameworks */,
+				A537415209DA4C7383066D3E /* zVideoUIEx.framework in Frameworks */,
+				C37D52BFDB414541A60F410D /* zm_conf_universal_ui_plugin.framework in Frameworks */,
+				7CCCDCB642C74D7A8FFC01B7 /* libcares.dylib in Frameworks */,
+				B5BAD0525C8A49DE90D94877 /* libcrypto.dylib in Frameworks */,
+				828E3C73A58F4060925135B5 /* libjson.dylib in Frameworks */,
+				9C2FB1FB183C4B1B9CC63E04 /* liblooper.dylib in Frameworks */,
+				DE3B21C55E7D476DAC583C23 /* libminizip.dylib in Frameworks */,
+				88F5625373534671A58A11A8 /* libssl.dylib in Frameworks */,
+				C27CE452EDA74D3C8B98B1EC /* libzContext.dylib in Frameworks */,
+				71D2FDB36C6849AEA73FBC21 /* libzmbRecord.dylib in Frameworks */,
+				DAEF1C321B734CC287A1DDA8 /* libzmbTranscode.dylib in Frameworks */,
+				C280CF2E5BAE4A949AC02010 /* libzoombase_crypto_shared.dylib in Frameworks */,
+				50C1604B9E664B9F8A11578A /* zbt.dylib in Frameworks */,
+				EB63E3BFAB93442FA9645D31 /* ZMDB.framework in Frameworks */,
+				D81B91DAD09642388CD9638A /* curl64.framework in Frameworks */,
+				EB8E23D6A309407AA8492CE5 /* tp.framework in Frameworks */,
+				63E79DE96FDE4BB6814FF187 /* protobuf.framework in Frameworks */,
+				AE8FD2777B2645D6A86067C0 /* cmmbiz.framework in Frameworks */,
+				E4EC1CE5BA1949E78F5FB216 /* cmmlib.framework in Frameworks */,
+				ED9F5BEE58C14047A012DAFE /* Prism.framework in Frameworks */,
+				EC2EF4D76E974B7CBAAC1B56 /* PTUIBridge.framework in Frameworks */,
+				E088BF51104C4DD5A5951D6A /* util.framework in Frameworks */,
+				E9D092E1A5EB48BFBFCA33F7 /* zNetUtils.framework in Frameworks */,
+				6905ACA636D448DAB46E21E8 /* ZoomKit.framework in Frameworks */,
+				6F08DF68A0104406A2EA89FC /* ZoomMeetingBridge.framework in Frameworks */,
+				C9E4FB0FBAD5430B83D68A91 /* ZoomSDKCustomVideoUI.framework in Frameworks */,
+				C91927ECD6DE49998C832ADC /* ZoomSetting.framework in Frameworks */,
+				39566793BCDE487BBBAFB32B /* ZoomTask.framework in Frameworks */,
+				519883CB261147E7AB2EFDB4 /* ZoomUnit.framework in Frameworks */,
+				1AC8D727A3524AB08894EA12 /* zUI.framework in Frameworks */,
+				D9D6696B96734A0FB030579A /* zUIClient.framework in Frameworks */,
+				DB79894EC01C41A5AD4C6364 /* zUnifyWebViewApp.framework in Frameworks */,
+				F90E89806BB34A20BAAD48F3 /* zVideoUIBridge.framework in Frameworks */,
+				B71F62B910434568AA1B1E14 /* zBusinessUIComponent.framework in Frameworks */,
+				30361451481A4030B6886688 /* zChatBase.framework in Frameworks */,
+				669339DD6DA24EB39BE39602 /* zChatComponent.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		AAAF97E07CB14F2C9086AB3A /* ZoomSDK */ = {
+			isa = PBXGroup;
+			children = (
+				1516618259C84712A5CF90A3 /* ZoomSDK.framework */,
+				FD590C2E4B6F4B2D8E3C244F /* ZoomSettingEx.framework */,
+				EB58DDA9B468421D9D8CE975 /* zVideoUIEx.framework */,
+				988BB19EDAF242AA81BEB1CC /* zm_conf_universal_ui_plugin.framework */,
+				03350F52BD904CD3A282594B /* libcares.dylib */,
+				9A85C73C050045ABB1036D67 /* libcrypto.dylib */,
+				C6493392CBE945A3B85E41A9 /* libjson.dylib */,
+				748DA631B1A6405981E4920E /* liblooper.dylib */,
+				B9210D9C2EB9441E84B3A084 /* libminizip.dylib */,
+				7B7882EE41504F158510B782 /* libssl.dylib */,
+				40C8F7D163784BFFBA421AAC /* libzContext.dylib */,
+				6890B2EF98C64DDBA949E194 /* libzmbRecord.dylib */,
+				3947FBA8527A42B6B5ACB2D4 /* libzmbTranscode.dylib */,
+				112340F185AB424B91BB9813 /* libzoombase_crypto_shared.dylib */,
+				712FBF07C07A4CEEB8EB688C /* zbt.dylib */,
+				F4AF8D5638F34F1297160FB9 /* ZMDB.framework */,
+				00BB67165A2A420FA2EDD822 /* curl64.framework */,
+				1105B7FA413A48BAAAA0E308 /* tp.framework */,
+				AF890D26254845EFA49C2D2F /* protobuf.framework */,
+				5D7E802DF8544D2DBED618F7 /* cmmbiz.framework */,
+				1650905AD9F64FA18D11AB15 /* cmmlib.framework */,
+				62EFB0AAF7984E81A18649A4 /* Prism.framework */,
+				A4E4A7E5A57D4CCCAC336FF6 /* PTUIBridge.framework */,
+				E3E2716FF95F41B9ADF40CED /* util.framework */,
+				5558EC4C259D45BB9A380C8C /* zNetUtils.framework */,
+				E25B527917A9442E855BD8BE /* ZoomKit.framework */,
+				7DAF95C9042744BC8DA787DA /* ZoomMeetingBridge.framework */,
+				D1BCE986B3B7405E865F26EC /* ZoomSDKCustomVideoUI.framework */,
+				6C7F7DF17B2140BD98AAE529 /* ZoomSetting.framework */,
+				EF9C3B08A035443897822268 /* ZoomTask.framework */,
+				46A32461F3854618A32B4647 /* ZoomUnit.framework */,
+				B6E012444E504067831B0C0F /* zUI.framework */,
+				380EE77C3C44423496A4EFFA /* zUIClient.framework */,
+				0A87DBD0D1534F7ABD44E088 /* zUnifyWebViewApp.framework */,
+				A68150B615E944F4905DD123 /* zVideoUIBridge.framework */,
+				89FAA89BC8D849F7AD4BF6F4 /* zBusinessUIComponent.framework */,
+				C5452B2B2171422E97BCB740 /* zChatBase.framework */,
+				7A7FF16B47F546689CC71DAF /* zChatComponent.framework */,
+			);
+			path = ZoomSDK;
+			sourceTree = "<group>";
+		};
 		AB1DB2B2301D13CF00900A4E = {
 			isa = PBXGroup;
 			children = (
 				AB1DB2BD301D13CF00900A4E /* Anchor */,
+				AAAF97E07CB14F2C9086AB3A /* ZoomSDK */,
 				AB1DB2BC301D13CF00900A4E /* Products */,
 			);
 			sourceTree = "<group>";
@@ -55,6 +307,8 @@
 				AB1DB2B7301D13CF00900A4E /* Sources */,
 				AB1DB2B8301D13CF00900A4E /* Frameworks */,
 				AB1DB2B9301D13CF00900A4E /* Resources */,
+				C4AEBDCB2C264A4F9AC6FBC2 /* Embed Frameworks */,
+				A1A1A1A1A1A1A1A1A1A1A1A1 /* Copy Remaining ZoomSDK Resources */,
 			);
 			buildRules = (
 			);
@@ -114,6 +368,23 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		A1A1A1A1A1A1A1A1A1A1A1A1 /* Copy Remaining ZoomSDK Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Copy Remaining ZoomSDK Resources";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "DEST=\"$TARGET_BUILD_DIR/$CONTENTS_FOLDER_PATH/Frameworks\"\nmkdir -p \"$DEST\"\nSRC=\"$PROJECT_DIR/ZoomSDK\"\nfor item in \"$SRC\"/*; do\n  name=$(basename \"$item\")\n  if [ \"$name\" = \"Plugins\" ]; then continue; fi\n  rm -rf \"$DEST/$name\"\n  cp -R \"$item\" \"$DEST/$name\"\n  codesign --force --deep --sign - \"$DEST/$name\" 2>/dev/null || true\ndone\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		AB1DB2B7301D13CF00900A4E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -163,7 +434,7 @@
 				DEVELOPMENT_TEAM = SYLM5655ZW;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -227,7 +498,7 @@
 				DEVELOPMENT_TEAM = SYLM5655ZW;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -250,19 +521,32 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Anchor/Anchor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = SYLM5655ZW;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/ZoomSDK",
+				);
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Anchor's meeting bot uses the Zoom Meeting SDK to join classes; camera access is required by the SDK even though the bot's own video stays off.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Anchor's meeting bot uses the Zoom Meeting SDK to join classes; microphone access is required by the SDK even though the bot's own audio stays off.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/ZoomSDK",
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Rishab-Reddy.Anchor";
@@ -282,19 +566,32 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Anchor/Anchor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = SYLM5655ZW;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/ZoomSDK",
+				);
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Anchor's meeting bot uses the Zoom Meeting SDK to join classes; camera access is required by the SDK even though the bot's own video stays off.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Anchor's meeting bot uses the Zoom Meeting SDK to join classes; microphone access is required by the SDK even though the bot's own audio stays off.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/ZoomSDK",
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Rishab-Reddy.Anchor";
