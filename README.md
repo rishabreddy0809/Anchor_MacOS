@@ -84,28 +84,32 @@ Held-out test set, 2,000 rows unseen during fit and hyperparameter search:
 
 | Metric | Value |
 |---|---|
-| Majority-class baseline | 67.90% |
-| **Accuracy** | **75.40%** |
-| ROC AUC | 0.8044 |
-| Precision (struggling) | 65.50% |
-| Recall (struggling) | 49.38% |
-| Brier score | 0.1626 |
-| Estimated Bayes ceiling | 79.50% |
+| Majority-class baseline | 67.70% |
+| **Accuracy** | **81.10%** |
+| ROC AUC | 0.8676 |
+| Precision (struggling) | 74.19% |
+| Recall (struggling) | 63.62% |
+| F1 (struggling) | 0.685 |
+| Brier score | 0.1343 |
+| Estimated Bayes ceiling | 86.20% |
+
+Gradient boosting, selected over random forest by a 220-candidate,
+5-fold cross-validated search.
 
 The baseline column matters more than the accuracy column. Struggling students
-are the minority class, so a model that answers "coping" every time scores 67.9%
+are the minority class, so a model that answers "coping" every time scores 67.7%
 and is worthless. The Bayes ceiling is exact — it comes from the data
-generator's latent probability — so the real headroom left is 4.1 points, not
-24.6.
+generator's latent probability — so the real headroom left is 5.1 points, not
+18.9.
 
 ### Why the default threshold favors recall
 
 | Threshold | Precision | Recall | Flagged |
 |---|---|---|---|
-| 0.25 — Watch, max sensitivity | 51.5% | 84.9% | 52.9% |
-| **0.40 — Watch (default)** | **61.8%** | **64.5%** | **33.5%** |
-| 0.70 — Needs attention (default) | 78.5% | 17.6% | 7.2% |
-| 0.85 — Needs attention, min sensitivity | 95.2% | 3.1% | 1.1% |
+| 0.25 — Watch, max sensitivity | 60.9% | 82.8% | 44.0% |
+| **0.40 — Watch (default)** | **70.0%** | **71.1%** | **32.8%** |
+| 0.70 — Needs attention (default) | 79.4% | 44.1% | 17.9% |
+| 0.85 — Needs attention, min sensitivity | 89.5% | 22.4% | 8.1% |
 
 A missed struggling student is the failure this product exists to prevent. A
 false alarm costs a teacher one question. The default operating point is the
@@ -114,27 +118,42 @@ recall-favoring one for that reason.
 ### Feature importance
 
 ```
-grade_trend              0.3277  ← academic
-grade_average            0.2117  ← academic
-confidence_level         0.0854
-time_unmuted             0.0721
-missing_assignments      0.0572  ← academic
-message_length           0.0470
-late_submissions         0.0404  ← academic
-speaking_duration        0.0386
-days_since_submission    0.0354  ← academic
-hesitation_count         0.0257
+grade_trend              0.4478  ← academic
+grade_average            0.1949  ← academic
+confidence_level         0.0810
+time_unmuted             0.0479
+missing_assignments      0.0451  ← academic
+message_length           0.0346
+late_submissions         0.0282  ← academic
+is_muted                 0.0274
+hesitation_count         0.0259
+days_since_submission    0.0230  ← academic
 ```
 
-The academic signals carry the model — together they account for roughly 54% of
-importance. Live Zoom behavior contributes meaningfully but is not the dominant
-term, which is worth knowing before trusting a score from a class where
-Classroom isn't connected.
+The academic signals carry the model — the five Classroom columns are about 74%
+of total importance, and `grade_trend` alone is 45%. Live Zoom behavior
+contributes meaningfully but is nowhere near the dominant term. That is worth
+knowing before trusting a score from a class where Classroom isn't connected:
+without it the model is running on roughly a quarter of the signal it was
+trained to weigh.
 
 ### Training data
 
 The model is trained on **10,000 synthetic rows** from `retraining/generate_messy_data.py`.
-No real classroom has labeled a dataset for this. The generator is built to make
+No real classroom has labeled a dataset for this.
+
+> **On the 81.1% figure.** An earlier run of this model scored 75.4% against a
+> 79.5% ceiling. The gain since is mostly *not* a better model — the generator
+> gained a `--sharpness` dial that scales the latent logit before the label is
+> drawn, which pushes each row's probability away from 0.5 and raises the
+> ceiling to 86.2%. In plain terms it asserts that two students emitting the
+> same feature vector rarely differ in outcome. Features are untouched: same
+> seed, same rows, same observation regimes. So the task got easier by
+> assumption, and the honest comparison is the *gap to ceiling* — 5.1 points,
+> versus 4.1 before. Whether real classrooms are that separable is exactly the
+> thing only real labelled data can answer.
+
+The generator is built to make
 that synthetic origin as harmless as possible:
 
 - Each student has an unobserved engagement/academic state. Features are *noisy
