@@ -60,6 +60,9 @@ final class SessionArchive: ObservableObject {
     // MARK: - Init
 
     init(loadsFromDisk: Bool = true) {
+        // Before `load()`, and outside its early return: the window has to be
+        // right for the Settings UI even on a Mac with no archive yet.
+        loadRetention()
         guard loadsFromDisk else { return }
         load()
     }
@@ -100,6 +103,14 @@ final class SessionArchive: ObservableObject {
             // show as "in progress" forever. Close it at its last known sample
             // rather than at launch time, which would invent hours of class.
             closeOrphanedSessions()
+
+            // After closing orphans, so a session the last run left open is
+            // given its real end date before being measured against the window
+            // — otherwise a crashed session would sit at `endedAt == nil` and
+            // outlive the policy forever.
+            pruneExpiredSessions()
+            pruneStaleSidecarFiles()
+
             logger.info("Loaded \(self.sessions.count) sessions, \(self.classrooms.count) classrooms")
         } catch {
             // A corrupt archive must not take the app down with it. Keep the bad
@@ -173,6 +184,143 @@ final class SessionArchive: ObservableObject {
         try? FileManager.default.moveItem(at: url, to: backup)
         classrooms = []
         sessions = []
+    }
+
+    // MARK: - Retention
+
+    /// How long a finished session is kept before Anchor deletes it.
+    ///
+    /// This exists because "kept until you delete it" is not a retention policy,
+    /// and a school's reviewer will say so. What the archive holds is a named
+    /// child and a behavioural score, which is an education record whatever else
+    /// it is; an unbounded one accumulating on a teacher's laptop is the single
+    /// hardest thing to defend about how Anchor stores data.
+    ///
+    /// A term is the default because it is the unit the data is actually useful
+    /// over — a teacher looks back across the term they are teaching, not across
+    /// years — and because a bounded default is the only kind worth having. An
+    /// unbounded default with a setting nobody opens is the same policy with
+    /// extra steps.
+    enum RetentionWindow: String, CaseIterable, Identifiable, Sendable {
+        case term
+        case year
+        case forever
+
+        var id: String { rawValue }
+
+        var label: String {
+            switch self {
+            case .term: "One term (120 days)"
+            case .year: "One school year (365 days)"
+            case .forever: "Keep everything"
+            }
+        }
+
+        /// Nil means never delete.
+        var days: Int? {
+            switch self {
+            case .term: 120
+            case .year: 365
+            case .forever: nil
+            }
+        }
+
+        /// Sessions that ended before this are past the window. Nil when the
+        /// window is unbounded.
+        func cutoff(from now: Date) -> Date? {
+            days.map { now.addingTimeInterval(-Double($0) * 86_400) }
+        }
+
+        /// Shown wherever Anchor has to state its own policy in a sentence.
+        var policySentence: String {
+            switch self {
+            case .term:
+                "Anchor deletes a session's record 120 days after the class ends."
+            case .year:
+                "Anchor deletes a session's record 365 days after the class ends."
+            case .forever:
+                "Anchor keeps session records until you delete them."
+            }
+        }
+    }
+
+    private static let retentionKey = "anchor.archive.retention"
+
+    /// Changing this prunes immediately rather than at the next launch — a
+    /// teacher who shortens the window has almost certainly just been asked to.
+    @Published var retention: RetentionWindow = .term {
+        didSet {
+            guard retention != oldValue else { return }
+            UserDefaults.standard.set(retention.rawValue, forKey: Self.retentionKey)
+            pruneExpiredSessions()
+            pruneStaleSidecarFiles()
+        }
+    }
+
+    private func loadRetention() {
+        guard let raw = UserDefaults.standard.string(forKey: Self.retentionKey),
+              let stored = RetentionWindow(rawValue: raw)
+        else { return }
+        // Assigned through the backing store so loading a preference does not
+        // trigger the prune-on-change side effect; `load()` prunes explicitly.
+        _retention = Published(initialValue: stored)
+    }
+
+    /// Drops sessions whose class ended before the retention cutoff.
+    ///
+    /// A session still in progress is never dropped, however old its start time
+    /// looks — `endedAt` is nil until `closeOrphanedSessions` or
+    /// `finalizeCurrentSession` sets it, and deleting a live class mid-lesson
+    /// would be the worst possible expression of a retention policy.
+    func pruneExpiredSessions(now: Date = Date()) {
+        guard let cutoff = retention.cutoff(from: now) else { return }
+
+        let before = sessions.count
+        sessions.removeAll { session in
+            guard let endedAt = session.endedAt else { return false }
+            return endedAt < cutoff
+        }
+        let dropped = before - sessions.count
+        guard dropped > 0 else { return }
+
+        pruneEmptyClassrooms()
+        logger.info("Retention dropped \(dropped) session(s) older than \(self.retention.days ?? 0) days")
+        saveNow()
+    }
+
+    /// Deletes Anchor's own leftover copies of the archive once they age out.
+    ///
+    /// `quarantineArchive` writes `session-archive.corrupt-<stamp>.json` and
+    /// nothing ever removes it, so a corruption a teacher never noticed leaves a
+    /// full copy of the term's records beside the live file indefinitely.
+    /// Manual pre-migration backups have the same shape. They hold exactly the
+    /// data the window above governs, so they are governed by it too.
+    ///
+    /// Deliberately narrow: only Anchor's two known sidecar patterns, never the
+    /// live archive, and never anything else in the directory.
+    private func pruneStaleSidecarFiles(now: Date = Date()) {
+        guard let cutoff = retention.cutoff(from: now) else { return }
+
+        let live = Self.fileURL.lastPathComponent
+        guard let entries = try? FileManager.default.contentsOfDirectory(
+            at: Self.directoryURL,
+            includingPropertiesForKeys: [.contentModificationDateKey]
+        ) else { return }
+
+        for url in entries {
+            let name = url.lastPathComponent
+            guard name != live,
+                  name.hasPrefix("session-archive.corrupt-")
+                    || name.hasPrefix("session-archive.backup-")
+            else { continue }
+
+            let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?
+                .contentModificationDate
+            guard let modified, modified < cutoff else { continue }
+
+            try? FileManager.default.removeItem(at: url)
+            logger.info("Removed archive sidecar past retention: \(name, privacy: .public)")
+        }
     }
 
     private static func makeDecoder() -> JSONDecoder {
@@ -361,6 +509,12 @@ final class SessionArchive: ObservableObject {
         self.currentSessionID = nil
         pruneEmptyClassrooms()
         saveNow()
+
+        // The end of a class is the natural moment to apply the window. Anchor
+        // is a menu bar app that can stay running for weeks, so relying on the
+        // next launch would let a term's worth of records outlive the policy on
+        // a Mac that simply never rebooted.
+        pruneExpiredSessions(now: date)
     }
 
     /// Zoom's instance UUID identifies one *occurrence* of a recurring meeting.

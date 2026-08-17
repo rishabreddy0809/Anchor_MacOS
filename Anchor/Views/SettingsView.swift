@@ -485,6 +485,36 @@ struct SettingsView: View {
                         .truncationMode(.middle)
                         .textSelection(.enabled)
 
+                    Divider().padding(.vertical, 2)
+
+                    // The window is stated, not just configurable. A teacher
+                    // asked by their school what Anchor keeps and for how long
+                    // should be able to read the answer off this pane and repeat
+                    // it, which is also why the sentence below is the same one
+                    // the privacy policy uses.
+                    HStack(spacing: 7) {
+                        Text("Keep history for")
+                            .font(.system(size: 11, weight: .medium))
+
+                        Picker("", selection: $archive.retention) {
+                            ForEach(SessionArchive.RetentionWindow.allCases) { window in
+                                Text(window.label).tag(window)
+                            }
+                        }
+                        .labelsHidden()
+                        .controlSize(.small)
+                        .frame(maxWidth: 210)
+
+                        Spacer(minLength: 0)
+                    }
+
+                    Text(archive.retention.policySentence)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Divider().padding(.vertical, 2)
+
                     HStack(spacing: 7) {
                         Button("Export Training Data…") {
                             TrainingDataExporter.export(

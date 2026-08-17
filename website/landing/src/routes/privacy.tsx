@@ -181,7 +181,10 @@ function Privacy() {
           <li>
             <strong>Session history</strong> — a JSON file in your Mac's Application Support
             directory. It records engagement scores and Zoom signals.{" "}
-            <strong>It never contains a line of speech.</strong>
+            <strong>It never contains a line of speech.</strong> Anchor deletes each session's
+            record <strong>120 days after the class ends</strong>, and removes its own leftover
+            copies of the file on the same schedule. You can change the window, or turn the
+            deletion off, in Settings → Data &amp; Privacy.
           </li>
           <li>
             <strong>Your Google refresh token</strong> — the macOS Keychain. The short-lived access
@@ -311,8 +314,10 @@ function Privacy() {
             <strong>Live transcripts</strong> — discarded automatically when the meeting ends.
           </li>
           <li>
-            <strong>Session history</strong> — kept until you delete it, in the app or by deleting
-            the file.
+            <strong>Session history</strong> — deleted automatically 120 days after each class
+            ends. You can shorten that to nothing, extend it to a school year, or switch automatic
+            deletion off entirely in Settings → Data &amp; Privacy. You can also delete any session
+            or class immediately in the app, or delete the whole file yourself.
           </li>
           <li>
             <strong>Google connection</strong> — disconnect in the app, and revoke Anchor's access

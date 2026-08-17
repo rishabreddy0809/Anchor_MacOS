@@ -24,10 +24,10 @@ export const CONTACT_EMAIL = "rishabreddy0809@gmail.com";
 export const LEGAL_NAME = "Rishab Reddy Paili";
 
 /** Shown on the legal pages. Bump when any of them changes materially. */
-export const LEGAL_LAST_UPDATED = "August 13, 2026";
+export const LEGAL_LAST_UPDATED = "August 17, 2026";
 
 /** Minimum macOS version, from MACOSX_DEPLOYMENT_TARGET in the Xcode project. */
-export const MIN_MACOS = "macOS 26.5";
+export const MIN_MACOS = "macOS 14";
 
 export const MAILTO_PILOT = `mailto:${CONTACT_EMAIL}?subject=Anchor%20pilot%20program`;
 
