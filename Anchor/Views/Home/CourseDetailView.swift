@@ -383,7 +383,7 @@ struct CourseDetailView: View {
                             CourseStudentCard(
                                 rank: index + 1,
                                 student: student,
-                                snapshot: student.matchKey.flatMap { snapshots[$0] }
+                                snapshot: student.rosterKey.flatMap { snapshots[$0] }
                             )
                         }
                         .buttonStyle(.plain)

@@ -110,12 +110,25 @@ nonisolated struct GoogleOAuthConfig: Sendable {
     /// Google presents these as individual tick boxes on the consent screen and
     /// grants only what the teacher ticks, so these are checked after sign-in
     /// rather than assumed. See `GoogleTokens.missingClassroomScopes`.
+    /// `classroom.profile.emails` was removed on 2026-08-17. It was the only
+    /// *sensitive* scope Anchor requested and the only thing standing between
+    /// this app and publishing to Production without Google verification —
+    /// everything left is non-sensitive, and nothing here is restricted.
+    ///
+    /// What it cost: Google no longer returns roster email addresses, so
+    /// `ClassroomStudent.matchKey` is nil for every entry and identity matching
+    /// runs on normalised display names via `AcademicMatchTable.byName`. That
+    /// path was already built and already refuses ambiguous names outright — two
+    /// students who normalise alike both drop out rather than one being guessed
+    /// at — and the UI already labels those links unverified. What changes is
+    /// that it is now the ordinary path rather than the fallback, so a class with
+    /// two Emmas will show both as unmatched until the teacher links them by
+    /// hand in `ManualRosterLinks`.
     static let classroomScopes = [
         "https://www.googleapis.com/auth/classroom.courses.readonly",
         "https://www.googleapis.com/auth/classroom.rosters.readonly",
         "https://www.googleapis.com/auth/classroom.coursework.students",
-        "https://www.googleapis.com/auth/classroom.student-submissions.students.readonly",
-        "https://www.googleapis.com/auth/classroom.profile.emails"
+        "https://www.googleapis.com/auth/classroom.student-submissions.students.readonly"
     ]
 
     /// Everything requested, including identity.

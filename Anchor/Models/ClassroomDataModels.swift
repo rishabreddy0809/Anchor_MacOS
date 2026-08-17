@@ -61,6 +61,22 @@ struct ClassroomStudent: Identifiable, Hashable, Sendable {
     /// The weaker key, used only when Zoom supplies no email. Nil when the name
     /// normalises to nothing to match on.
     var nameMatchKey: String? { ClassroomNameKey.make(name) }
+
+    /// The key an academic snapshot is filed and looked up under.
+    ///
+    /// Email where there is one, normalised name otherwise. This exists because
+    /// Anchor stopped requesting `classroom.profile.emails` on 2026-08-17, so
+    /// `matchKey` is now nil for every roster entry on a normal install — and
+    /// everything that filed or fetched a snapshot by `matchKey` alone was
+    /// therefore about to return nothing at all. The academic columns are ~74%
+    /// of the model's weight, so "nothing at all" is not a degraded mode, it is
+    /// the feature switched off.
+    ///
+    /// Note this is deliberately *not* a claim of identity. `AcademicMatchTable`
+    /// still decides whether a link is `.verified` or `.byName`, still refuses
+    /// ambiguous names outright, and the UI still labels an unverified match as
+    /// unverified. This key only says where the rollup is stored.
+    var rosterKey: String? { matchKey ?? nameMatchKey }
 }
 
 /// Normalises a display name enough that Zoom and Classroom can agree on it.
@@ -197,7 +213,12 @@ struct AcademicSnapshot: Hashable, Sendable {
     /// Classroom user id.
     var studentID: String
     var name: String
-    var email: String
+    /// Optional since 2026-08-17, when Anchor stopped requesting
+    /// `classroom.profile.emails`. On a normal install this is now always nil —
+    /// it stays in the type because a Workspace deployment that grants the scope
+    /// separately would still populate it, and because "we were not told" is a
+    /// state the UI shows rather than hides.
+    var email: String?
 
     /// Past-due assignments with nothing turned in.
     var missingAssignments: [ClassroomAssignment]

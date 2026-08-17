@@ -67,7 +67,7 @@ nonisolated struct AcademicMatchTable: Sendable {
     private var byEmail: [String: ClassroomStudent] = [:]
     private var byName: [String: ClassroomStudent] = [:]
     private var overrides: [String: ClassroomStudent] = [:]
-    private var snapshotsByEmailKey: [String: AcademicSnapshot] = [:]
+    private var snapshotsByRosterKey: [String: AcademicSnapshot] = [:]
 
     /// The empty table — no Classroom connection, no course selected. Every
     /// lookup returns nil, which is what makes Zoom-only scoring the default.
@@ -79,7 +79,7 @@ nonisolated struct AcademicMatchTable: Sendable {
         /// Identity key → Classroom student id, as recorded by the teacher.
         manualLinks: [String: String] = [:]
     ) {
-        snapshotsByEmailKey = snapshots
+        snapshotsByRosterKey = snapshots
 
         let rosterByID = Dictionary(
             roster.map { ($0.id, $0) },
@@ -182,10 +182,10 @@ nonisolated struct AcademicMatchTable: Sendable {
     /// Nil when the student isn't matched, and also when they are matched but
     /// coursework hasn't synced — the caller distinguishes those with `match`.
     func snapshot(forIdentity identityKey: String, name: String? = nil) -> AcademicSnapshot? {
-        guard let key = match(forIdentity: identityKey, name: name)?.student.matchKey else {
+        guard let key = match(forIdentity: identityKey, name: name)?.student.rosterKey else {
             return nil
         }
-        return snapshotsByEmailKey[key]
+        return snapshotsByRosterKey[key]
     }
 
     var isEmpty: Bool { byEmail.isEmpty && byName.isEmpty && overrides.isEmpty }

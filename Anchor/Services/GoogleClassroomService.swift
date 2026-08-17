@@ -569,11 +569,20 @@ nonisolated struct AcademicRollup: Sendable {
         var result: [String: AcademicSnapshot] = [:]
 
         for student in students {
-            guard let matchKey = student.matchKey, let email = student.email else {
-                // No verified email means Anchor will never match this student to
-                // a Zoom participant, so there is nothing to build a snapshot for.
-                continue
-            }
+            // Filed under the roster key — email when Anchor has one, normalised
+            // name otherwise.
+            //
+            // This used to require an email and `continue` without one, on the
+            // reasoning that an unmatched student has nothing to build a
+            // snapshot for. That reasoning stopped holding when Anchor dropped
+            // the classroom.profile.emails scope: every roster entry lost its
+            // email at once, so the guard skipped the entire roster and returned
+            // an empty map — silently taking out all five academic features,
+            // which carry about 74% of the model's weight.
+            //
+            // A student who normalises to no name at all is still skipped: there
+            // is genuinely no key to file them under.
+            guard let matchKey = student.rosterKey else { continue }
 
             var missing: [ClassroomAssignment] = []
             var late = 0
@@ -628,7 +637,7 @@ nonisolated struct AcademicRollup: Sendable {
             result[matchKey] = AcademicSnapshot(
                 studentID: student.id,
                 name: student.name,
-                email: email,
+                email: student.email,
                 missingAssignments: missing.sorted {
                     ($0.dueDate ?? .distantPast) > ($1.dueDate ?? .distantPast)
                 },

@@ -73,8 +73,8 @@ func sortedByAcademicRisk(
     snapshots: [String: AcademicSnapshot]
 ) -> [ClassroomStudent] {
     roster.sorted { lhs, rhs in
-        let left = academicRiskScore(lhs.matchKey.flatMap { snapshots[$0] }) ?? -1
-        let right = academicRiskScore(rhs.matchKey.flatMap { snapshots[$0] }) ?? -1
+        let left = academicRiskScore(lhs.rosterKey.flatMap { snapshots[$0] }) ?? -1
+        let right = academicRiskScore(rhs.rosterKey.flatMap { snapshots[$0] }) ?? -1
         if left != right { return left > right }
         return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
     }

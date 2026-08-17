@@ -140,10 +140,6 @@ function Privacy() {
             state
           </li>
           <li>
-            <code>classroom.profile.emails</code> — student email addresses, used only for roster
-            matching
-          </li>
-          <li>
             <code>classroom.coursework.students</code> — coursework. Google's console does not offer
             a read-only variant of this scope for our configuration, so the broader one is
             requested.{" "}
@@ -153,6 +149,15 @@ function Privacy() {
             <code>userinfo.email</code> — your own email, to show which account is connected
           </li>
         </ul>
+        <p>
+          <strong>Anchor does not request your students' email addresses.</strong> It used to, to
+          match a Classroom roster entry to the right person in the Zoom call. That was the only
+          permission on this list Google classes as sensitive, and it was removed on 17 August 2026.
+          Anchor now matches students by name instead, which is less certain — so it only accepts an
+          unambiguous name, shows any such match as unverified, and asks you to confirm the rest
+          yourself. Two students whose names look alike are both left unmatched rather than one of
+          them being guessed at.
+        </p>
         <p>
           Google shows these as individual checkboxes and grants only what you tick. Anchor checks
           afterwards what was actually granted and degrades rather than failing.
