@@ -521,7 +521,12 @@ nonisolated struct FeatureCalculator: Sendable {
 
         // MARK: Academic
         if let academic {
-            features.applyClassroomFeatures(Self.extractClassroomFeatures(from: academic))
+            // `asOf: now`, not the default. The one time-dependent academic
+            // column reads a gap in days, and this calculator is constructed
+            // with an injected clock precisely so that gap can be pinned.
+            features.applyClassroomFeatures(
+                Self.extractClassroomFeatures(from: academic, asOf: now)
+            )
         }
 
         // MARK: Derived confidence
@@ -540,7 +545,21 @@ nonisolated struct FeatureCalculator: Sendable {
     /// a course with nothing graded yet must not read as a student with no
     /// grades. `observed` records which of these were actually measured, exactly
     /// as it does for the Zoom signals.
-    static func extractClassroomFeatures(from snapshot: AcademicSnapshot) -> ClassroomFeatures {
+    ///
+    /// `asOf` is defaulted for call sites that genuinely mean "right now", but
+    /// `calculateFeatures` must pass its own clock. Reaching the no-argument
+    /// `snapshot.daysSinceSubmission` here read `Date()` directly and threw the
+    /// injected clock away — the identical defect `daysSinceSubmission(asOf:)`
+    /// was added to fix in `AcademicEscalation`, one layer up. Live scoring
+    /// barely noticed, since `now` is usually the wall clock anyway; the export
+    /// path is where it bites. `allInputs` exists to write training rows, and
+    /// rebuilding historical rows stamped every one of them with the gap as of
+    /// the day of the export rather than the gap on the day the row happened,
+    /// which is a column of pure hindsight fed straight back into training.
+    static func extractClassroomFeatures(
+        from snapshot: AcademicSnapshot,
+        asOf now: Date = Date()
+    ) -> ClassroomFeatures {
         var features = ClassroomFeatures()
         features.observed.insert(.academic)
 
@@ -561,7 +580,7 @@ nonisolated struct FeatureCalculator: Sendable {
         // Only meaningful once the course has past-due work. In a brand new
         // course "nothing submitted" is the correct and unremarkable state.
         if snapshot.pastDueCount > 0 {
-            features.daysSinceSubmission = snapshot.daysSinceSubmission ?? 30
+            features.daysSinceSubmission = snapshot.daysSinceSubmission(asOf: now) ?? 30
         }
 
         return features
@@ -582,7 +601,27 @@ nonisolated struct FeatureCalculator: Sendable {
 
     private func messages(of participant: ZoomParticipant, in chat: [ZoomChat]) -> [String] {
         chat.filter { message in
-            if let userID = participant.userID, message.senderID == userID { return true }
+            // When both sides carry an id, the ids settle it — including when
+            // they disagree.
+            //
+            // This used to fall through to the name comparison after a failed
+            // id match, so a message whose sender was known and *different*
+            // could still be claimed on a display-name collision. Two students
+            // who both go by "Ada" is ordinary in a class. So is one student
+            // joining twice, from a laptop and a phone: Zoom reports two
+            // participants sharing a name, and every message got attributed to
+            // both, doubling message_length and hesitation_count for the pair
+            // while the real second device sat there looking silent.
+            //
+            // Safe because the two ids are the same namespace wherever both
+            // exist — ZoomChat is only ever built by the Meeting SDK bridge,
+            // which stringifies the same in-meeting user id it puts on the
+            // participant. The name path is for the REST feed, which reports no
+            // chat at all and no ids worth comparing; it is a fallback for a
+            // missing answer, not an override for an answer we already have.
+            if let userID = participant.userID, let senderID = message.senderID {
+                return senderID == userID
+            }
             return message.senderName == participant.name
         }
         .map(\.message)
@@ -598,7 +637,15 @@ nonisolated struct FeatureCalculator: Sendable {
 
     /// Filler words. The training feature counts spoken hesitations; with no
     /// transcript feed the closest available proxy is the same fillers typed in
-    /// chat, which under-counts rather than over-flags.
+    /// chat.
+    ///
+    /// "like" and "so" are ordinary English as well as hesitations, and this
+    /// cannot tell the two apart: "so I finished the homework" scores a
+    /// hesitation. The set is kept as-is anyway because it is the set the model
+    /// was trained against, and quietly narrowing it here would move the column
+    /// out from under the weights without retraining. Worth revisiting on the
+    /// next retrain, not before — the penalty it feeds is capped at 15 points
+    /// (see `confidenceLevel`), which bounds how wrong this can be.
     private static let fillers: Set<String> = ["um", "umm", "uh", "uhh", "erm", "hmm", "like", "so"]
 
     static func hesitationCount(in text: String) -> Int {
@@ -612,8 +659,20 @@ nonisolated struct FeatureCalculator: Sendable {
 
     static func isQuestion(_ text: String) -> Bool {
         if text.contains("?") { return true }
-        guard let first = words(in: text).first else { return false }
-        return questionOpeners.contains(first)
+        // Look past any leading fillers for the opener.
+        //
+        // Students rarely open a chat question with the interrogative. "so how
+        // do we do part b" and "um what page are we on" are the normal register,
+        // and matching only the literal first word read both as statements. The
+        // cost landed twice on the same student: has_question stayed 0 *and*
+        // hesitation_count went up for the very word that made it miss, so
+        // asking for help the way students actually ask for help scored as
+        // disengaged and hesitant. No filler is also an opener, so skipping them
+        // cannot swallow the word being looked for.
+        guard let opener = words(in: text).first(where: { !fillers.contains($0) }) else {
+            return false
+        }
+        return questionOpeners.contains(opener)
     }
 
     // MARK: - confidence_level

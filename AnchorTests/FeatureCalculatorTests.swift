@@ -484,6 +484,20 @@ final class FeatureCalculatorTests: XCTestCase {
         XCTAssertFalse(features.observed.contains(.speaking))
     }
 
+    func testAReportedZeroSpeakingDurationIsAMeasurementOfSilence() {
+        // The counterpart to the test above, and the pair is the whole point of
+        // `observed`: both vectors carry speakingDuration = 0, and only the
+        // flag says whether that zero was measured. Zoom reporting a total of
+        // zero means we asked and the answer was none; a nil total with nothing
+        // integrated means we never asked.
+        let features = FeatureCalculator(now: now).calculateFeatures(
+            from: participant(speakingSeconds: 0)
+        )
+
+        XCTAssertEqual(features.speakingDuration, 0)
+        XCTAssertTrue(features.observed.contains(.speaking))
+    }
+
     func testANegativeReportedDurationIsFlooredAtZero() {
         // Every column is fed to CoreML as an Int64 in training units; a
         // negative duration is not a value the model has ever seen.
@@ -546,6 +560,50 @@ final class FeatureCalculatorTests: XCTestCase {
         XCTAssertFalse(withoutFeed.observed.contains(.chat))
     }
 
+    func testAMessageFromAKnownDifferentSenderIsNotClaimedByAMatchingName() {
+        // Name matching is the fallback for a missing id, not an override for
+        // one that already answered. Two students who both go by "Ada" is
+        // ordinary in a class, and attributing one's chat to the other moves
+        // message_length, hesitation_count and has_question onto a student who
+        // typed nothing — every chat-derived column at once.
+        let features = FeatureCalculator(now: now).calculateFeatures(
+            from: participant(userID: "u1", name: "Ada"),
+            chat: [chat("i am completely lost", from: "u2", named: "Ada")]
+        )
+
+        XCTAssertEqual(features.messageLength, 0)
+        XCTAssertTrue(
+            features.observed.contains(.chat),
+            "The feed was still read — this student just didn't write in it"
+        )
+    }
+
+    func testOneStudentOnTwoDevicesDoesNotHaveTheirChatCountedTwice() {
+        // The everyday shape of the same bug, and the more likely one: a
+        // student joins from a laptop and a phone, so Zoom reports two
+        // participants sharing a display name and differing in nothing else the
+        // matcher looks at. Both entries used to collect both messages, which
+        // doubled the chat columns for the pair while making it look like two
+        // students were struggling in identical words.
+        let calculator = FeatureCalculator(now: now)
+        let messages = [
+            chat("i am lost", from: "u1", named: "Ada"),
+            chat("still lost here", from: "u2", named: "Ada")
+        ]
+
+        let laptop = calculator.calculateFeatures(
+            from: participant(userID: "u1", name: "Ada"),
+            chat: messages
+        )
+        let phone = calculator.calculateFeatures(
+            from: participant(userID: "u2", name: "Ada"),
+            chat: messages
+        )
+
+        XCTAssertEqual(laptop.messageLength, 3)
+        XCTAssertEqual(phone.messageLength, 3)
+    }
+
     func testHesitationsAreCountedAcrossAllOfAStudentsMessages() {
         let features = FeatureCalculator(now: now).calculateFeatures(
             from: participant(),
@@ -562,6 +620,61 @@ final class FeatureCalculatorTests: XCTestCase {
         XCTAssertTrue(FeatureCalculator.isQuestion("How does that work"))
         XCTAssertFalse(FeatureCalculator.isQuestion("sounds right"))
         XCTAssertFalse(FeatureCalculator.isQuestion(""))
+    }
+
+    func testAQuestionOpeningWithAFillerIsStillAQuestion() {
+        // Students almost never open a chat question with the interrogative.
+        // Matching only the literal first word read all of these as statements,
+        // and the cost landed twice on the same student: has_question stayed 0
+        // *and* hesitation_count rose for the very word that caused the miss.
+        // Asking for help the way students actually ask scored as disengaged
+        // and hesitant at once.
+        XCTAssertTrue(FeatureCalculator.isQuestion("so how do we do part b"))
+        XCTAssertTrue(FeatureCalculator.isQuestion("um what page are we on"))
+        XCTAssertTrue(FeatureCalculator.isQuestion("like is this right"))
+
+        // …without turning every filler-led sentence into a question.
+        XCTAssertFalse(FeatureCalculator.isQuestion("so i finished it"))
+        XCTAssertFalse(FeatureCalculator.isQuestion("um sounds right"))
+    }
+
+    func testAMessageOfNothingButFillersIsNotAQuestion() {
+        // The degenerate case of skipping fillers: skip them all and there is
+        // no opener left to test. Reaching past the end must read as "not a
+        // question" rather than crediting one.
+        XCTAssertFalse(FeatureCalculator.isQuestion("um uh like so"))
+        XCTAssertFalse(FeatureCalculator.isQuestion("hmm"))
+    }
+
+    func testEmojiOnlyChatIsReadAsNoWordsAtAll() {
+        // Known and deliberate, recorded because it is invisible and because
+        // K-12 students react in emoji constantly. message_length counts words,
+        // and the model was trained on a word count, so a thumbs-up is
+        // indistinguishable from silence in a chat we are demonstrably reading.
+        // `observed` still says the feed was live, which is what stops the
+        // confidence estimate treating it as missing data — so the student
+        // reads as present and quiet, not as unmeasured. Fixing it properly
+        // means a column the model has never seen, i.e. a retrain.
+        let features = FeatureCalculator(now: now).calculateFeatures(
+            from: participant(),
+            chat: [chat("👍"), chat("🎉🎉")]
+        )
+
+        XCTAssertEqual(features.messageLength, 0)
+        XCTAssertEqual(features.hasQuestion, 0)
+        XCTAssertTrue(features.observed.contains(.chat))
+    }
+
+    func testEverydayUsesOfSoAndLikeAreCountedAsHesitations() {
+        // Pinned because the proxy over-flags rather than under-flags, which is
+        // the opposite of what is comfortable to assume. "like" and "so" are
+        // ordinary English and this cannot tell the uses apart. The set is left
+        // alone on purpose — it is the set the model was trained against, and
+        // narrowing it here would move the column out from under the weights
+        // without a retrain. The 15-point cap in confidenceLevel is what bounds
+        // the damage in the meantime.
+        XCTAssertEqual(FeatureCalculator.hesitationCount(in: "so i finished all the homework"), 1)
+        XCTAssertEqual(FeatureCalculator.hesitationCount(in: "i like this class"), 1)
     }
 
     // MARK: Accumulators reaching the vector
@@ -679,6 +792,63 @@ final class ConfidenceLevelTests: XCTestCase {
         features.hesitationCount = 50
 
         XCTAssertEqual(FeatureCalculator.confidenceLevel(for: features, meetingElapsed: 0), 85)
+    }
+
+    func testAnAudioFeedEnrollsSpeakingDurationEvenWithNoIntegratedTotal() {
+        // A genuine surprise between two files, pinned so nobody re-derives it.
+        //
+        // `testAZeroFallbackIsNotAMeasurementOfSilence` keeps `.speaking` out of
+        // `observed` so an unmeasured zero cannot be averaged in — but the
+        // speaking component here fires on `.speaking` OR `.audio`, and reads
+        // speakingDuration either way. On the Meeting SDK path audioLevel is
+        // always reported, so `.audio` is always set and that zero is averaged
+        // in after all, on the heaviest component in the estimate.
+        //
+        // Correct, but only because of a layer that lives elsewhere: a student
+        // whose duration is zero because nobody has watched them yet also has
+        // observedSeconds near zero, and ObservationRamp scales their score to
+        // nothing until that changes. Remove the ramp and this becomes a
+        // first-poll false alarm on every student who joins.
+        var heard = StruggleFeatures()
+        heard.observed = [.audio]
+        XCTAssertEqual(FeatureCalculator.confidenceLevel(for: heard, meetingElapsed: 0), 0)
+
+        // With no mic feed at all the same vector is genuinely unknown.
+        var unheard = StruggleFeatures()
+        unheard.observed = []
+        XCTAssertEqual(FeatureCalculator.confidenceLevel(for: unheard, meetingElapsed: 0), 50)
+    }
+
+    func testOneFloodedSignalCannotBuyBackTheOthers() {
+        // Each component's share is clamped to 0...1 before it is weighted, so
+        // a signal cannot earn more than its own weight. Without the clamp a
+        // student who pasted three thousand words into chat would earn ten times
+        // the chat weight and finish at 100 with their camera off and nobody
+        // ever hearing them — the flood alone would paper over every other
+        // column in the vector.
+        var features = StruggleFeatures()
+        features.observed = [.camera, .chat]
+        features.cameraOn = 0
+        features.messageLength = 3_000
+        features.hasQuestion = 1
+
+        let value = FeatureCalculator.confidenceLevel(for: features, meetingElapsed: 0)
+
+        XCTAssertEqual(value, 56)
+        XCTAssertLessThan(value, 100, "The clamp is the whole point of this test")
+    }
+
+    func testTheHesitationPenaltyIsReachedAtFiveFillers() {
+        // The boundary of the cap the test above only probes from far away.
+        // Five is not many for a student who types the way people talk, so this
+        // is the realistic worst case rather than an extreme one.
+        var four = engaged()
+        four.hesitationCount = 4
+        XCTAssertEqual(FeatureCalculator.confidenceLevel(for: four, meetingElapsed: 0), 88)
+
+        var five = engaged()
+        five.hesitationCount = 5
+        XCTAssertEqual(FeatureCalculator.confidenceLevel(for: five, meetingElapsed: 0), 85)
     }
 
     func testRefreshUsesTheElapsedTimeStoredOnTheVector() {
@@ -912,6 +1082,69 @@ final class ClassroomFeatureExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(features.daysSinceSubmission, 30)
+    }
+
+    func testTheSubmissionGapIsMeasuredAgainstTheSuppliedClock() {
+        let submitted = Date(timeIntervalSince1970: 1_700_000_000)
+        let twelveDaysLater = Calendar.current.date(byAdding: .day, value: 12, to: submitted)!
+
+        let features = FeatureCalculator.extractClassroomFeatures(
+            from: snapshot(pastDue: 2, lastSubmission: submitted),
+            asOf: twelveDaysLater
+        )
+
+        XCTAssertEqual(features.daysSinceSubmission, 12)
+    }
+
+    func testTheCalculatorsOwnClockReachesTheSubmissionGap() {
+        // The regression that matters, and it is the same defect
+        // `daysSinceSubmission(asOf:)` was written to fix in AcademicEscalation,
+        // repeated one layer up: FeatureCalculator takes an injected clock and
+        // then called the extractor with no clock at all, which reached the
+        // property that reads `Date()` directly.
+        //
+        // Live scoring barely noticed, because `now` is normally the wall clock
+        // anyway. The export path is where it bites — `allInputs` exists to
+        // write training rows, and rebuilding historical rows stamped every one
+        // of them with the gap as of the day of the export instead of the gap on
+        // the day the row happened. That is a column of pure hindsight fed back
+        // into the model that reads it.
+        let submitted = Date(timeIntervalSince1970: 1_700_000_000)
+        let twelveDaysLater = Calendar.current.date(byAdding: .day, value: 12, to: submitted)!
+
+        let features = FeatureCalculator(now: twelveDaysLater).calculateFeatures(
+            from: ZoomParticipant(id: "p1", name: "Ada", isInMeeting: true),
+            academic: snapshot(pastDue: 2, lastSubmission: submitted)
+        )
+
+        XCTAssertEqual(features.daysSinceSubmission, 12)
+    }
+
+    func testAMeasuredZeroGradeIsNotTheInGoodStandingDefault() {
+        // 0.0 is the one average that has to survive the optional unwrap on its
+        // own merits: a student failing everything and a course with nothing
+        // marked must not arrive at the model as the same vector.
+        let failing = FeatureCalculator.extractClassroomFeatures(
+            from: snapshot(graded: 5, average: 0.0)
+        )
+        XCTAssertEqual(failing.gradeAverage, 0)
+        XCTAssertTrue(failing.observed.contains(.grades))
+
+        let unmarked = FeatureCalculator.extractClassroomFeatures(from: snapshot())
+        XCTAssertEqual(unmarked.gradeAverage, 80)
+        XCTAssertFalse(unmarked.observed.contains(.grades))
+    }
+
+    func testFullMarksLandAtTheTopOfTheColumn() {
+        // The upper bound holds because ClassroomSubmission.fraction clamps to
+        // 0...1 at the source, which is what keeps extra credit — points above
+        // an assignment's maximum, which Classroom does allow — from handing the
+        // model a percentage it has never seen.
+        let features = FeatureCalculator.extractClassroomFeatures(
+            from: snapshot(graded: 5, average: 1.0)
+        )
+
+        XCTAssertEqual(features.gradeAverage, 100)
     }
 
     func testCountsPassStraightThrough() {
