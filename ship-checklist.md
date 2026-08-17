@@ -41,7 +41,7 @@ Decisions to lock in first, since they change what "done" means for everything b
 ## 5. Known bugs to fix
 
 - [x] `PKCE.makeCodeVerifier()` discarded the `SecRandomCopyBytes` status and used the buffer regardless — fixed 2026-08-17, it now checks the status and traps. A silent RNG failure would have handed out a predictable verifier while every other part of the flow looked correct, which is the kind of thing that never shows up in a successful sign-in test.
-- [ ] Bot appears as a scored "student" in its own roster — filter using the SDK's `isMySelf` flag (currently unused in `ZoomMeetingSDKBridge.swift`)
+- [x] **Bot appears as a scored "student" in its own roster** — already fixed; this line was stale. `ZoomMeetingSDKBridge` sets `isSelf: info.isMySelf()` and `MeetingRoles.isBot` checks it first, ahead of the host check, so the bot is filtered even in a meeting it happens to host. REST reports no `isSelf`, so on that path the bot is matched by the name it joined under — as a prefix, to survive the suffix Zoom appends when a display name is already taken. Pinned by `MeetingRolesTests` on 2026-08-17. One trap left in place deliberately: `botName` is prefix-matched, so a deployment overriding the default with something short like "Anchor" *would* claim a student called "Anchor Patel" and drop them from the dashboard with nothing on screen to say so. The shipped default ("Anchor (engagement assistant)") is long and parenthesised precisely so that stays hypothetical — anything replacing it has to be too.
 - [ ] Reconnection handling: verify behavior when a meeting drops, laptop sleeps, or Wi-Fi blips mid-session — currently untested
 - [ ] Multi-participant scale: validate UI, polling cadence, and Classroom sync cost with a real class size (20–30 students), not just 2–3 known test accounts
 
@@ -82,7 +82,7 @@ Decisions to lock in first, since they change what "done" means for everything b
 
 ## 9. QA pass before calling it v1
 
-- [x] Automated coverage exists at all — an `AnchorTests` XCTest target, 25 passing tests over ObservationRamp, EngagementDrift, EngagementRecovery and the RiskLevel thresholds (added 2026-08-17; the repo had none before). These pin the score-shaping arithmetic and the three cut-offs, which is the part a refactor can quietly move without anything looking wrong on screen. It says nothing about the manual passes below, which all stay open.
+- [x] Automated coverage exists at all — an `AnchorTests` XCTest target, **156 passing tests** as of 2026-08-17 (the repo had none before that day). Grown in four passes, each pinning a layer where a mistake is silent rather than loud: score shaping and the three RiskLevel cut-offs; the academic escalation rules; the 16-feature vector and the cross-poll accumulators that build it (`FeatureCalculatorTests`); the Zoom redirect transports, driven over a real loopback socket (`ZoomRedirectTransportTests`); and the roster gate that decides who is scored at all (`MeetingRolesTests`). Those passes found five real defects between them — three in the feature vector, two in the redirect transports; the roster gate turned out to be already correct and is simply pinned now. See the commit messages for what and why. It still says nothing about the manual passes below, which all stay open.
 - [ ] Full session, start to finish, with a real unfamiliar class size
 - [ ] Network interruption recovery
 - [ ] Classroom disconnect/reconnect flow
