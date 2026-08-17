@@ -85,6 +85,16 @@
 		FEB58559513E438EA1EC524E /* ZoomUnit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 46A32461F3854618A32B4647 /* ZoomUnit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		7E57A00000000000000000B1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AB1DB2B3301D13CF00900A4E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AB1DB2BA301D13CF00900A4E;
+			remoteInfo = Anchor;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXCopyFilesBuildPhase section */
 		C4AEBDCB2C264A4F9AC6FBC2 /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -158,6 +168,7 @@
 		7A7FF16B47F546689CC71DAF /* zChatComponent.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = zChatComponent.framework; sourceTree = "<group>"; };
 		7B7882EE41504F158510B782 /* libssl.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libssl.dylib; sourceTree = "<group>"; };
 		7DAF95C9042744BC8DA787DA /* ZoomMeetingBridge.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ZoomMeetingBridge.framework; sourceTree = "<group>"; };
+		7E57A00000000000000000A2 /* AnchorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AnchorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		89FAA89BC8D849F7AD4BF6F4 /* zBusinessUIComponent.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = zBusinessUIComponent.framework; sourceTree = "<group>"; };
 		988BB19EDAF242AA81BEB1CC /* zm_conf_universal_ui_plugin.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = zm_conf_universal_ui_plugin.framework; sourceTree = "<group>"; };
 		9A85C73C050045ABB1036D67 /* libcrypto.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libcrypto.dylib; sourceTree = "<group>"; };
@@ -179,6 +190,11 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		7E57A00000000000000000A3 /* AnchorTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AnchorTests;
+			sourceTree = "<group>";
+		};
 		AB1DB2BD301D13CF00900A4E /* Anchor */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Anchor;
@@ -187,6 +203,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		7E57A00000000000000000A5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		AB1DB2B8301D13CF00900A4E /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -284,6 +307,7 @@
 			isa = PBXGroup;
 			children = (
 				AB1DB2BD301D13CF00900A4E /* Anchor */,
+				7E57A00000000000000000A3 /* AnchorTests */,
 				AAAF97E07CB14F2C9086AB3A /* ZoomSDK */,
 				AB1DB2BC301D13CF00900A4E /* Products */,
 			);
@@ -293,6 +317,7 @@
 			isa = PBXGroup;
 			children = (
 				AB1DB2BB301D13CF00900A4E /* Anchor.app */,
+				7E57A00000000000000000A2 /* AnchorTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -300,6 +325,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		7E57A00000000000000000A1 /* AnchorTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7E57A00000000000000000A7 /* Build configuration list for PBXNativeTarget "AnchorTests" */;
+			buildPhases = (
+				7E57A00000000000000000A4 /* Sources */,
+				7E57A00000000000000000A5 /* Frameworks */,
+				7E57A00000000000000000A6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7E57A00000000000000000B2 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				7E57A00000000000000000A3 /* AnchorTests */,
+			);
+			name = AnchorTests;
+			packageProductDependencies = (
+			);
+			productName = AnchorTests;
+			productReference = 7E57A00000000000000000A2 /* AnchorTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		AB1DB2BA301D13CF00900A4E /* Anchor */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = AB1DB2C6301D13D000900A4E /* Build configuration list for PBXNativeTarget "Anchor" */;
@@ -354,11 +402,19 @@
 			projectRoot = "";
 			targets = (
 				AB1DB2BA301D13CF00900A4E /* Anchor */,
+				7E57A00000000000000000A1 /* AnchorTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		7E57A00000000000000000A6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		AB1DB2B9301D13CF00900A4E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -386,6 +442,13 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		7E57A00000000000000000A4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		AB1DB2B7301D13CF00900A4E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -395,7 +458,59 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		7E57A00000000000000000B2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AB1DB2BA301D13CF00900A4E /* Anchor */;
+			targetProxy = 7E57A00000000000000000B1 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		7E57A00000000000000000A8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/ZoomSDK",
+				);
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = SYLM5655ZW;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Rishab-Reddy.AnchorTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Anchor.app/Contents/MacOS/Anchor";
+			};
+			name = Debug;
+		};
+		7E57A00000000000000000A9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/ZoomSDK",
+				);
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = SYLM5655ZW;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Rishab-Reddy.AnchorTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Anchor.app/Contents/MacOS/Anchor";
+			};
+			name = Release;
+		};
 		AB1DB2C4301D13D000900A4E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -450,7 +565,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -508,7 +623,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
@@ -609,6 +724,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		7E57A00000000000000000A7 /* Build configuration list for PBXNativeTarget "AnchorTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7E57A00000000000000000A8 /* Debug */,
+				7E57A00000000000000000A9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		AB1DB2B6301D13CF00900A4E /* Build configuration list for PBXProject "Anchor" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
