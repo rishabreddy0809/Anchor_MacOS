@@ -401,7 +401,20 @@ nonisolated struct StruggleSignalHistory: Hashable, Sendable {
         if handRaised, !wasHandRaised {
             next.handRaiseCount += 1
         }
-        if isTalking || (handRaised && !wasHandRaised) {
+        // Level, not edge — and the distinction matters more than it looks.
+        //
+        // `handRaiseCount` above is edge-counted, correctly: a hand held up
+        // across three polls is one raise. `lastEngagementAt` answers a
+        // different question — when did this student last do something active —
+        // and a hand that is still up is still active. Sharing the edge
+        // condition meant a student who raised their hand and waited to be
+        // called on stopped counting as engaged the instant the edge passed,
+        // aged out of EngagementDrift's five-minute grace period, and began
+        // accruing a drift penalty while their hand was still raised. Anchor
+        // would then offer the teacher "hasn't spoken in 8 min — ask them a
+        // direct question" about the one student in the room already asking for
+        // precisely that.
+        if isTalking || handRaised {
             next.lastEngagementAt = now
         }
 
