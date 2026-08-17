@@ -39,6 +39,7 @@ import FoundationModels
 /// optionals, but an empty string is the one shape that cannot be ambiguous
 /// across schema versions, and the conversion into `ClassTopic` normalises it
 /// into a real Optional immediately.
+@available(macOS 26.0, *)
 @Generable
 nonisolated struct ExtractedTopic {
 
@@ -73,8 +74,25 @@ nonisolated struct ExtractedTopic {
 }
 
 /// The teacher-facing wording for one recommendation.
-@Generable
+///
+/// Deliberately *not* the `@Generable` type. Every symbol in FoundationModels is
+/// macOS 26 or later, and this value crosses back into
+/// `RecommendationGenerator`, which has to keep compiling — and running — on
+/// older systems. So the generation schema is `GeneratedPhrasing` below, and
+/// `phrase(_:)` converts at the boundary. It already did, before any of this was
+/// gated; the two types were always separate values.
 nonisolated struct PhrasedRecommendation {
+    var headline: String
+    var reason: String
+}
+
+/// The generation schema behind `PhrasedRecommendation`.
+///
+/// Carries the guides, because they are instructions to the model rather than
+/// facts about the value.
+@available(macOS 26.0, *)
+@Generable
+nonisolated struct GeneratedPhrasing {
 
     // Must name a *subject*. Without the second sentence the model falls back on
     // bare urgency — "Pull back now", "Check in immediately" — which tells a
@@ -140,22 +158,14 @@ actor FoundationModelAnalyzer {
     /// lesson, and a cached "unavailable" would keep the feature dark for the
     /// rest of the class.
     func availability() -> LiveCoachAvailability {
-        let resolved: LiveCoachAvailability
-        switch SystemLanguageModel.default.availability {
-        case .available:
-            resolved = .ready
-        case .unavailable(.deviceNotEligible):
-            resolved = .deviceNotEligible
-        case .unavailable(.appleIntelligenceNotEnabled):
-            resolved = .notEnabled
-        case .unavailable(.modelNotReady):
-            resolved = .modelNotReady
-        case .unavailable:
-            // A reason added after this was written. Reported as a generic
-            // failure rather than silently mapped onto one of the known cases,
-            // whose remedies would then be wrong.
-            resolved = .failed("Apple Intelligence is unavailable on this Mac.")
+        // The OS check comes first and is the only one that can be answered
+        // without touching FoundationModels at all. Below macOS 26 the framework
+        // has no symbols to ask, so there is nothing to fall through to.
+        guard #available(macOS 26.0, *) else {
+            cachedAvailability = .requiresNewerMacOS
+            return .requiresNewerMacOS
         }
+        let resolved = resolvedAvailability()
         cachedAvailability = resolved
         return resolved
     }
@@ -168,6 +178,55 @@ actor FoundationModelAnalyzer {
     /// no discernible topic — all of which the caller treats identically, by
     /// keeping whatever topic is already on screen.
     func extractTopic(from excerpt: String, now: Date = Date()) async -> ClassTopic? {
+        guard #available(macOS 26.0, *) else { return nil }
+        return await extractTopicUsingModel(from: excerpt, now: now)
+    }
+
+    // MARK: Recommendation phrasing
+
+    /// Writes the headline and reason for one recommendation.
+    ///
+    /// Returns nil on any failure, including a guardrail refusal and including
+    /// an OS too old to have the framework at all. A refusal is not an error
+    /// condition worth surfacing: the facts are still true and
+    /// RecommendationGenerator will state them in its own words.
+    func phrase(_ request: PhrasingRequest) async -> PhrasedRecommendation? {
+        guard #available(macOS 26.0, *) else { return nil }
+        return await phraseUsingModel(request)
+    }
+}
+
+// MARK: - Generation
+//
+// Everything below touches FoundationModels, so all of it is macOS 26 or later.
+// The split is what lets the rest of Anchor — the scoring, the roster, the
+// archive, every view — deploy back to macOS 15, which is the difference between
+// a handful of teachers and most of them. Nothing here is reachable on an older
+// system: the three entry points above gate on `#available` and return the same
+// values they already returned when Apple Intelligence was switched off.
+
+@available(macOS 26.0, *)
+extension FoundationModelAnalyzer {
+
+    func resolvedAvailability() -> LiveCoachAvailability {
+        switch SystemLanguageModel.default.availability {
+        case .available:
+            .ready
+        case .unavailable(.deviceNotEligible):
+            .deviceNotEligible
+        case .unavailable(.appleIntelligenceNotEnabled):
+            .notEnabled
+        case .unavailable(.modelNotReady):
+            .modelNotReady
+        case .unavailable:
+            // A reason added after this was written. Reported as a generic
+            // failure rather than silently mapped onto one of the known cases,
+            // whose remedies would then be wrong.
+            .failed("Apple Intelligence is unavailable on this Mac.")
+        }
+    }
+
+    func extractTopicUsingModel(from excerpt: String, now: Date) async -> ClassTopic? {
         guard availability().isReady else { return nil }
 
         let trimmed = excerpt.trimmed
@@ -306,14 +365,7 @@ actor FoundationModelAnalyzer {
         )
     }
 
-    // MARK: Recommendation phrasing
-
-    /// Writes the headline and reason for one recommendation.
-    ///
-    /// Returns nil on any failure, including a guardrail refusal. A refusal is
-    /// not an error condition worth surfacing: the facts are still true and
-    /// RecommendationGenerator will state them in its own words.
-    func phrase(_ request: PhrasingRequest) async -> PhrasedRecommendation? {
+    func phraseUsingModel(_ request: PhrasingRequest) async -> PhrasedRecommendation? {
         guard availability().isReady else { return nil }
 
         let session = LanguageModelSession(
@@ -337,7 +389,7 @@ actor FoundationModelAnalyzer {
             let response = try await withTimeout(seconds: Self.phrasingTimeout) {
                 try await session.respond(
                     to: Self.prompt(for: request),
-                    generating: PhrasedRecommendation.self,
+                    generating: GeneratedPhrasing.self,
                     options: GenerationOptions(temperature: 0.4)
                 )
             }

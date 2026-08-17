@@ -376,6 +376,12 @@ nonisolated struct LiveRecommendation: Identifiable, Hashable, Sendable {
 nonisolated enum LiveCoachAvailability: Equatable, Sendable {
     case checking
     case ready
+    /// The Mac is running a macOS older than FoundationModels requires.
+    ///
+    /// Deliberately distinct from `deviceNotEligible`: the hardware here may be
+    /// perfectly capable and one software update away, so telling this teacher
+    /// their Mac "can't run Apple Intelligence" would be false.
+    case requiresNewerMacOS
     /// The Mac can't run Apple Intelligence at all.
     case deviceNotEligible
     /// Apple Intelligence is off in System Settings.
@@ -391,6 +397,7 @@ nonisolated enum LiveCoachAvailability: Equatable, Sendable {
         switch self {
         case .checking: "Checking the on-device model…"
         case .ready: "Recommendations are generated on-device."
+        case .requiresNewerMacOS: "Apple Intelligence needs macOS 26 or later."
         case .deviceNotEligible: "This Mac can't run Apple Intelligence."
         case .notEnabled: "Apple Intelligence is turned off."
         case .modelNotReady: "Apple Intelligence is still downloading its model."
@@ -402,6 +409,10 @@ nonisolated enum LiveCoachAvailability: Equatable, Sendable {
         switch self {
         case .checking, .ready:
             nil
+        case .requiresNewerMacOS:
+            "Update this Mac to macOS 26 or later to have Anchor phrase "
+            + "recommendations. Until then it composes them from the matched "
+            + "signals, and everything else works exactly the same."
         case .deviceNotEligible:
             "Anchor will still match the topic against each student's coursework "
             + "and write the recommendation from the matched signals — only the "
