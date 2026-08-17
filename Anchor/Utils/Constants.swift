@@ -44,6 +44,26 @@ nonisolated enum ZoomConfig {
 
     /// Scopes the Server-to-Server OAuth app needs. Classic names first, with
     /// the granular equivalents Zoom now issues for new apps.
+    ///
+    /// **Two of these cannot be granted on every plan, and that is a product
+    /// constraint rather than a configuration mistake.** Verified in the
+    /// Marketplace console on 2026-08-17: the scope picker offers only the
+    /// categories the signed-in account is entitled to, and on a Pro or Basic
+    /// account it lists no Dashboard and no Report category at all — Zoom's own
+    /// wording is "the following scopes are available based on your account
+    /// privileges. For additional scopes, contact your account admin."
+    ///
+    /// The two affected rows are the *only* ones that read participants. Without
+    /// them the OAuth path can find the live meeting and identify the host and
+    /// then see nobody inside it, so every engagement signal has to come from
+    /// the Meeting SDK bot. The bot is therefore not an enhancement to the REST
+    /// path on those accounts; it is the whole signal source.
+    ///
+    /// Consequence for a deployment: "which Zoom plan is the account on" is a
+    /// qualifying question, not a detail. Business, Education or Enterprise gets
+    /// both paths; Pro or Basic gets the bot alone, and `ZoomCapabilities`
+    /// should be the thing that says so rather than a roster that silently
+    /// stays empty.
     static let requiredScopes: [(classic: String, granular: String, purpose: String)] = [
         ("user:read:admin",
          "user:read:user:admin",
