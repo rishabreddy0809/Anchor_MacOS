@@ -349,7 +349,26 @@ nonisolated enum ZoomError: LocalizedError, Equatable, Sendable {
         }
     }
 
-    /// Whether the polling loop should retry rather than stop.
+    /// The provider's own "come back in N seconds", when it sent one.
+    ///
+    /// Zoom returns `Retry-After` on a 429 and it is better information than any
+    /// ladder Anchor invents. `PollSchedule.retryInterval` takes it as a floor —
+    /// see the reasoning there for why a floor rather than an override.
+    var retryAfterSeconds: TimeInterval? {
+        guard case .rateLimited(let retryAfter) = self else { return nil }
+        return retryAfter
+    }
+
+    /// Whether a failure is worth trying again at all.
+    ///
+    /// Read by the participant-email refresh, which gives up permanently on a
+    /// failure this rejects. Deliberately *not* what the main polling loop
+    /// branches on: that loop stops only for `requiresUserAction`, so a
+    /// `.decoding` or `.unsupported` failure keeps retrying there even though
+    /// this says it is not retryable. That difference is intended — a transient
+    /// malformed response should not end a lesson's monitoring outright, and
+    /// stopping mid-class is a worse failure than a few wasted polls — but the
+    /// two must not be confused for one another.
     var isRetryable: Bool {
         switch self {
         case .network, .rateLimited, .noActiveMeeting, .meetingEnded, .server:

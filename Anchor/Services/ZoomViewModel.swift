@@ -425,20 +425,41 @@ final class ZoomViewModel: ObservableObject {
         while !Task.isCancelled {
             await performSync()
 
-            if consecutiveFailures > 0 {
+            // Drawn once for this cycle, and that is the point.
+            //
+            // The wait below re-read the interval on every 500ms slice, which
+            // re-drew the random jitter each time. Two things went wrong with
+            // that. The number shown to the teacher as "Reconnecting… retrying
+            // in Ns" was an independent sample from the one actually waited on,
+            // so the countdown described a retry that was never going to happen
+            // at that moment. And the loop broke on the *smallest* value it
+            // happened to draw, which pulls the effective wait down toward the
+            // base and undoes the decorrelation the jitter exists to provide.
+            let retry = consecutiveFailures > 0 ? retryInterval() : nil
+
+            if let retry {
                 state = .retrying(
-                    after: nextInterval(),
+                    after: retry,
                     reason: lastError?.errorDescription ?? "Retrying"
                 )
             }
 
-            // Wait in short slices and re-check the target each time, so
-            // dropping the refresh interval — or the bot joining and unlocking
-            // the faster floor — takes effect within half a second instead of
-            // after the current wait runs out.
+            // Wait in short slices so a change takes effect within half a second
+            // rather than after the current wait runs out.
             let waitStartedAt = Date()
             while !Task.isCancelled {
-                if Date().timeIntervalSince(waitStartedAt) >= nextInterval() { break }
+                // The steady cadence is re-read every slice, so dropping the
+                // refresh interval — or the bot joining and unlocking the faster
+                // floor — applies immediately. A retry wait is deliberately not
+                // re-read: it is one fixed target for this cycle. It is dropped
+                // the moment the failure count clears, which is what lets a
+                // manual Reconnect cut a five-minute backoff short instead of
+                // leaving the teacher staring at a dashboard that has already
+                // recovered.
+                let target = consecutiveFailures > 0
+                    ? (retry ?? steadyInterval())
+                    : steadyInterval()
+                if Date().timeIntervalSince(waitStartedAt) >= target { break }
                 do {
                     try await Task.sleep(nanoseconds: 500_000_000)
                 } catch {
@@ -448,21 +469,22 @@ final class ZoomViewModel: ObservableObject {
         }
     }
 
-    /// Poll interval on success; exponential backoff after failures.
-    ///
-    /// The floor depends on where the data comes from. A joined bot is read
-    /// in-process, so it can honour a 10-second setting exactly; the REST
-    /// Dashboard path is heavy rate-limited and stays at 30 seconds however low
-    /// the setting goes. `pollFloorNotice` tells the teacher when that applies
-    /// rather than silently ignoring what they picked.
-    private func nextInterval() -> TimeInterval {
-        guard consecutiveFailures > 0 else {
-            return max(currentPollFloor, store.settings.refreshInterval.seconds)
-        }
-        let index = min(consecutiveFailures - 1, ZoomConfig.backoffLadder.count - 1)
-        let base = ZoomConfig.backoffLadder[index]
-        // Jitter so multiple clients don't retry in lockstep.
-        return base + Double.random(in: 0...(base * 0.2))
+    /// Cadence when the last sync succeeded.
+    private func steadyInterval() -> TimeInterval {
+        PollSchedule.steadyInterval(
+            floor: currentPollFloor,
+            chosen: store.settings.refreshInterval.seconds
+        )
+    }
+
+    /// Backoff after a failure, honouring Zoom's own `Retry-After` when it sent
+    /// one. The jitter is drawn here, once per retry — see `PollSchedule`.
+    private func retryInterval() -> TimeInterval {
+        PollSchedule.retryInterval(
+            consecutiveFailures: consecutiveFailures,
+            jitterFraction: Double.random(in: 0...1),
+            retryAfter: lastError?.retryAfterSeconds
+        )
     }
 
     /// Fastest cadence the current data source can sustain.
