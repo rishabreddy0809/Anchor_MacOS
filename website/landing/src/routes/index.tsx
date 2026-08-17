@@ -98,9 +98,15 @@ function Hero() {
               aren't saying.
             </span>
           </h1>
+          {/* Outcome first, privacy second, mechanism third — in that order on
+              purpose. The people reading this teach children online, and an app
+              that watches a class is guilty until proven otherwise. Leading with
+              "reads live Zoom behavior" asked them to trust the mechanism before
+              they had any reason to. */}
           <p className="mt-6 max-w-lg text-lg text-muted-invert">
-            Anchor reads live Zoom behavior and Google Classroom signals to surface struggling
-            students while you can still help them.
+            The student who goes quiet is the one you lose. Anchor surfaces them while the lesson is
+            still running — reading participation and coursework on your own Mac. No video, and
+            nothing leaves your computer.
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <Link
@@ -166,9 +172,20 @@ function Solution() {
         <div>
           <Reveal from="left">
             <p className="eyebrow text-muted-foreground">The solution</p>
-            <h2 className="mt-4 text-3xl font-bold sm:text-5xl">Real-time struggle detection</h2>
+            {/* Was "Anchor monitors behavioral signals to identify at-risk
+                students instantly." Two problems. "Monitors" is the word this
+                audience is scanning for, and "instantly" was simply untrue:
+                ObservationRamp deliberately holds every score down for the
+                first ten minutes of watching a student, because minute zero of
+                a class is indistinguishable from a room full of disengaged
+                students. Claiming the opposite of a designed behaviour is the
+                kind of thing a pilot teacher notices in week one. */}
+            <h2 className="mt-4 text-3xl font-bold sm:text-5xl">
+              Who needs you, while you can still act
+            </h2>
             <p className="mt-5 text-lg text-muted-foreground">
-              Anchor monitors behavioral signals to identify at-risk students instantly.
+              Anchor reads participation and coursework together, names the student worth checking
+              on, and gives you the question to ask them.
             </p>
           </Reveal>
 
@@ -272,9 +289,9 @@ function Dashboard() {
       <Showcase
         eyebrow="Your dashboard"
         title="Every class you've taught, in one place"
-        copy="Anchor keeps what happened after the meeting ends: which classes you monitored, who was behind on work, and every recorded session you can open back up. It is there when the class isn't."
+        copy="Anchor keeps what happened after the meeting ends: which classes you ran, who was behind on work, and every session you can open back up. It is there when the class isn't — and it clears itself after a term unless you say otherwise."
         img={homeShot}
-        alt="Anchor's home dashboard: a live class banner, a monitored Google Classroom course showing three students behind on work, and a list of recent recorded sessions"
+        alt="Anchor's home dashboard: a live class banner, a linked Google Classroom course showing three students behind on work, and a list of recent recorded sessions"
         w={1100}
         h={647}
       />
