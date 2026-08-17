@@ -247,7 +247,19 @@ nonisolated final class URLSchemeHandler: @unchecked Sendable {
         _ redirect: OAuthRedirect,
         state: String
     ) -> Result<OAuthRedirect, Error> {
+        // Errors first, whatever state they carry. The comment above has always
+        // promised this and the code did not do it: the state check ran first,
+        // so a provider that reports a denial without echoing `state` had its
+        // "you declined" turned into "the response didn't match the request
+        // Anchor sent". There is no code in an error response, so nothing can be
+        // exchanged and nothing is at risk in passing it through — the check
+        // that matters is the one guarding a *success*, below. This also puts
+        // the two transports back in agreement; LoopbackRedirectListener has
+        // always passed errors through, and they are meant to be
+        // interchangeable behind one `wait`.
+        if redirect.error != nil { return .success(redirect) }
         guard redirect.state == state else { return .failure(OAuthRedirectError.stateMismatch) }
+        guard redirect.code != nil else { return .failure(OAuthRedirectError.missingCode) }
         return .success(redirect)
     }
 

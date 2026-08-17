@@ -138,9 +138,10 @@ nonisolated final class LoopbackRedirectListener: @unchecked Sendable {
         let expected = expectedState
         lock.unlock()
 
+        let stateMatches = redirect.state == expected
         let succeeded = redirect.error == nil
             && redirect.code != nil
-            && redirect.state == expected
+            && stateMatches
 
         let body = Self.responseHTML(succeeded: succeeded)
         let response = """
@@ -156,7 +157,17 @@ nonisolated final class LoopbackRedirectListener: @unchecked Sendable {
         }
 
         guard succeeded || redirect.error != nil else {
-            finish(with: .failure(OAuthRedirectError.stateMismatch))
+            // Name the failure that actually happened. A redirect whose state
+            // matched but carried no code is not a state mismatch, and saying so
+            // sends whoever is debugging it hunting for a CSRF problem that
+            // isn't there. This flow's real failure mode is a redirect URL that
+            // doesn't match the Marketplace registration character for
+            // character, and Zoom announces that by sending back something other
+            // than a code — so the message a teacher forwards has to distinguish
+            // the two. `.missingCode` existed for this and was never thrown.
+            finish(with: .failure(stateMatches
+                ? OAuthRedirectError.missingCode
+                : OAuthRedirectError.stateMismatch))
             return
         }
         finish(with: .success(redirect))
