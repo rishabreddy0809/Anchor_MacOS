@@ -206,7 +206,12 @@ nonisolated struct AcademicEscalation: Sendable {
 
         // Gone quiet on submissions, but only where the course actually expected
         // something by now.
-        if snapshot.pastDueCount > 0, let days = snapshot.daysSinceSubmission, days >= 14 {
+        //
+        // `asOf: now` rather than the bare property. This type takes an
+        // injectable clock so its rules can be evaluated at a fixed moment, and
+        // reading `Date()` inside the property made that injection a no-op —
+        // the one time-dependent rule here was the one thing it could not reach.
+        if snapshot.pastDueCount > 0, let days = snapshot.daysSinceSubmission(asOf: now), days >= 14 {
             found.append(AcademicFactor(
                 title: "Nothing submitted in \(days) days",
                 severity: .medium,

@@ -281,12 +281,23 @@ struct AcademicSnapshot: Hashable, Sendable {
         }
     }
 
-    var daysSinceSubmission: Int? {
+    var daysSinceSubmission: Int? { daysSinceSubmission(asOf: Date()) }
+
+    /// The same figure against a caller-supplied clock.
+    ///
+    /// `AcademicEscalation` takes an injectable `now` so its rules can be
+    /// reasoned about and tested at a fixed moment. That injection was silently
+    /// doing nothing: the one time-dependent rule it has — "nothing submitted in
+    /// N days" — reached this property, which read `Date()` directly. So the
+    /// escalation could not be tested against a fixed clock however the caller
+    /// constructed it. The parameter is the fix; the property above keeps every
+    /// other call site unchanged.
+    func daysSinceSubmission(asOf now: Date) -> Int? {
         guard let lastSubmission else { return nil }
         return max(0, Calendar.current.dateComponents(
             [.day],
             from: lastSubmission,
-            to: Date()
+            to: now
         ).day ?? 0)
     }
 

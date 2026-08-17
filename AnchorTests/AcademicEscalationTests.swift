@@ -62,7 +62,7 @@ final class AcademicEscalationTests: XCTestCase {
             average: 0.31,
             trend: -0.30,
             pastDue: 12,
-            lastSubmission: Calendar.current.date(byAdding: .day, value: -40, to: Date())!
+            lastSubmission: Calendar.current.date(byAdding: .day, value: -40, to: now)!
         )
     }
 
@@ -282,7 +282,7 @@ final class AcademicEscalationTests: XCTestCase {
     func testGoingQuietOnSubmissionsNeedsACourseThatExpectedSomething() {
         // Without the pastDueCount guard, every student in a course that has
         // set no deadlines yet reads as having gone silent on their work.
-        let silent = Calendar.current.date(byAdding: .day, value: -21, to: Date())!
+        let silent = Calendar.current.date(byAdding: .day, value: -21, to: now)!
 
         // The single late submission is there only so the snapshot is not
         // `isEmpty`, which would short-circuit `apply` before any rule runs.
@@ -303,7 +303,7 @@ final class AcademicEscalationTests: XCTestCase {
 
     func testAFortnightIsTheThresholdForSilence() {
         func impact(daysAgo: Int) -> Double {
-            let date = Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date())!
+            let date = Calendar.current.date(byAdding: .day, value: -daysAgo, to: now)!
             return AcademicEscalation(now: now)
                 .apply(
                     to: 0.30,

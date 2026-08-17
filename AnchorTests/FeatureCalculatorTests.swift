@@ -119,6 +119,46 @@ final class StruggleSignalHistoryTests: XCTestCase {
         XCTAssertLessThan(next.observedSeconds, 3_600, "The clamp is the whole point of this test")
     }
 
+    func testStaleEngagementDoesNotSurviveASuspend() {
+        // The counterpart to the clamp above, and it used to be wrong.
+        //
+        // Crediting is clamped so a sleeping laptop cannot invent an hour of
+        // attention. Decay was reading that same clamped value, so an hour of
+        // sleep decayed the counters by only e^-1 — leaving ~37% of the
+        // pre-sleep figure — instead of e^-12, which is nothing. A student who
+        // was talking before the lid closed still read as recently engaged
+        // after it, and `EngagementRecovery` reads exactly that counter.
+        //
+        // Crediting answers "how much did they earn"; decay answers "how long
+        // ago was that". An hour really was an hour.
+        var history = StruggleSignalHistory()
+        history.lastSampledAt = now.addingTimeInterval(-3_600)
+        history.recentTalkingSeconds = 200
+        history.recentUnmutedSeconds = 200
+
+        // Silent and muted on the first poll back, so nothing new is credited
+        // and only the decay term moves the counters.
+        let next = history.advanced(with: participant(muted: true, audioLevel: 0), now: now)
+
+        XCTAssertLessThan(
+            next.recentTalkingSeconds, 1,
+            "An hour of sleep must decay recent talking effectively to zero"
+        )
+        XCTAssertLessThan(
+            next.recentUnmutedSeconds, 1,
+            "An hour of sleep must decay recent unmuted time effectively to zero"
+        )
+
+        // A poll at the clamp boundary still decays by exactly one tau, so the
+        // fix has not simply thrown the clamp away.
+        var atBoundary = StruggleSignalHistory()
+        atBoundary.lastSampledAt = now.addingTimeInterval(-maximumSampleGap)
+        atBoundary.recentTalkingSeconds = 200
+
+        let stepped = atBoundary.advanced(with: participant(muted: true, audioLevel: 0), now: now)
+        XCTAssertEqual(stepped.recentTalkingSeconds, 200 * exp(-1), accuracy: 0.001)
+    }
+
     func testAClockThatStepsBackwardsCreditsNothingRatherThanSubtracting() {
         // NTP correction, or a poll delivered out of order. `max(0, …)` keeps
         // the gap non-negative; without it a backwards step would *decrement*

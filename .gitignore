@@ -77,3 +77,6 @@ retraining/*.mlmodel
 # --- Scratch ---
 *.bak
 *.log
+
+# Coverage artefact from `xcodebuild test`.
+default.profraw

@@ -2,7 +2,7 @@
 //  FeatureCalculator.swift
 //  Anchor
 //
-//  Turns a live Zoom participant into the 11-feature vector the Core ML model
+//  Turns a live Zoom participant into the 16-feature vector the Core ML model
 //  was trained on.
 //
 //  The model is a CreateML tabular classifier whose inputs are all Int64, so
@@ -371,12 +371,14 @@ nonisolated struct StruggleSignalHistory: Hashable, Sendable {
     func advanced(with participant: ZoomParticipant, now: Date) -> StruggleSignalHistory {
         var next = self
 
-        let gap: Int
-        if let lastSampledAt {
-            gap = Int(min(Self.maximumSampleGap, max(0, now.timeIntervalSince(lastSampledAt))))
-        } else {
-            gap = 0   // first sighting: nothing observed yet
-        }
+        // Two different intervals, deliberately.
+        //
+        // `elapsed` is the real wall-clock time since the last poll. `gap` is
+        // that clamped to `maximumSampleGap`, and the clamp exists so a laptop
+        // that slept for an hour cannot come back and credit the whole hour as
+        // unmuted. Crediting must be clamped; the two are not the same question.
+        let elapsed = lastSampledAt.map { max(0, now.timeIntervalSince($0)) } ?? 0
+        let gap = Int(min(Self.maximumSampleGap, elapsed))
 
         next.observedSeconds += gap
 
@@ -392,7 +394,14 @@ nonisolated struct StruggleSignalHistory: Hashable, Sendable {
 
         // Decay first, then credit this interval — crediting first would let a
         // long gap decay the seconds it just added.
-        let decay = exp(-Double(gap) / Self.recencyTau)
+        //
+        // Decay uses `elapsed`, not `gap`. Reusing the clamped value here meant a
+        // laptop closed for an hour came back with e^-1 ≈ 37% of its pre-sleep
+        // counters intact instead of e^-12 ≈ 0, so a student who was talking
+        // before lunch still read as recently engaged after it. The clamp answers
+        // "how much credit did they earn"; decay answers "how long ago was that",
+        // and an hour really was an hour.
+        let decay = exp(-elapsed / Self.recencyTau)
         next.recentUnmutedSeconds = recentUnmutedSeconds * decay + (isUnmuted ? Double(gap) : 0)
         next.recentTalkingSeconds = recentTalkingSeconds * decay + (isTalking ? Double(gap) : 0)
 
