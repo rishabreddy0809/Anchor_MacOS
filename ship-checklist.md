@@ -3,6 +3,7 @@
 Decisions to lock in first, since they change what "done" means for everything below.
 
 - [ ] **Zoom account model**: per-school (school's Zoom admin installs the S2S app under their Business/Education account — email matching + Dashboard data just works) vs. per-teacher on any plan (broader reach, but verified-email matching will never work for teachers on Basic/Pro — name-matching + manual override becomes the primary mechanism, not a fallback)
+  - Still open, but the price of the per-teacher branch is now measured rather than assumed. Confirmed 2026-08-17: the two participant scopes (`dashboard:read:list_meeting_participants:admin`, `report:read:list_meeting_participants:admin`) are not on the app and cannot be added from an account below Business/Education/Enterprise — the Marketplace scope picker shows no Dashboard or Report category to select them from. So on a per-teacher pilot the REST path never returns a participant list at all, and the Meeting SDK bot is not the richer of two sources but the only source of live engagement signal. Picking per-teacher means the bot (§5, §7) is a hard dependency of shipping, not a differentiator on top of it.
 - [ ] **Distribution channel**: direct download (Developer ID + notarization) vs. Mac App Store — see reasoning below, but pick one before building the packaging pipeline
 - [ ] **Pricing model**: free, per-teacher subscription, per-school license — affects whether you need StoreKit (App Store) or your own payment integration (direct)
 
@@ -12,7 +13,7 @@ Decisions to lock in first, since they change what "done" means for everything b
 
 - [ ] Privacy policy, hosted at a real public URL
 - [ ] Terms of service, hosted at a real public URL
-- [ ] Written data-retention policy — you already have real substance here (grades held in memory only, never written to disk); get it into plain language a school's IT/legal reviewer can read in two minutes
+- [ ] Written data-retention policy — you already have real substance here (grades held in memory only, never written to disk; and since 2026-08-17 `SessionArchive` enforces a window instead of keeping everything forever — one term / 120 days by default, one school year or "keep everything" as alternatives, under Settings → Data & Privacy, pruning on load, when a class ends, and immediately when the window is shortened, with Anchor's own `session-archive.corrupt-*` / `.backup-*` sidecars ageing out on the same clock). The mechanism is done; the *document* is not, and that is what this line is about — get it into plain language a school's IT/legal reviewer can read in two minutes
 - [ ] FERPA posture documented — Anchor's user is the teacher, not the student directly, but you're touching grades and assignment data, so be deliberate and explicit about this rather than silent
 - [ ] Review Zoom's Marketplace developer terms for apps that process meeting audio/video/chat content
 - [ ] A real homepage (needed for Google verification anyway, and for App Store / notarized-app credibility either way)
@@ -26,6 +27,7 @@ Decisions to lock in first, since they change what "done" means for everything b
 
 ## 3. Zoom Marketplace readiness
 
+- [x] **Rename the Marketplace app** — done 2026-08-17. The consent screen quotes the app name verbatim and read *"General app 392 would like permission to:"*; it now reads *"Anchor would like permission to:"*. Edited on App Listing → App Name, not the pencil beside the header. Re-check this on any second app created for production, which starts life with a generated name again.
 - [ ] Confirm the Meeting SDK app and Server-to-Server app are both properly activated for production use (not just dev/test mode)
 - [ ] If going per-teacher model: build a real "Connect your Zoom account" OAuth flow (Zoom's OAuth app type, not Server-to-Server) — mirror the pattern already built for Google
 - [ ] If going per-school model: document the admin install process clearly, since a school's Zoom admin is doing this, not the end-user teacher
@@ -38,6 +40,7 @@ Decisions to lock in first, since they change what "done" means for everything b
 
 ## 5. Known bugs to fix
 
+- [x] `PKCE.makeCodeVerifier()` discarded the `SecRandomCopyBytes` status and used the buffer regardless — fixed 2026-08-17, it now checks the status and traps. A silent RNG failure would have handed out a predictable verifier while every other part of the flow looked correct, which is the kind of thing that never shows up in a successful sign-in test.
 - [ ] Bot appears as a scored "student" in its own roster — filter using the SDK's `isMySelf` flag (currently unused in `ZoomMeetingSDKBridge.swift`)
 - [ ] Reconnection handling: verify behavior when a meeting drops, laptop sleeps, or Wi-Fi blips mid-session — currently untested
 - [ ] Multi-participant scale: validate UI, polling cadence, and Classroom sync cost with a real class size (20–30 students), not just 2–3 known test accounts
@@ -60,6 +63,9 @@ Decisions to lock in first, since they change what "done" means for everything b
 
 ## 8. Distribution mechanics
 
+**Either way:**
+- [x] Deployment target lowered to **macOS 14.0** (was 26.5) on 2026-08-17. The 26.5 floor existed solely because `FoundationModelAnalyzer` referenced FoundationModels unconditionally — one optional phrasing feature setting the hardware requirement for the whole product, which for a pilot audience of teachers on school-issued Macs meant almost nobody could install it. FoundationModels is now behind `@available(macOS 26.0, *)` with `#available` at its three entry points, and the vendored Zoom SDK only ever asked for 10.15. 13.0 remains blocked by SwiftUI APIs newer than it — `ContentUnavailableView`, `SettingsLink`, the two-argument `onChange`, `symbolEffect` and `variableColor` need 14.0, and `scrollBounceBehavior` needs 13.3 — so dropping further is a UI rewrite rather than a build setting, and 14.0 is the floor unless that becomes worth doing.
+
 **If direct download:**
 - [ ] Enroll in Apple Developer Program ($99/yr)
 - [ ] Sign with Developer ID Application certificate, hardened runtime enabled
@@ -76,6 +82,7 @@ Decisions to lock in first, since they change what "done" means for everything b
 
 ## 9. QA pass before calling it v1
 
+- [x] Automated coverage exists at all — an `AnchorTests` XCTest target, 25 passing tests over ObservationRamp, EngagementDrift, EngagementRecovery and the RiskLevel thresholds (added 2026-08-17; the repo had none before). These pin the score-shaping arithmetic and the three cut-offs, which is the part a refactor can quietly move without anything looking wrong on screen. It says nothing about the manual passes below, which all stay open.
 - [ ] Full session, start to finish, with a real unfamiliar class size
 - [ ] Network interruption recovery
 - [ ] Classroom disconnect/reconnect flow

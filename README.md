@@ -58,7 +58,9 @@ beside a student row reading "watch" would be two verdicts about one child.
 Apple's Foundation Models write the phrasing. When the model is unavailable,
 refuses, or times out, a deterministic fallback states the same facts in
 Anchor's own voice — the feature degrades in phrasing quality, never in
-correctness.
+correctness. Below macOS 26 the framework does not exist at all, so on most
+Macs the fallback is the ordinary path rather than the exception. That is the
+whole reason it has to carry the same facts and not a thinner set of them.
 
 ### It shows its work
 
@@ -188,13 +190,38 @@ would just train the next model to agree with this one.
 - **No student install.** Everything runs from the teacher's machine.
 - **Credentials live only in the macOS Keychain.** No secret is stored in this
   repository, and `.gitignore` enforces it. Refresh tokens rotate on every use.
+- **Session history expires.** `SessionArchive` keeps one term (120 days) by
+  default — one school year and "keep everything" are the alternatives, under
+  **Settings → Data & Privacy**. It prunes on load, when a class ends, and
+  immediately when the window is shortened, and Anchor's own leftover sidecars
+  (`session-archive.corrupt-*`, `session-archive.backup-*`) age out on the same
+  schedule rather than outliving the records they were copied from.
 
 ## Requirements
 
-- macOS 26.5 or later
+- macOS 14.0 or later
 - A Zoom account, and a Zoom Marketplace app (setup in [`ZOOM_INTEGRATION.md`](ZOOM_INTEGRATION.md))
 - Google Classroom, optional — Anchor runs on Zoom signals alone, with reduced
   accuracy
+
+> **Why 14.0.** The deployment target was 26.5 until 2026-08-17, for exactly one
+> reason: `FoundationModelAnalyzer` referenced FoundationModels unconditionally,
+> so an optional phrasing feature set the floor for the entire app. It is now
+> behind `@available(macOS 26.0, *)`, with `#available` checks at its three entry
+> points, and the framework's own floor applies to the phrasing and nothing else.
+> The vendored Zoom SDK asks only for 10.15. macOS 13 stays out of reach for a
+> separate reason — a handful of SwiftUI APIs newer than it.
+> `ContentUnavailableView`, `SettingsLink`, the two-argument `onChange`,
+> `symbolEffect` and `variableColor` need 14.0; `scrollBounceBehavior` needs
+> 13.3. Reaching 13.0 is a UI rewrite rather than a build setting, and nothing
+> below 13.3 is reachable at all.
+
+> **Live behavior needs the bot on most plans.** The two participant scopes are
+> Dashboard/Report scopes, and Zoom only offers those to Business, Education and
+> Enterprise accounts — on anything smaller they cannot be added to the
+> Marketplace app at all, so the REST path never returns a participant list and
+> the meeting bot is the only source of live engagement signal. See
+> [`ZOOM_INTEGRATION.md`](ZOOM_INTEGRATION.md) §2a.
 
 > **Zoom authorization is currently limited.** The Marketplace app is
 > unpublished, so only the developer's own Zoom account can authorize it. See
@@ -213,6 +240,7 @@ Anchor/
   DesignSystem/   Theme tokens
   Data/           Local persistence: engagement history, session archive
   Utils/          Keychain, constants, diagnostics
+AnchorTests/      XCTest target — score shaping and the RiskLevel thresholds
 retraining/       Data generation, training, and evaluation pipeline
 Web/              OAuth redirect bounce page
 website/landing/  Marketing site

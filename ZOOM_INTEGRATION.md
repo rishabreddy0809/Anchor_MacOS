@@ -43,6 +43,9 @@ browser instead of asking anybody to type a credential.
 3. **Scopes**: add the rows in the table below. A teacher who is not a Zoom
    account admin can only be granted the non-`:admin` spellings, and that is
    fine — Anchor degrades to the bot for live signals and says so in Settings.
+   The app as it stands carries exactly three: `meeting:read:list_meetings`,
+   `user:read:user`, `user:read:zak` — find the class, identify the teacher,
+   mint the bot's ZAK.
 4. Paste the **Client ID** into `OAuthClientDefaults.zoomClientID`. Provision the
    **Client Secret** through Settings → Zoom → Advanced, or
    `ANCHOR_ZOOM_OAUTH_CLIENT_SECRET`, so it stays out of source control.
@@ -50,6 +53,25 @@ browser instead of asking anybody to type a credential.
 Teachers then click **Settings → Zoom → Connect Zoom**, sign in, and land back in
 Anchor. The tokens go to the Keychain; the refresh token rotates on every use and
 is rewritten each time.
+
+> **The two participant scopes are not on this app, and cannot be added from
+> this account.** `dashboard:read:list_meeting_participants:admin` and
+> `report:read:list_meeting_participants:admin` are absent, and the Marketplace
+> scope picker offers no Dashboard and no Report category at all to select them
+> from — the categories themselves are gated on a Business, Education or
+> Enterprise plan, so this is not an oversight that a checkbox fixes. §2b's note
+> about a 403 describes the plan failing at request time; here the request can
+> never be built in the first place.
+>
+> What that means for a deployment: on an account below those plans the REST
+> path can never read participants, so it contributes the meeting itself and the
+> teacher's identity and nothing about who is in the room. **The Meeting SDK bot
+> is then the only source of live engagement signal** — not the richer of two
+> sources, the only one. A pilot on a Basic or Pro account that cannot run the
+> bot has no live signal at all, and the dashboard will correctly stay empty
+> (§6). This is the concrete cost of the per-teacher account model still listed
+> as open in `ship-checklist.md`; the per-school route on an Education account is
+> what makes the REST path viable.
 
 > **Only the developer's own Zoom account can sign in today.** While the app is
 > unpublished, users *outside* that account cannot authorize it at all — they
@@ -70,10 +92,13 @@ is rewritten each time.
 > docs quote for sharing an authorization URL; that figure covers the review,
 > not assembling the evidence.
 >
-> Rename the app first. The consent screen shows the app's name verbatim, and
-> at the time of writing it still reads *"General app 392 would like permission
-> to…"* — not what a teacher should be asked to approve. The name is edited on
-> **App Listing → App Name**, not the pencil beside the header.
+> **Renamed 2026-08-17 — done.** The consent screen shows the app's name
+> verbatim, and it used to read *"General app 392 would like permission to…"*,
+> which is not what a teacher should be asked to approve. It now reads *"Anchor
+> would like permission to:"*. Recorded because the name is edited on **App
+> Listing → App Name**, not the pencil beside the header, and a freshly created
+> app arrives carrying its generated name — so any second app built for
+> production starts out saying "General app N" again.
 
 > **Production uses different credentials from Development.** The Production tab
 > carries its own Client ID (`Vgi566QtQhaoeAO…`) and its own, initially empty,
@@ -203,6 +228,12 @@ Anchor cannot even verify the connection. Add every row above, then click
 > The Dashboard (`/metrics`) endpoints require a **Business, Education or
 > Enterprise** plan. On Pro or Free, Anchor gets a 403 and reports
 > `planRequired` — it keeps running on the signals that are available.
+>
+> On the account these apps live on today the plan bites a step earlier than
+> that: the last two rows of the table above cannot be granted at all, because
+> the Marketplace scope picker lists no Dashboard and no Report category to pick
+> them from (§2a). A 403 is what you get on a plan that has the scopes and not
+> the entitlement; here there is nothing to send.
 
 ## 3. Connect
 
@@ -343,6 +374,11 @@ on a 401.
 | **Time unmuted / speaking seconds** | ❌ | Meeting SDK |
 | **Audio level per participant** | ❌ | Meeting SDK (raw audio) |
 | **In-meeting chat** | ❌ | Cloud recording `chat_file`, post-meeting only |
+
+Every ✅ in the first four rows presumes the Dashboard participant scope, which
+the app does not currently hold and cannot be granted on this account (§2a). On
+such an account the REST column collapses to the meeting-level row alone, and
+the bot is the only path to a roster, never mind to the ❌ rows.
 
 The Dashboard payload has `microphone` and `camera` fields, but those name the
 **device** ("MacBook Pro Microphone"), not whether the person is muted. Anchor
