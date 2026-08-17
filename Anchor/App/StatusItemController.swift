@@ -209,7 +209,14 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
     // MARK: - Right-click menu
 
-    /// LSUIElement apps have no app menu, so quitting lives here (and in Settings).
+    /// Quit lives here, and in Settings.
+    ///
+    /// This used to reason that an LSUIElement app has no app menu. Anchor is
+    /// not one — it runs as a regular app with a Dock icon and a main window, so
+    /// there *is* an app menu. The right-click item stays regardless: closing
+    /// the window leaves Anchor monitoring from the menu bar (see
+    /// `applicationShouldTerminateAfterLastWindowClosed`), so the status item is
+    /// often the only part of Anchor still on screen when someone wants to quit.
     private func showContextMenu() {
         let menu = NSMenu()
         menu.addItem(

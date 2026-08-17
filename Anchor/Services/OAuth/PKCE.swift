@@ -18,9 +18,27 @@ import Foundation
 nonisolated enum PKCE {
 
     /// One sign-in's verifier: 32 random bytes, base64url encoded.
+    ///
+    /// The status is checked rather than discarded. `bytes` starts as 32 zeros,
+    /// so a failure that goes unnoticed does not produce a weak verifier — it
+    /// produces a *constant* one, and `makeState()` below shares this generator,
+    /// so the CSRF token becomes the same constant. Both would still be
+    /// well-formed, both would still authenticate, and nothing anywhere would
+    /// report that anything had gone wrong.
+    ///
+    /// Trapping is the right response and not merely the convenient one: the
+    /// only alternative to a random verifier is a predictable one, and there is
+    /// no version of continuing a sign-in whose entropy source has just failed
+    /// that is safer than stopping.
     static func makeCodeVerifier() -> String {
         var bytes = [UInt8](repeating: 0, count: 32)
-        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        guard status == errSecSuccess else {
+            fatalError(
+                "SecRandomCopyBytes failed (OSStatus \(status)). Refusing to "
+                + "build a PKCE verifier from non-random bytes."
+            )
+        }
         return Data(bytes).base64URLEncoded
     }
 

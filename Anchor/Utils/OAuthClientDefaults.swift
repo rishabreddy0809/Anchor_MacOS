@@ -22,10 +22,32 @@
 //    1. marketplace.zoom.us → Develop → Build App → **General App**
 //       (a *user-managed* OAuth app — a Server-to-Server OAuth app cannot do
 //       browser sign-in, it has no authorization page at all)
-//    2. OAuth Redirect URL: anchor://oauth/zoom
-//       Add the same value to the OAuth allow list.
-//    3. Scopes → add what Anchor reads: see ZoomOAuthConfig.requiredScopes.
-//    4. Paste the Client ID and Client Secret below.
+//    2. App Listing → App Name. The consent screen shows this verbatim, so a
+//       default like "General app 392" is what a teacher is asked to approve.
+//       It is *not* the pencil beside the page header.
+//    3. OAuth Redirect URL: the value in `ZoomOAuthConfig.bounceURL`, currently
+//       https://anchor-oauth-bounce.vercel.app/oauth/zoom
+//       Paste the identical string into the **OAuth allow list** below it too;
+//       setting only one of the two fields is a common way this breaks. Zoom
+//       matches character for character — no trailing slash.
+//
+//       It must be HTTPS. `anchor://oauth/zoom` is rejected at registration
+//       ("Use HTTPS or numeric loopback addresses instead of custom URI
+//       schemes"), and an `http://127.0.0.1` loopback is accepted by the form
+//       but never honoured at authorisation — every redirect_uri then comes
+//       back `Invalid redirect URL`, which reads like a typo rather than a
+//       transport that cannot work. That URL is served by
+//       `Web/oauth-zoom-bounce.html`, which forwards `code` and `state` to the
+//       loopback listener Anchor is already running. See ZOOM_INTEGRATION.md
+//       §2a — this is easy to re-introduce.
+//    4. Scopes → add what Anchor reads: see ZoomOAuthConfig.requiredScopes.
+//    5. Paste the Client ID and Client Secret below.
+//
+//       Development and Production carry *separate* Client IDs and separate,
+//       independently-registered redirect URLs. Everything today runs on the
+//       Development pair; going live means switching both this value and the
+//       Keychain secret, and registering the bounce URL again on the
+//       Production tab.
 //
 //  Google:
 //    1. console.cloud.google.com → new project → enable the Classroom API
