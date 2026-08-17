@@ -100,7 +100,21 @@ nonisolated enum OAuthClientDefaults {
 
     // MARK: - Google
 
-    static let googleClientID = ""
+    /// Client ID of the **Anchor macOS** Desktop client in the `anchor-504419`
+    /// Cloud project.
+    ///
+    /// Public by design, like the Zoom one above — it appears in the address bar
+    /// of every Google sign-in. It was empty until 2026-08-17, which meant the
+    /// connect flow fell back to asking a teacher to paste a Client ID and
+    /// Secret copied out of a console they have no reason to have ever opened.
+    /// That is the manual credential entry ship-checklist §4 exists to remove.
+    static let googleClientID = "150467027663-9e666lfgaq69bif315c05avvvti1gblk.apps.googleusercontent.com"
+
+    /// Left empty in source, like every other secret. Google issues one for a
+    /// Desktop client and it is not a real secret — the flow's proof is PKCE,
+    /// not this — but it still does not belong in a public repository.
+    /// Provision through Settings → Advanced or the environment; it lives in
+    /// the Keychain from then on.
     static let googleClientSecret = ""
 
     // MARK: - Helpers
