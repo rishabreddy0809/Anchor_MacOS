@@ -118,7 +118,9 @@ This section was written assuming the longest external dependency in the project
 
 ## 10. Launch readiness
 
-- [ ] Support channel live and monitored
+- [~] **Support channel — live and reachable from inside the app; "monitored" is a standing commitment, not a shippable artefact.** As of 2026-08-18 the outbound half is done: `/support` is live and prerendered, Settings → **Get Help** opens it, a failure opens a pre-filled report, and `SupportContactTests` pins the app's address against the site's `CONTACT_EMAIL` so the two cannot drift apart silently. A teacher who hits a wall can now reach a human without leaving Anchor.
+  - **The inbound half is still broken, and it is the conversion path rather than the support one.** `submitPilotApplication` falls back to `onboarding@resend.dev`, which delivers only to the Resend account owner, so a pilot application from a stranger fails or lands in spam. That needs `PILOT_FROM_EMAIL` and a verified domain in Vercel production — it is on the blocked-on-a-human list and is the cheapest item on it.
+  - Left `[~]` because the remaining word is "monitored". Nothing in a repo can discharge that; it is a promise the support page already makes in your name ("there is no ticketing system and no bot in front of it"), so the only thing that closes this line is deciding you will actually read it daily during the pilot.
 - [ ] Versioning/release process decided (even something simple)
 - [ ] A rollback plan if a release breaks something mid-semester for a teacher relying on it
 
