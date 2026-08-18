@@ -39,25 +39,20 @@ final class TeacherFacingCopyTests: XCTestCase {
         "under advanced", "re-activate"
     ]
 
-    /// Files whose credential UI is Debug-only but gated at the *call site*
-    /// rather than the declaration, so the strings are still in the source a
-    /// scan can see.
+    /// Regions the scan skips: anything inside an `#if DEBUG`.
     ///
-    /// This is recorded debt, not an exemption on principle. Both files hold a
-    /// `advancedDisclosure` that a Release build never renders — but
-    /// `ConnectionStatusView` shares `testResult` between that Debug-only form
-    /// and the status row every teacher sees, so hoisting the declarations
-    /// behind `#if DEBUG` is a real refactor rather than a wrapper. Until that
-    /// happens these two are scanned only for the vocabulary that would be
-    /// wrong *anywhere*, below.
-    private let callSiteGatedFiles = [
-        "ConnectionStatusView.swift",
-        "ClassroomConnectionPanel.swift"
-    ]
-
-    /// Phrases that are wrong in any file, gated or not, because they send the
-    /// reader somewhere that does not exist in the build they are holding.
-    private let alwaysWrong = ["under advanced"]
+    /// There is no file-level exemption list, and that is the point. The first
+    /// version of this test carried one, because `ConnectionStatusView` and
+    /// `ClassroomConnectionPanel` held credential UI that a Release build never
+    /// renders but that a source scan could still see — gated at the call site
+    /// rather than the declaration. An exemption is a hole: it would have let a
+    /// genuinely bad string sit in either file forever.
+    ///
+    /// Both files now gate those declarations too, so the dead views, their
+    /// state and their strings are absent from the Release binary and the scan
+    /// covers every file in full. `#if DEBUG` is now the only thing that
+    /// silences it, which is the honest signal — a string not compiled into the
+    /// shipped app genuinely cannot be read by a teacher.
 
     // MARK: - The rule
 
@@ -65,11 +60,9 @@ final class TeacherFacingCopyTests: XCTestCase {
         var offences: [String] = []
 
         for url in try viewSources() {
-            let isGated = callSiteGatedFiles.contains(url.lastPathComponent)
-            let terms = isGated ? alwaysWrong : developerVocabulary
             let source = try String(contentsOf: url, encoding: .utf8)
 
-            for (line, text, term) in literals(in: source, matching: terms) {
+            for (line, text, term) in literals(in: source, matching: developerVocabulary) {
                 offences.append("\(url.lastPathComponent):\(line) [\(term)] \"\(text)\"")
             }
         }
@@ -123,8 +116,20 @@ final class TeacherFacingCopyTests: XCTestCase {
     ) -> [(Int, String, String)] {
         var found: [(Int, String, String)] = []
 
+        var branches: [Bool] = []
+
         for (index, raw) in source.components(separatedBy: .newlines).enumerated() {
             let line = raw.trimmingCharacters(in: .whitespaces)
+
+            // Same #if tracking as ReleaseHygieneTests, and for the same reason:
+            // a string the shipped binary does not contain cannot be read by a
+            // teacher. `#else` flips the innermost branch, since the else-arm of
+            // `#if DEBUG` is exactly the Release build.
+            if line.hasPrefix("#if") { branches.append(line.contains("DEBUG")); continue }
+            if line.hasPrefix("#endif") { if !branches.isEmpty { branches.removeLast() }; continue }
+            if line.hasPrefix("#else"), !branches.isEmpty { branches[branches.count - 1].toggle(); continue }
+            guard !branches.contains(true) else { continue }
+
             guard !line.hasPrefix("//"), !line.hasPrefix("///"), !line.hasPrefix("*") else { continue }
 
             let pattern = try? NSRegularExpression(pattern: "\"([^\"\\\\]{12,})\"")

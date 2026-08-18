@@ -54,21 +54,36 @@ struct ZoomConnectionPanel: View {
     @ObservedObject private var credentials = ZoomCredentialsStore.shared
     @ObservedObject private var oauth = ZoomOAuthStore.shared
 
+    // Credential entry is Debug-only, and gated here at the declaration so a
+    // Release build does not compile it at all. The call site in `body` is
+    // gated too; this removes the dead views, their state and their strings
+    // from the shipped binary, and lets TeacherFacingCopyTests scan this file
+    // in full rather than exempting it.
+    //
+    // `testResult` and `testSucceeded` are deliberately NOT in here: `save()`
+    // writes them, but so do `connect()` and `disconnect()`, which every
+    // teacher uses.
+#if DEBUG
     @State private var accountID = ""
     @State private var clientID = ""
     @State private var clientSecret = ""
+#endif
     @State private var isTesting = false
     @State private var testResult: String?
     @State private var testSucceeded = false
+#if DEBUG
     @State private var showSecretField = false
+#endif
     @State private var meetingNumber = ""
     @State private var meetingPasscode = ""
+#if DEBUG
     /// The Server-to-Server credentials and the OAuth app override both live
     /// behind this. A teacher never opens it; it exists for whoever sets a
     /// school up, and for the bot's own account.
     @State private var showAdvanced = false
     @State private var advancedClientID = ""
     @State private var advancedClientSecret = ""
+#endif
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -290,6 +305,7 @@ struct ZoomConnectionPanel: View {
         }
     }
 
+#if DEBUG
     /// Server-to-Server credentials and the OAuth app override — everything a
     /// teacher should never have to look at.
     private var advancedDisclosure: some View {
@@ -423,6 +439,7 @@ struct ZoomConnectionPanel: View {
                 .foregroundStyle(.tertiary)
         }
     }
+#endif
 
     private func noticeRow(symbol: String, tint: Color, text: String) -> some View {
         HStack(alignment: .top, spacing: 5) {
@@ -437,6 +454,7 @@ struct ZoomConnectionPanel: View {
         .foregroundStyle(tint)
     }
 
+#if DEBUG
     private func labelledField(_ title: String, text: Binding<String>, prompt: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
@@ -448,6 +466,7 @@ struct ZoomConnectionPanel: View {
                 .font(.system(size: 11))
         }
     }
+#endif
 
     private var actionRow: some View {
         HStack(spacing: 7) {
@@ -541,6 +560,7 @@ struct ZoomConnectionPanel: View {
 
     // MARK: Actions
 
+#if DEBUG
     private var canSave: Bool {
         !accountID.trimmed.isEmpty && !clientID.trimmed.isEmpty && !clientSecret.trimmed.isEmpty
     }
@@ -561,6 +581,7 @@ struct ZoomConnectionPanel: View {
             testSucceeded = false
         }
     }
+#endif
 
     private func connect() async {
         testResult = nil

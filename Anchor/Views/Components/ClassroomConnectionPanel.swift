@@ -17,9 +17,15 @@ struct ClassroomConnectionPanel: View {
     @ObservedObject private var classroom = ClassroomViewModel.shared
     @ObservedObject private var credentials = GoogleCredentialsStore.shared
 
+    // Debug-only, gated at the declaration as well as the call site, so a
+    // Release build compiles none of it. See ConnectionStatusView for the
+    // reasoning; this file is the simpler half — nothing here is shared with
+    // the panel a teacher sees.
+#if DEBUG
     @State private var clientIDDraft = ""
     @State private var clientSecretDraft = ""
     @State private var showAdvanced = false
+#endif
     @State private var isConnecting = false
     /// True only for a sync the teacher started from this panel, so the
     /// scheduled one never surfaces a spinner here.
@@ -154,6 +160,7 @@ struct ClassroomConnectionPanel: View {
 
     // MARK: - Client ID
 
+#if DEBUG
     /// The OAuth client registration — a deployment concern, not a teacher's.
     private var advancedDisclosure: some View {
         DisclosureGroup(isExpanded: $showAdvanced) {
@@ -227,6 +234,7 @@ struct ClassroomConnectionPanel: View {
         }
         .onAppear { clientIDDraft = credentials.clientIDOverride ?? "" }
     }
+#endif
 
     // MARK: - Actions
 
