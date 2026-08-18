@@ -35,79 +35,11 @@ import Combine
 import Foundation
 import os
 
-// MARK: - Protocol
-
-protocol ClassroomDataProviding: Sendable {
-    func courses() async throws -> [ClassroomCourse]
-    func students(courseID: String) async throws -> [ClassroomStudent]
-    func assignments(courseID: String) async throws -> [ClassroomAssignment]
-    func submissions(courseID: String, assignmentID: String) async throws -> [ClassroomSubmission]
-    /// Every submission in a course, keyed by assignment id.
-    ///
-    /// Exists as its own call because it is the whole cost of a sync: fetched
-    /// one assignment at a time it is N sequential round trips, and Google will
-    /// serve all N in one paged request.
-    func submissions(
-        courseID: String,
-        assignmentIDs: [String]
-    ) async throws -> [String: [ClassroomSubmission]]
-}
-
-extension ClassroomDataProviding {
-    /// Fallback for providers that have no bulk endpoint — still parallel,
-    /// since the per-assignment calls are independent.
-    func submissions(
-        courseID: String,
-        assignmentIDs: [String]
-    ) async throws -> [String: [ClassroomSubmission]] {
-        try await ClassroomConcurrency.map(assignmentIDs) { id in
-            (id, try await submissions(courseID: courseID, assignmentID: id))
-        }
-        .reduce(into: [:]) { $0[$1.0] = $1.1 }
-    }
-}
-
-// MARK: - Bounded concurrency
-
-/// Runs independent Classroom calls a few at a time.
-///
-/// Not unbounded: Google's per-minute limit is the binding constraint, and a
-/// 30-way burst is exactly what trips it. Six in flight keeps a course's sync
-/// inside a second or two while staying well under the ceiling.
-enum ClassroomConcurrency {
-    static let width = 6
-
-    static func map<T: Sendable, R: Sendable>(
-        _ items: [T],
-        transform: @escaping @Sendable (T) async throws -> R
-    ) async throws -> [R] {
-        guard !items.isEmpty else { return [] }
-
-        return try await withThrowingTaskGroup(of: (Int, R).self) { group in
-            var results = [R?](repeating: nil, count: items.count)
-            var next = 0
-
-            // Prime the pump, then add one task per completion so no more than
-            // `width` requests are ever outstanding.
-            while next < min(width, items.count) {
-                let index = next
-                group.addTask { (index, try await transform(items[index])) }
-                next += 1
-            }
-
-            while let (index, value) = try await group.next() {
-                results[index] = value
-                if next < items.count {
-                    let index = next
-                    group.addTask { (index, try await transform(items[index])) }
-                    next += 1
-                }
-            }
-
-            return results.compactMap { $0 }
-        }
-    }
-}
+// The `ClassroomDataProviding` protocol and `ClassroomConcurrency` moved to
+// ClassroomDataProviding.swift on 2026-08-18 — they are the vendor-neutral
+// seam, and living inside the Google client made them read as Google's.
+// This type is one implementation of that protocol; a Canvas one would be
+// another, and should need nothing from this file.
 
 // MARK: - Service
 
