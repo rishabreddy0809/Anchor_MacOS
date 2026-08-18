@@ -211,7 +211,23 @@ def main() -> None:
                     help="hyperparameter candidates to evaluate (>=200)")
     ap.add_argument("--out", type=Path, default=HERE / "StudentStruggleModel_PRODUCTION.mlmodel")
     ap.add_argument("--report", type=Path, default=HERE / "model_evaluation_production.txt")
+    ap.add_argument("--engagement-only", action="store_true",
+                    help="Train on the 11 Zoom columns alone, dropping the 5 academic "
+                         "ones. This is the model Anchor loads for a teacher with no "
+                         "Classroom or Canvas connected — see ANCHOR note below.")
     args = ap.parse_args()
+
+    # Both models come out of this one script on purpose.
+    #
+    # The whole value of an 11-vs-16 comparison is that everything except the
+    # feature set is held identical: same rows, same folds, same search space,
+    # same thresholds, same gates, same export path. Training the engagement
+    # model from a different script — train_struggle_model.py has its own
+    # --engagement-only — would compare two pipelines rather than two feature
+    # sets, and the delta would mean nothing.
+    global FEATURES
+    if args.engagement_only:
+        FEATURES = [f for f in FEATURES if f not in ACADEMIC]
 
     frame = pd.read_csv(args.data)
     latent_p = frame["_latent_p"].to_numpy()
@@ -227,7 +243,9 @@ def main() -> None:
     say("ANCHOR STRUGGLE MODEL — PRODUCTION TRAINING RUN")
     say("=" * 74)
     say(f"Data:       {args.data.name}")
-    say(f"Rows:       {len(frame):,}   Features: {len(FEATURES)} (11 engagement + 5 academic)")
+    n_academic = len([f for f in FEATURES if f in ACADEMIC])
+    say(f"Rows:       {len(frame):,}   Features: {len(FEATURES)} "
+        f"({len(FEATURES) - n_academic} engagement + {n_academic} academic)")
     say(f"Balance:    {y.mean():.1%} struggling")
     say(f"Distinct feature vectors: {X.drop_duplicates().shape[0]:,}")
     say()
@@ -244,7 +262,13 @@ def main() -> None:
         "days_since_submission": (0, 90, "0 when the course has no past-due work"),
         "confidence_level": (0, 100, "derived — ported from confidenceLevel()"),
     }
+    # Only the columns this model actually carries. An engagement-only build
+    # has no academic columns to range-check, and asking pandas for one is a
+    # KeyError rather than a useful complaint.
     for name, (lo, hi, note) in expectations.items():
+        if name not in FEATURES:
+            say(f"  {name:<22} {'—':>4}       SKIP   not in this model")
+            continue
         lo_seen, hi_seen = int(X[name].min()), int(X[name].max())
         ok = lo_seen >= lo and (hi is None or hi_seen <= hi)
         say(f"  {name:<22} {lo_seen:>4}..{hi_seen:<4}  {'PASS' if ok else 'FAIL'}   {note}")
@@ -402,7 +426,11 @@ def main() -> None:
             tag = "  <- academic" if name in ACADEMIC else ""
             say(f"  {name:<24} {value:.4f}  {'#' * int(value * 120)}{tag}")
         say()
-        say(f"Academic features combined: {imp[list(ACADEMIC)].sum():.1%}")
+        present_academic = [f for f in ACADEMIC if f in FEATURES]
+        if present_academic:
+            say(f"Academic features combined: {imp[present_academic].sum():.1%}")
+        else:
+            say("Academic features: none in this model (engagement-only build).")
         say()
 
     # --- scenarios --------------------------------------------------------
@@ -410,7 +438,13 @@ def main() -> None:
     say("PRODUCTION SCENARIO GATES")
     say("=" * 74)
     failures = 0
-    for name, direction, bound, values in SCENARIOS:
+    academic_only_scenarios = {"D. Talks a lot, failing", "F. Extreme academic tail"}
+    scenarios = [s for s in SCENARIOS
+                 if not (args.engagement_only and s[0] in academic_only_scenarios)]
+    if args.engagement_only:
+        for name in sorted(academic_only_scenarios):
+            say(f"  {name:<35} SKIPPED — needs academic signal this model lacks")
+    for name, direction, bound, values in scenarios:
         row = pd.DataFrame([[values[f] for f in FEATURES]], columns=FEATURES)
         p = float(model.predict_proba(row)[0, 1])
         ok = p >= bound if direction == "min" else p <= bound
@@ -418,7 +452,7 @@ def main() -> None:
         want = f"{'>' if direction == 'min' else '<'} {bound:.0%}"
         say(f"  {name:<34} {p:6.1%}   expect {want:<7} [{'PASS' if ok else 'FAIL'}]")
     say()
-    say(f"  {len(SCENARIOS) - failures}/{len(SCENARIOS)} gates passed")
+    say(f"  {len(scenarios) - failures}/{len(scenarios)} gates passed")
     say()
 
     # --- direction gates --------------------------------------------------
@@ -448,6 +482,7 @@ def main() -> None:
         ("grade_trend", range(40, 166, 5), "down"),
         ("confidence_level", range(0, 101, 5), "down"),
     ]
+    sweeps = [s for s in sweeps if s[0] in FEATURES]
     direction_failures = 0
     for feature, values, want in sweeps:
         rows = []
@@ -511,7 +546,7 @@ def main() -> None:
         "test_roc_auc": float(roc_auc_score(y_test, prob)),
         "bayes_ceiling": ceiling,
         "params": {k: str(v) for k, v in best.items()},
-        "scenario_gates_passed": len(SCENARIOS) - failures,
+        "scenario_gates_passed": len(scenarios) - failures,
     }, indent=2))
     print(f"\nReport -> {args.report.name}")
 

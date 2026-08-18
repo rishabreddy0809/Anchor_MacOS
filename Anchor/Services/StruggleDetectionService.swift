@@ -62,22 +62,46 @@ nonisolated final class StruggleDetectionService: @unchecked Sendable {
     static let shared = StruggleDetectionService()
 
     private let lock = NSLock()
-    private var model: MLModel?
-    /// The input columns the loaded model actually declares.
+
+    /// One loaded model and the columns it declares.
     ///
-    /// The vector carries 16 features; the model shipped today understands 11.
-    /// Core ML throws if handed a column it doesn't declare, so every prediction
-    /// is filtered through this set. A retrained 16-feature model widens it
-    /// automatically and starts consuming the academic signals with no code
-    /// change.
-    private var declaredInputs: Set<String> = []
+    /// Core ML throws if handed a column it doesn't declare, so every
+    /// prediction is filtered through `declaredInputs` rather than trusting a
+    /// model to ignore extras.
+    private struct Loaded {
+        let model: MLModel
+        let declaredInputs: Set<String>
+        let name: String
+
+        var isAcademic: Bool {
+            !StruggleFeatures.academicFeatureNames.isDisjoint(with: declaredInputs)
+        }
+    }
+
+    /// Two models, held at once, chosen per prediction. See `requireModel(for:)`
+    /// for why this is not one model and not three.
+    private var academicModel: Loaded?
+    private var engagementModel: Loaded?
+    /// Loading is attempted once. A bundle with no usable model must not be
+    /// rescanned on every student of every poll.
+    private var didAttemptLoad = false
     private var loadedState: StruggleModelState = .notLoaded
     private let logger = Logger(subsystem: "com.anchor.coreml", category: "StruggleDetection")
 
     /// Filenames to try before falling back to scanning the bundle, in
     /// preference order.
     ///
-    /// `StudentStruggleModel_PRODUCTION` is the shipping model: all 16
+    /// `StudentStruggleModel_16` and `StudentStruggleModel_11` are the pair
+    /// Anchor ships from 2026-08-18. The first declares all 16 columns and
+    /// scores a student Classroom or Canvas matched; the second declares only
+    /// the 11 engagement columns and scores everyone else, so an unmatched
+    /// student is never judged on academic defaults nobody measured. Both come
+    /// out of one `train_production_model.py` run over identical folds — see
+    /// `retraining/README.md`, "Two models" — so the difference between them is
+    /// the feature set and nothing else. Order matters here only for picking
+    /// *within* a kind; `loadIfNeeded` keeps the first of each.
+    ///
+    /// `StudentStruggleModel_PRODUCTION` is the previous single shipping model: all 16
     /// features (11 engagement + the full academic five), trained on 10,000
     /// messy synthetic sessions whose columns match `FeatureCalculator.swift`
     /// exactly — including the *uncapped* `missing_assignments` and
@@ -107,6 +131,8 @@ nonisolated final class StruggleDetectionService: @unchecked Sendable {
     /// on automatically, and the rule-based `AcademicEscalation` layer stands
     /// down for it (see that file's header).
     private static let candidateResourceNames = [
+        "StudentStruggleModel_16",
+        "StudentStruggleModel_11",
         "StudentStruggleModel_PRODUCTION",
         "StudentStruggleModel_CORRECTED",
         "StudentStruggleModel",
@@ -129,38 +155,127 @@ nonisolated final class StruggleDetectionService: @unchecked Sendable {
     /// doesn't pay the load cost. Safe to call more than once.
     func preload() {
         Task.detached(priority: .utility) { [self] in
-            _ = requireModel()
+            loadIfNeeded()
         }
     }
 
-    /// Returns the loaded model, loading it on first use. Caller holds no lock.
-    private func requireModel() -> MLModel? {
+    /// Picks the model that matches what is actually known about *this student*.
+    ///
+    /// Not "is Classroom connected" — `observed.contains(.academic)`, which is
+    /// per student and per poll. In one class with Classroom connected some
+    /// students match the roster and some do not, because matching runs on
+    /// normalised display names since the `classroom.profile.emails` scope was
+    /// dropped. So the choice cannot be made once at launch.
+    ///
+    /// Why two models rather than one: the academic columns have *benign
+    /// defaults*. A student who did not match carries `grade_average = 80` and
+    /// `grade_trend = 100` — the values of a student in good standing, invented
+    /// because there was nothing to read. A 16-feature model cannot tell those
+    /// inventions from measurements, and they sit on the columns carrying most
+    /// of its weight, so it would quietly report a struggling student as fine.
+    /// This is the same zero-versus-unknown distinction `ObservedSignals` keeps
+    /// everywhere else, arriving at the model boundary.
+    ///
+    /// Why not three: Canvas and Google Classroom produce the *same five
+    /// columns*. Both land in `AcademicSnapshot` and are mapped by
+    /// `FeatureCalculator.extractClassroomFeatures`, so nothing downstream can
+    /// tell them apart and there is no Canvas-specific model to hold.
+    ///
+    /// Falling back to the other model when the preferred one is absent is
+    /// deliberate: a score computed from partly-default inputs is worse than a
+    /// matched one and better than none, and a bundle shipping only one model
+    /// must still work.
+    private func requireModel(for features: StruggleFeatures) -> Loaded? {
+        loadIfNeeded()
+
         lock.lock()
         defer { lock.unlock() }
 
-        if let model { return model }
-        if case .unavailable = loadedState { return nil }   // don't retry a known failure
-
-        do {
-            let (loaded, name) = try loadModel()
-            model = loaded
-            declaredInputs = Set(loaded.modelDescription.inputDescriptionsByName.keys)
-            let inputCount = declaredInputs.count
-            loadedState = .ready(modelName: name)
-            let academicCount = StruggleFeatures.academicFeatureNames
-                .intersection(declaredInputs).count
-            logger.info(
-                "Model \(name, privacy: .public) declares \(inputCount, privacy: .public) inputs, \(academicCount, privacy: .public) academic"
-            )
-            logger.info("Loaded struggle model \(name, privacy: .public)")
-            return loaded
-        } catch {
-            let reason = (error as? LoadError)?.message ?? error.localizedDescription
-            loadedState = .unavailable(reason: reason)
-            logger.error("Struggle model unavailable: \(reason, privacy: .public)")
-            return nil
+        let kind = Self.modelKind(
+            hasAcademicSignals: features.hasAcademicSignals,
+            academicAvailable: academicModel != nil,
+            engagementAvailable: engagementModel != nil
+        )
+        switch kind {
+        case .academic:   return academicModel
+        case .engagement: return engagementModel
+        case nil:         return nil
         }
     }
+
+    /// Which model a student should be scored with.
+    ///
+    /// Extracted as a pure function so the decision can be tested without a
+    /// bundle, a Core ML runtime, or a trained model — the routing is the part
+    /// that can be wrong in a way nothing else would notice, since either model
+    /// returns a plausible-looking number for any input.
+    enum ModelKind: Equatable {
+        case academic
+        case engagement
+    }
+
+    static func modelKind(
+        hasAcademicSignals: Bool,
+        academicAvailable: Bool,
+        engagementAvailable: Bool
+    ) -> ModelKind? {
+        if hasAcademicSignals {
+            if academicAvailable { return .academic }
+            // No academic model bundled: the engagement one ignores the columns
+            // rather than reading them, which is the safe direction — it scores
+            // what it can see and `AcademicEscalation` supplies the rest.
+            return engagementAvailable ? .engagement : nil
+        }
+
+        if engagementAvailable { return .engagement }
+        // Nothing measured academically and only the 16-feature model present.
+        // It will read in-good-standing defaults as evidence, which is the
+        // failure the split exists to prevent — but a degraded score beats no
+        // score, and the load path logs that this is happening.
+        return academicAvailable ? .academic : nil
+    }
+
+    /// Loads every usable model in the bundle, once.
+    private func loadIfNeeded() {
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard !didAttemptLoad else { return }
+        didAttemptLoad = true
+
+        let found = loadModels()
+        // First of each kind wins, and `candidateResourceNames` sets that order.
+        academicModel = found.first(where: \.isAcademic)
+        engagementModel = found.first(where: { !$0.isAcademic })
+
+        guard !found.isEmpty else {
+            let reason = lastLoadFailure ?? "no compiled .mlmodelc in the app bundle."
+            loadedState = .unavailable(reason: reason)
+            logger.error("Struggle model unavailable: \(reason, privacy: .public)")
+            return
+        }
+
+        let names = [academicModel?.name, engagementModel?.name]
+            .compactMap { $0 }
+            .joined(separator: " + ")
+        loadedState = .ready(modelName: names)
+
+        for loaded in [academicModel, engagementModel].compactMap({ $0 }) {
+            let kind = loaded.isAcademic ? "academic" : "engagement-only"
+            logger.info(
+                "Loaded \(kind, privacy: .public) model \(loaded.name, privacy: .public) declaring \(loaded.declaredInputs.count, privacy: .public) inputs"
+            )
+        }
+
+        // Worth saying out loud: with only the 16-feature model present, a
+        // student Classroom never matched is still scored off in-good-standing
+        // defaults, which is the case the engagement model exists to remove.
+        if engagementModel == nil {
+            logger.info("No engagement-only model bundled — unmatched students will be scored with academic defaults.")
+        }
+    }
+
+    private var lastLoadFailure: String?
 
     private enum LoadError: Error {
         case notFound
@@ -183,16 +298,32 @@ nonisolated final class StruggleDetectionService: @unchecked Sendable {
     /// score through the model itself. It stays false only if the app falls
     /// all the way back to a model that predates them, in which case the
     /// rule-based escalation layer resumes — see `AcademicEscalation`.
+    /// Whether an academic-declaring model is loaded *at all*.
+    ///
+    /// Deliberately a property of the bundle rather than of one student: it is
+    /// what `AcademicEscalation` stands down for, and that layer is the
+    /// fallback for a build whose model cannot read academic columns. A student
+    /// with no Classroom match gets the engagement model, but the escalation
+    /// rules have no snapshot to escalate on for them either, so the two agree.
     var usesAcademicFeatures: Bool {
+        loadIfNeeded()
         lock.lock()
         defer { lock.unlock() }
-        return !StruggleFeatures.academicFeatureNames.isDisjoint(with: declaredInputs)
+        return academicModel != nil
     }
 
-    private func loadModel() throws -> (MLModel, String) {
+    /// Every usable model in the bundle, in probe order.
+    ///
+    /// Collects rather than returning the first match, because the two kinds
+    /// are both wanted: an academic model for matched students and an
+    /// engagement-only one for the rest. A model missing any of the 11
+    /// engagement columns is skipped whatever else it declares — those are the
+    /// floor, not a preference.
+    private func loadModels() -> [Loaded] {
         let configuration = MLModelConfiguration()
         configuration.computeUnits = .cpuOnly   // a tiny GLM; the ANE costs more than it saves
 
+        var loaded: [Loaded] = []
         var lastMismatch: String?
 
         for url in candidateModelURLs() {
@@ -200,21 +331,27 @@ nonisolated final class StruggleDetectionService: @unchecked Sendable {
                 let candidate = try MLModel(contentsOf: url)
                 let inputs = Set(candidate.modelDescription.inputDescriptionsByName.keys)
 
-                // Only the 11 engagement features are required. A model that
-                // also declares the academic five passes the same check and is
-                // used to its full extent.
                 guard StruggleFeatures.requiredFeatureNames.isSubset(of: inputs) else {
                     lastMismatch = inputs.sorted().joined(separator: ", ")
                     continue
                 }
-                return (candidate, url.deletingPathExtension().lastPathComponent)
+
+                loaded.append(
+                    Loaded(
+                        model: candidate,
+                        declaredInputs: inputs,
+                        name: url.deletingPathExtension().lastPathComponent
+                    )
+                )
             } catch {
                 logger.debug("Skipping \(url.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
             }
         }
 
-        if let lastMismatch { throw LoadError.noMatchingFeatures(lastMismatch) }
-        throw LoadError.notFound
+        if loaded.isEmpty, let lastMismatch {
+            lastLoadFailure = LoadError.noMatchingFeatures(lastMismatch).message
+        }
+        return loaded
     }
 
     /// Compiled models first, then any raw .mlmodel that slipped into the bundle
@@ -252,17 +389,13 @@ nonisolated final class StruggleDetectionService: @unchecked Sendable {
 
     /// Struggle probability as 0...1, the unit the rest of the app scores in.
     func probability(for features: StruggleFeatures) -> Double? {
-        guard let model = requireModel() else { return nil }
+        guard let loaded = requireModel(for: features) else { return nil }
 
         do {
             // Filtered to the columns this model declares. The shipped model
             // ignores extra keys, but relying on that is relying on a quirk of
             // how it was converted — see StruggleFeatures.modelInputs(accepting:).
-            lock.lock()
-            let declared = declaredInputs
-            lock.unlock()
-
-            let inputs = features.modelInputs(accepting: declared)
+            let inputs = features.modelInputs(accepting: loaded.declaredInputs)
                 .mapValues { NSNumber(value: $0) }
             let provider = try MLDictionaryFeatureProvider(dictionary: inputs)
 
@@ -272,7 +405,7 @@ nonisolated final class StruggleDetectionService: @unchecked Sendable {
             lock.lock()
             defer { lock.unlock() }
 
-            let output = try model.prediction(from: provider)
+            let output = try loaded.model.prediction(from: provider)
             return Self.struggleProbability(from: output)
         } catch {
             logger.error("Prediction failed: \(error.localizedDescription, privacy: .public)")
