@@ -66,13 +66,16 @@ This section was written assuming the longest external dependency in the project
 - [ ] App icon and branding assets finalized
 - [x] **In-app support/contact path — done 2026-08-18** (`a1e8bdb`). Two entries, deliberately different. Settings → **Get Help** opens the support page, because nothing has gone wrong at that point and the teacher is browsing. A failure instead offers **Email support**, which opens a composer pre-filled with what broke, the error's `technicalDetail`, and the build and macOS version — so a report arrives actionable without a teacher hunting for any of it. `SupportContact` is the single source of the address and is pinned by test against the marketing site's `CONTACT_EMAIL`; the body is composed only from values Anchor supplies, so nothing about a class or a student can reach it.
 
-## 7. The differentiator feature (optional for v1, but this is your actual moat)
+## 7. The differentiator feature — built, unwatched
 
-- [ ] Live transcript capture via `ZoomSDKCloseCaptionController` (confirmed available in the SDK you're already linking)
-- [ ] Topic extraction from the rolling transcript window
-- [ ] Cross-reference extracted topic against Classroom assignment titles / academic snapshot
-- [ ] Trigger-gated recommendation generation (only fire on silent + academically-weak-on-this-topic, not every transcript line)
-- [ ] Surface generated recommendations in the existing "Suggested Next Steps" panel, clearly tagged as AI-generated
+**This whole section was stale.** All five lines were open; all five are implemented. Audited 2026-08-18 by reading the code rather than the titles. What has never happened is a real lesson running through it, which is a different item and lives in §9.
+
+- [x] **Live transcript capture** — `ZoomMeetingSDKBridge.startLiveTranscription()` drives `getCloseCaptionController()`, handles the already-started and connecting states, and detects the feature being disabled for the account rather than failing opaquely. It also asks the host to start captions when it cannot start them itself.
+- [x] **Topic extraction from the rolling window** — `TranscriptCaptureService` (327 lines) holds the window; `LiveCoachViewModel` runs one pass per Zoom poll, immediately after the scores land, so what is on screen is always about the roster on screen.
+- [x] **Cross-reference against Classroom assignment titles** — `TopicMatcher` (365 lines), joined to the academic snapshot at `LiveCoachViewModel.swift:327`, with a `minimumRelevance` floor below which a match is discarded rather than shown weakly.
+- [x] **Trigger-gated generation** — and the gate is the feature, exactly as this line intended. Two clocks: scores move every ten seconds, the topic every ten minutes, so extraction fires only when the transcript has *actually moved* **and** a minimum interval has passed. Recommendations are cached on the facts they were built from. Without that cache this would run an inference per student per ten seconds for a whole lesson to re-derive text that had not changed.
+- [x] **Surfaced in "Suggested Next Steps", provenance always stated** — `StudentDetailView:206`. One box rather than two: when the model has an answer that *is* the answer, and the composed lines would restate it worse; when it doesn't (no Apple Intelligence, no transcript, a refusal, a timeout) `RecommendationGenerator.fallback` is the whole feature. Either way the source is labelled, on the stated principle that a teacher acting on a sentence about a child should know whether a model wrote it.
+- [ ] **Watch it run in a real lesson.** None of the above has met a live class. This is the §7 item that is actually open, and it rides along with the three live sessions in §9 rather than being scheduled separately.
 
 ## 8. Distribution mechanics
 
