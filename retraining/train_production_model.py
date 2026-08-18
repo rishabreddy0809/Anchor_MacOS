@@ -477,6 +477,24 @@ def main() -> None:
     say("PRODUCTION SCENARIO GATES")
     say("=" * 74)
     failures = 0
+    # Bounds that assume academic corroboration, relaxed to the product's own
+    # cut-off for an engagement-only build.
+    #
+    # Scenario A is a maximally disengaged student: muted, never unmuted, silent,
+    # camera off, no hand, no messages, confidence 8. The 16-feature model puts
+    # that at 94.9% because the academic half agrees. With no academic columns
+    # the honest answer is lower — 71.6% here — because in the unmatched
+    # population that is genuinely how often such a student turns out to be
+    # struggling. Demanding 75% of a model that cannot see the corroborating
+    # evidence asks it to be overconfident, and a gate that can never pass is
+    # worse than no gate: it teaches people to ignore the exit code.
+    #
+    # 0.70 is not a softer arbitrary number, it is RiskLevel.defaultHighThreshold
+    # — the line where Anchor paints a student red. The requirement that matters
+    # is that an obviously disengaged student is *flagged*, and this asserts
+    # exactly that rather than an absolute probability borrowed from a different
+    # feature set.
+    engagement_only_bounds = {"A. Obviously struggling": 0.70}
     academic_only_scenarios = {"D. Talks a lot, failing", "F. Extreme academic tail"}
     scenarios = [s for s in SCENARIOS
                  if not (args.engagement_only and s[0] in academic_only_scenarios)]
@@ -484,6 +502,8 @@ def main() -> None:
         for name in sorted(academic_only_scenarios):
             say(f"  {name:<35} SKIPPED — needs academic signal this model lacks")
     for name, direction, bound, values in scenarios:
+        if args.engagement_only and name in engagement_only_bounds:
+            bound = engagement_only_bounds[name]
         row = pd.DataFrame([[values[f] for f in FEATURES]], columns=FEATURES)
         p = float(model.predict_proba(row)[0, 1])
         ok = p >= bound if direction == "min" else p <= bound

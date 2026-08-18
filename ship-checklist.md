@@ -36,7 +36,7 @@ Decisions to lock in first, since they change what "done" means for everything b
 
 - [ ] Ship your own Zoom Meeting SDK key + Google OAuth client ID/secret baked into the app binary (both are already designed to be non-confidential per your own code's PKCE reasoning — don't make users paste keys)
 - [ ] Cut Settings down to a single "Connect" button per service; remove the manual client ID/secret entry fields from the shipped build
-- [ ] Confirm `BotCredentials.swift`'s dev-only hardcoded secrets are excluded from the shipped build (or replaced with the production app's own credentials) and never committed to a public repo
+- [x] **Confirm no secrets ship** — verified 2026-08-18, and this line was stale: `BotCredentials.swift` no longer exists anywhere in the repo. What ships is `OAuthClientDefaults`, and all three secret fields are empty strings (`zoomClientSecret`, `meetingSDKSecret`, `googleClientSecret`). Only the Zoom client ID, the Meeting SDK key and the Google client ID carry values, and none of those is confidential — they are public identifiers for a PKCE native client, which is the whole reason the flow uses PKCE. A source-wide scan for assigned secret-shaped literals returns nothing.
 
 ## 5. Known bugs to fix
 
@@ -88,7 +88,7 @@ Decisions to lock in first, since they change what "done" means for everything b
 - [ ] Classroom disconnect/reconnect flow
 - [ ] Fresh-install onboarding walkthrough, done by someone who isn't you
 - [ ] Verify no dev credentials, test account references, or debug logging ship in the release build
-- [ ] Run `scripts/verify-no-demo-data.sh` against the exact build you are shipping — proves the fabricated classroom in `DemoData.swift` is absent from the binary, and fails a Debug build outright
+- [~] Run `scripts/verify-no-demo-data.sh` against the exact build you are shipping — **passes as of 2026-08-18** against the current Release build: no demo reference reachable from a Release compile, Release build confirmed (no debug dylib), no demo symbols in the symbol table, none of the 36 long fabricated literals present. Left at `[~]` rather than `[x]` on purpose: the guarantee is per-binary, so this has to be re-run against the actual signed artifact you ship, not against whatever is in DerivedData today.
 
 ## 10. Launch readiness
 
