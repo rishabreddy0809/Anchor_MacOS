@@ -131,30 +131,81 @@ struct ZoomConnectionPanel: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             if zoom.needsMeetingNumber {
-                HStack(spacing: 6) {
-                    TextField("Meeting number", text: $meetingNumber)
-                        .textFieldStyle(.roundedBorder)
-                        .controlSize(.small)
-                        .font(.system(size: 11))
-                    TextField("Passcode (optional)", text: $meetingPasscode)
-                        .textFieldStyle(.roundedBorder)
-                        .controlSize(.small)
-                        .font(.system(size: 11))
-                        .frame(width: 110)
-                    Button("Join") {
-                        Task {
-                            await zoom.joinBot(
-                                meetingNumber: meetingNumber.trimmed,
-                                passcode: meetingPasscode.isEmpty ? nil : meetingPasscode
-                            )
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 6) {
+                        TextField("Paste the invite, link, or meeting number", text: $meetingNumber)
+                            .textFieldStyle(.roundedBorder)
+                            .controlSize(.small)
+                            .font(.system(size: 11))
+                            .onChange(of: meetingNumber) { _, pasted in
+                                adoptPastedInvitation(pasted)
+                            }
+                        TextField("Passcode (optional)", text: $meetingPasscode)
+                            .textFieldStyle(.roundedBorder)
+                            .controlSize(.small)
+                            .font(.system(size: 11))
+                            .frame(width: 110)
+                        Button("Join") {
+                            Task {
+                                await zoom.joinBot(
+                                    meetingNumber: pastedLink?.meetingNumber ?? meetingNumber.trimmed,
+                                    passcode: meetingPasscode.isEmpty ? nil : meetingPasscode
+                                )
+                            }
                         }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                        .disabled(pastedLink == nil)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
-                    .disabled(meetingNumber.trimmed.isEmpty)
+
+                    // Said here rather than after a failed join. A personal-room
+                    // link carries no meeting id at all, so the join would fail
+                    // deep in the SDK with a message about the meeting number
+                    // being wrong — which is true and useless, because the
+                    // teacher pasted exactly what Zoom gave them.
+                    if !meetingNumber.trimmed.isEmpty, pastedLink == nil {
+                        Text("No meeting number in that. A personal room link "
+                             + "(zoom.us/my/…) doesn't contain one — paste the "
+                             + "invitation instead, or the number from your Zoom window.")
+                            .font(.system(size: 9.5))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
 
+        }
+    }
+
+    /// Whatever is currently in the field, understood.
+    private var pastedLink: ZoomMeetingLink? {
+        ZoomMeetingLink.parse(meetingNumber)
+    }
+
+    /// Collapses a pasted invitation into the two fields the moment it lands.
+    ///
+    /// The teacher sees the paragraph they pasted turn into a bare meeting
+    /// number with the passcode filled in beside it, which is both the
+    /// confirmation that Anchor understood it and the chance to correct it
+    /// before joining. Doing this on paste rather than on Join matters: a join
+    /// that silently used something other than what is on screen would be
+    /// impossible to argue with when it failed.
+    private func adoptPastedInvitation(_ raw: String) {
+        // Only act on something that isn't already just the number. Without
+        // this, every keystroke of a hand-typed id would be re-parsed and
+        // written back, which fights the cursor. It also terminates the
+        // re-entrant `onChange` this assignment triggers: the value written
+        // back is bare digits, so the next pass stops here.
+        guard raw.contains(where: { !$0.isNumber && !$0.isWhitespace && $0 != "-" }),
+              let link = ZoomMeetingLink.parse(raw)
+        else { return }
+
+        meetingNumber = link.meetingNumber
+
+        // Never overwrite a passcode already typed by hand — if the two
+        // disagree, the human is the one who knows which meeting this is.
+        if let passcode = link.passcode, meetingPasscode.trimmed.isEmpty {
+            meetingPasscode = passcode
         }
     }
 
