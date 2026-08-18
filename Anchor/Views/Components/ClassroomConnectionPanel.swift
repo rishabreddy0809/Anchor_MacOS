@@ -45,8 +45,8 @@ struct ClassroomConnectionPanel: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 10))
                         .padding(.top, 1)
-                    Text("This build has no Google OAuth client configured, so sign-in "
-                         + "can't open. Add one under Advanced.")
+                    Text("This copy of Anchor is missing part of its Google setup, so "
+                         + "sign-in can't open. It isn't something you can fix from here.")
                         .font(.system(size: 10.5))
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)

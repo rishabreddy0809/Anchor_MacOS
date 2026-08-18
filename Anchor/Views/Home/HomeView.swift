@@ -567,9 +567,8 @@ private struct ClassroomConnectBanner: View {
                 Text(credentials.hasClientID
                      ? "Sign in to see your classes here, and to factor missing "
                        + "assignments and grade trends into each student's score."
-                     : "Add a Google OAuth client ID in Settings first — Anchor ships "
-                       + "no Google credentials of its own, so each deployment uses "
-                       + "its own registered app.")
+                     : "This copy of Anchor is missing part of its Google setup, so "
+                       + "Classroom can't connect. It isn't something you can fix from here.")
                     .font(.system(size: 11.5))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

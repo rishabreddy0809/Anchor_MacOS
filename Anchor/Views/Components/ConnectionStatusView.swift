@@ -275,8 +275,8 @@ struct ZoomConnectionPanel: View {
                 noticeRow(
                     symbol: "exclamationmark.triangle.fill",
                     tint: Theme.riskHigh,
-                    text: "This build has no Zoom app configured, so sign-in can't open. "
-                        + "Add a Client ID under Advanced."
+                    text: "This copy of Anchor is missing part of its Zoom setup, so sign-in "
+                        + "can't open. It isn't something you can fix from here."
                 )
             }
 
