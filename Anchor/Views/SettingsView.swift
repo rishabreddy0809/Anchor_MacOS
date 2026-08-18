@@ -340,7 +340,7 @@ struct SettingsView: View {
                 canConnect: oauth.hasClientCredentials,
                 unavailableReason: oauth.hasClientCredentials
                     ? nil
-                    : "This build has no Zoom app configured yet. Add one under Advanced.",
+                    : "This copy of Anchor is missing part of its Zoom setup. It isn't something you can fix from here.",
                 connectedDetail: oauth.accountLabel,
                 onConnect: connectZoom,
                 onDisconnect: disconnectZoom
@@ -359,13 +359,13 @@ struct SettingsView: View {
                 description: "Optional. Adds missing assignments and grade trends to each "
                     + "student's score.",
                 learnMoreDetail: "Anchor only reads Classroom — it never posts, grades or "
-                    + "changes anything. Choose which classes to sync under Advanced.",
+                    + "changes anything. Once connected, choose which classes to sync in this panel.",
                 isConnected: classroom.isConnected,
                 isBusy: isConnectingClassroom,
                 canConnect: googleCredentials.hasClientID,
                 unavailableReason: googleCredentials.hasClientID
                     ? nil
-                    : "This build has no Google client configured yet. Add one under Advanced.",
+                    : "This copy of Anchor is missing part of its Google setup. It isn't something you can fix from here.",
                 connectedDetail: googleCredentials.tokens?.accountEmail,
                 onConnect: connectClassroom,
                 onDisconnect: disconnectClassroom

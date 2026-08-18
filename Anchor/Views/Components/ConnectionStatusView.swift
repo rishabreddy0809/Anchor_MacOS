@@ -90,7 +90,23 @@ struct ZoomConnectionPanel: View {
                 .foregroundStyle(testSucceeded ? Theme.riskLow : Theme.riskHigh)
             }
 
+            // Credential entry is Debug-only. §4 of the ship checklist exists to
+            // get this out of a teacher's Settings entirely: both client IDs
+            // ship in OAuthClientDefaults, and neither integration needs a
+            // secret to sign a teacher in — Zoom runs as a public client, and
+            // Google documents client_secret as *optional* for installed apps,
+            // with PKCE standing in for it. So a shipped build has nothing to
+            // ask for, and a field asking anyway invites a teacher to believe
+            // something is missing.
+            //
+            // Deliberately #if DEBUG rather than deleted. It is still the
+            // fastest way to point a development build at a different
+            // registration, and a managed deployment provisions through the
+            // ANCHOR_* environment variables on first launch (see AppDelegate),
+            // which is a path this never touched.
+#if DEBUG
             advancedDisclosure
+#endif
 
             if store.dataSource == .zoom, !store.capabilities.unavailableSignals.isEmpty {
                 capabilityNote

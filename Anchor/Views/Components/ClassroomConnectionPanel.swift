@@ -54,7 +54,23 @@ struct ClassroomConnectionPanel: View {
                 .foregroundStyle(Theme.riskHigh)
             }
 
+            // Credential entry is Debug-only. §4 of the ship checklist exists to
+            // get this out of a teacher's Settings entirely: both client IDs
+            // ship in OAuthClientDefaults, and neither integration needs a
+            // secret to sign a teacher in — Zoom runs as a public client, and
+            // Google documents client_secret as *optional* for installed apps,
+            // with PKCE standing in for it. So a shipped build has nothing to
+            // ask for, and a field asking anyway invites a teacher to believe
+            // something is missing.
+            //
+            // Deliberately #if DEBUG rather than deleted. It is still the
+            // fastest way to point a development build at a different
+            // registration, and a managed deployment provisions through the
+            // ANCHOR_* environment variables on first launch (see AppDelegate),
+            // which is a path this never touched.
+#if DEBUG
             advancedDisclosure
+#endif
 
             if classroom.isConnected {
                 Divider().overlay(Theme.hairline)
@@ -193,10 +209,12 @@ struct ClassroomConnectionPanel: View {
 
                 Text("Google Cloud console → APIs & Services → Credentials → "
                      + "Create OAuth client ID → Desktop app. Enable the Google "
-                     + "Classroom API on the same project. Google requires the "
-                     + "secret on the token exchange even for desktop clients, and "
-                     + "refuses custom URL schemes for this client type — the "
-                     + "redirect is a loopback port Anchor opens for the sign-in.")
+                     + "Classroom API on the same project. The secret is optional: "
+                     + "Google lists client_secret as optional for installed apps "
+                     + "and takes the PKCE code_verifier instead, so leaving it "
+                     + "empty is a supported configuration rather than a gap. "
+                     + "Google refuses custom URL schemes for this client type — "
+                     + "the redirect is a loopback port Anchor opens for the sign-in.")
                     .font(.system(size: 9.5))
                     .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
