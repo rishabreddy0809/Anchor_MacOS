@@ -37,7 +37,7 @@ This section was written assuming the longest external dependency in the project
 
 - [x] **Rename the Marketplace app** — done 2026-08-17. The consent screen quotes the app name verbatim and read *"General app 392 would like permission to:"*; it now reads *"Anchor would like permission to:"*. Edited on App Listing → App Name, not the pencil beside the header. Re-check this on any second app created for production, which starts life with a generated name again.
 - [ ] Confirm the Meeting SDK app and Server-to-Server app are both properly activated for production use (not just dev/test mode)
-- [ ] If going per-teacher model: build a real "Connect your Zoom account" OAuth flow (Zoom's OAuth app type, not Server-to-Server) — mirror the pattern already built for Google
+- [x] **Per-teacher "Connect your Zoom account" OAuth flow — already built, this line was stale.** `ZoomOAuthHandler.authorize(config:)` and `ZoomViewModel.connectAccount()` are the browser sign-in, on Zoom's General app type rather than Server-to-Server, mirroring the Google pattern as the line asked. PKCE throughout, tokens in the Keychain, and the redirect runs over the hosted bounce page because Zoom rejects loopback (see `ZOOM_INTEGRATION.md` §2a). `ZoomRedirectTransportTests` drives the callback leg over a real socket. **What is still untested is the one click** — no teacher has ever completed this flow end to end, which is the same open item as the fresh-install test, not a gap in the code.
 - [ ] If going per-school model: document the admin install process clearly, since a school's Zoom admin is doing this, not the end-user teacher
 
 ## 4. Credential distribution — get this out of Settings entirely
