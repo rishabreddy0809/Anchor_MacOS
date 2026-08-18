@@ -1,20 +1,20 @@
 {
   "candidates": 220,
   "cv_roc_auc_by_family": {
-    "RandomForest": 0.8754043125748444,
-    "GradientBoosting": 0.8769319981988033
+    "RandomForest": 0.7818130845931328,
+    "GradientBoosting": 0.7849539147793594
   },
   "winner": "GradientBoosting",
-  "best_cv_roc_auc": 0.8769319981988033,
-  "test_roc_auc": 0.8784626133639105,
-  "bayes_ceiling": 0.8601339837611335,
+  "best_cv_roc_auc": 0.7849539147793594,
+  "test_roc_auc": 0.793331149346536,
+  "bayes_ceiling": 0.8545094129648265,
   "params": {
-    "subsample": "0.9",
-    "n_estimators": "600",
+    "subsample": "0.6",
+    "n_estimators": "200",
     "min_samples_leaf": "64",
-    "max_features": "0.5",
-    "max_depth": "5",
-    "learning_rate": "0.02"
+    "max_features": "sqrt",
+    "max_depth": "3",
+    "learning_rate": "0.08"
   },
-  "scenario_gates_passed": 6
+  "scenario_gates_passed": 3
 }

@@ -1,0 +1,145 @@
+==========================================================================
+ANCHOR STRUGGLE MODEL — PRODUCTION TRAINING RUN
+==========================================================================
+Data:       training_50k.csv
+Population: 14,059 of 50,000 rows are no LMS match; training on those.
+Rows:       14,059   Features: 11 (11 engagement + 0 academic)
+Balance:    31.4% struggling
+Distinct feature vectors: 13,487
+
+--------------------------------------------------------------------------
+PRODUCTION RANGE CHECK (vs FeatureCalculator.swift)
+--------------------------------------------------------------------------
+  grade_trend               —       SKIP   not in this model
+  missing_assignments       —       SKIP   not in this model
+  late_submissions          —       SKIP   not in this model
+  grade_average             —       SKIP   not in this model
+  days_since_submission     —       SKIP   not in this model
+  confidence_level          0..100   PASS   derived — ported from confidenceLevel()
+
+--------------------------------------------------------------------------
+HYPERPARAMETER SEARCH — 220 candidates x 5-fold CV
+--------------------------------------------------------------------------
+  RandomForest       110 candidates   best CV ROC AUC 0.7818
+  GradientBoosting   110 candidates   best CV ROC AUC 0.7850
+  Evaluated 220 candidates (1100 fits) in 144s
+
+  Winner: GradientBoosting  (CV ROC AUC 0.7850)
+     learning_rate        0.08
+     max_depth            3
+     max_features         sqrt
+     min_samples_leaf     64
+     n_estimators         200
+     subsample            0.6
+
+  Top 5 candidates overall:
+    1. GradientBoosting     AUC 0.7850 (+/-0.0100)
+    2. GradientBoosting     AUC 0.7847 (+/-0.0104)
+    3. GradientBoosting     AUC 0.7844 (+/-0.0101)
+    4. GradientBoosting     AUC 0.7842 (+/-0.0105)
+    5. GradientBoosting     AUC 0.7841 (+/-0.0100)
+
+==========================================================================
+HELD-OUT TEST METRICS (2,000 rows, unseen during fit and search)
+==========================================================================
+  Majority-class baseline: 68.60%
+  Accuracy:                75.82%
+  Precision (struggling):  66.45%
+  Recall (struggling):     46.43%
+  F1 (struggling):         0.547
+  ROC AUC:                 0.7933
+  Brier score:             0.1653  (lower is better)
+  Brier if isotonic-calibrated: 0.1650  (not exportable — see above)
+
+  Estimated Bayes ceiling: 85.45% (exact — from the generator's latent p)
+  Gap to ceiling:          +9.63%
+
+  Labels are drawn from a latent state the features only partly reveal,
+  so the ceiling above is where a perfect model lands. Scoring at or
+  over it would mean the generator leaked its labels, not that the
+  model is good; the gap is the real headroom left.
+
+Per-class detail:
+              precision    recall  f1-score   support
+
+      coping       0.78      0.89      0.84      1929
+  struggling       0.66      0.46      0.55       883
+
+    accuracy                           0.76      2812
+   macro avg       0.72      0.68      0.69      2812
+weighted avg       0.75      0.76      0.74      2812
+
+Confusion matrix (rows=actual, cols=predicted):
+                 pred coping   pred struggling
+  actual coping        1722            207
+  actual struggling     473            410
+
+Calibration (predicted probability vs observed rate):
+  predicted     n   actual   gap
+  0.0-0.1    590     6.6%   +0.9%
+  0.1-0.2    544    12.5%   -2.0%
+  0.2-0.3    432    28.9%   +4.2%
+  0.3-0.4    347    34.6%   -0.5%
+  0.4-0.5    282    42.9%   -1.6%
+  0.5-0.6    233    55.4%   +0.6%
+  0.6-0.7    218    69.3%   +5.0%
+  0.7-0.8    133    79.7%   +5.4%
+  0.8-0.9     31    74.2%   -8.4%
+  0.9-1.0      2    50.0%  -40.6%
+
+--------------------------------------------------------------------------
+OPERATING POINTS (RiskLevel.swift cut-offs)
+--------------------------------------------------------------------------
+  threshold                     precision  recall     F1   flagged
+  0.25  Watch, max sensitivity         49.8%   82.0%  0.619    51.7%
+  0.40  Watch  <- default              59.1%   60.1%  0.596    32.0%
+  0.50  (comparison only)              66.5%   46.4%  0.547    21.9%
+  0.55  Needs attention, max sens.     71.0%   39.9%  0.511    17.6%
+  0.70  Needs attention  <- default    78.3%   14.7%  0.248     5.9%
+  0.85  Needs attention, min sens.     66.7%    0.5%  0.009     0.2%
+
+  A missed struggling student is the failure this product exists to
+  prevent; a false alarm costs a teacher one question. The default
+  'Watch' point is deliberately the recall-favouring one.
+
+--------------------------------------------------------------------------
+FEATURE IMPORTANCE
+--------------------------------------------------------------------------
+  confidence_level         0.2977  ###################################
+  is_muted                 0.1548  ##################
+  message_length           0.1521  ##################
+  time_unmuted             0.1375  ################
+  hand_raise_count         0.0896  ##########
+  hesitation_count         0.0697  ########
+  speaking_duration        0.0578  ######
+  is_speaking              0.0129  #
+  camera_on                0.0119  #
+  hand_raised              0.0106  #
+  has_question             0.0053  
+
+Academic features: none in this model (engagement-only build).
+
+==========================================================================
+PRODUCTION SCENARIO GATES
+==========================================================================
+  D. Talks a lot, failing             SKIPPED — needs academic signal this model lacks
+  F. Extreme academic tail            SKIPPED — needs academic signal this model lacks
+  A. Obviously struggling             71.6%   expect > 75%   [FAIL]
+  B. Quiet but fine                   12.2%   expect < 35%   [PASS]
+  C. Introvert, engaged               27.9%   expect < 35%   [PASS]
+  E. REST-only, nothing observed      30.4%   expect < 55%   [PASS]
+
+  3/4 gates passed
+
+==========================================================================
+FEATURE DIRECTION GATES (one column swept, everything else held)
+==========================================================================
+  confidence_level          58.2% ->  16.4%  down  (want down ) rank-corr -0.98  [PASS]
+
+  1/1 direction gates passed
+
+Renamed probability output 'classProbability' -> struggle_labelProbability
+Wrote StudentStruggleModel_11.mlmodel
+  declares 11 inputs: camera_on, confidence_level, hand_raise_count, hand_raised, has_question, hesitation_count, is_muted, is_speaking, message_length, speaking_duration, time_unmuted
+  outputs: ['struggle_label', 'struggle_labelProbability']
+  schema matches FeatureCalculator: YES

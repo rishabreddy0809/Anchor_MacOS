@@ -332,6 +332,17 @@ def make_row(rng: random.Random) -> dict:
         row["days_since_submission"] = 0
         row["late_submissions"] = 0
 
+    # Not a feature — which of the two label formulas below drew this row.
+    #
+    # It exists because the engagement-only model must be trained on the rows
+    # it will actually meet. A student with no LMS match has their struggle
+    # drawn from engagement alone; a matched student's is drawn mostly from
+    # academic terms the 11-feature model structurally cannot see. Train the
+    # engagement model on both and it is asked to predict something invisible
+    # to it, and it learns noise — which is exactly how it landed 1.7 points
+    # above the majority-class baseline on the first attempt.
+    row["_academic_observed"] = 1 if SIG_ACADEMIC in observed else 0
+
     # --- label, drawn from the latent state ------------------------------
     #
     # Academic weight exceeds engagement weight on purpose: the whole reason
@@ -402,11 +413,31 @@ def generate(n: int, seed: int, target_share: float = 0.32,
     rows = [make_row(rng) for _ in range(n)]
 
     risks = [r.pop("_risk") * sharpness for r in rows]
-    shift = solve_shift(risks, target_share)
+
+    # Solved per population, not globally.
+    #
+    # A single shift left matched students 39.0% struggling and unmatched ones
+    # 14.4% — a 2.7x gap that came entirely from the two risk formulas having
+    # different intercepts, and said nothing about the world. Whether Google
+    # Classroom matched a student's *display name* has no bearing on whether
+    # they are struggling, so the two sub-populations must carry the same
+    # prevalence.
+    #
+    # It is not a cosmetic difference. Each model trains on one population, so
+    # unequal shares calibrate them to different base rates, and Anchor ranks a
+    # whole class on one axis against fixed RiskLevel thresholds. Left alone,
+    # an unmatched student would score systematically below an equally
+    # struggling matched one — meaning the students the system can see least
+    # would also be flagged least, which is the opposite of the point.
+    shifts = {}
+    for observed_flag in (0, 1):
+        group = [r for r, row in zip(risks, rows) if row["_academic_observed"] == observed_flag]
+        if group:
+            shifts[observed_flag] = solve_shift(group, target_share)
 
     label_rng = random.Random(seed ^ 0x5EED)
     for row, risk in zip(rows, risks):
-        p = sigmoid(risk + shift)
+        p = sigmoid(risk + shifts[row["_academic_observed"]])
         row["struggle_label"] = bernoulli(label_rng, p)
         # Not a feature — the true probability this student struggles, which
         # only the generator knows. Training drops the column, but it makes the
@@ -415,12 +446,18 @@ def generate(n: int, seed: int, target_share: float = 0.32,
         # tell a model that is doing badly from a task that is genuinely hard.
         row["_latent_p"] = p
 
-    frame = pd.DataFrame(rows, columns=COLUMNS + ["_latent_p"])
-    print(f"Solved intercept shift: {shift:+.4f} for target share {target_share:.0%} "
-          f"(sharpness x{sharpness})")
+    frame = pd.DataFrame(rows, columns=COLUMNS + ["_academic_observed", "_latent_p"])
+    print("Solved intercept shifts for target share "
+          f"{target_share:.0%} (sharpness x{sharpness}): "
+          + ", ".join(f"{'matched' if k else 'unmatched'} {v:+.4f}"
+                      for k, v in sorted(shifts.items(), reverse=True)))
     latent = frame["_latent_p"]
     ceiling = latent.combine(1 - latent, max).mean()
     print(f"Bayes ceiling of this set: {ceiling:.2%}")
+    matched = int(frame["_academic_observed"].sum())
+    print(f"Academic observed: {matched:,} of {len(frame):,} rows "
+          f"({matched / len(frame):.1%}) — the rest are what the "
+          f"engagement-only model must be trained on")
     # Every column is an Int64 the Swift side can send — except the latent
     # probability, which is bookkeeping and stays a float.
     return frame.astype({c: "int64" for c in COLUMNS})

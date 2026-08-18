@@ -231,6 +231,44 @@ def main() -> None:
 
     frame = pd.read_csv(args.data)
     latent_p = frame["_latent_p"].to_numpy()
+    # The engagement model is trained only on rows with no LMS match — the
+    # situation it is actually routed for.
+    #
+    # Training it on matched rows too asks it to predict a label drawn mostly
+    # from academic terms it cannot see, so the best it can do on those rows is
+    # guess the base rate, and the fit spends its capacity learning that noise.
+    # The first attempt did exactly this and scored 69.6% against a 67.9%
+    # baseline — 1.7 points, and 18% recall — which read as "Zoom signal is
+    # nearly worthless" when it actually meant "this model was shown the wrong
+    # rows".
+    population_note = ""
+    if "_academic_observed" in frame.columns:
+        # Each model is trained on the population it is routed for, and only
+        # that one. The engagement model meets students with no LMS match,
+        # whose label is drawn from engagement alone; the academic model meets
+        # matched students, whose label is drawn mostly from academic terms.
+        #
+        # Mixing them harms both, in opposite ways. The engagement model is
+        # asked to predict a label it cannot see and learns noise instead. The
+        # academic model is shown rows where the academic columns hold
+        # in-good-standing defaults rather than readings, and learns that those
+        # exact values carry the engagement-driven label — which is the same
+        # confusion between a default and a measurement that the two-model
+        # split exists to prevent, reintroduced through the training set.
+        want = 0 if args.engagement_only else 1
+        kind = "no LMS match" if args.engagement_only else "matched in an LMS"
+        before = len(frame)
+        frame = frame[frame["_academic_observed"] == want].reset_index(drop=True)
+        population_note = (f"Population: {len(frame):,} of {before:,} rows are {kind}; "
+                           f"training on those.")
+        if frame.empty:
+            raise SystemExit(f"No rows with _academic_observed == {want}.")
+    elif args.engagement_only:
+        population_note = ("WARNING: no _academic_observed column — training on every row, "
+                           "including ones whose label depends on academic signal this "
+                           "model cannot see. Regenerate with the current "
+                           "generate_messy_data.py.")
+
     X, y = frame[FEATURES], frame[LABEL]
 
     out: list[str] = []
@@ -244,6 +282,7 @@ def main() -> None:
     say("=" * 74)
     say(f"Data:       {args.data.name}")
     n_academic = len([f for f in FEATURES if f in ACADEMIC])
+    if population_note: say(population_note)
     say(f"Rows:       {len(frame):,}   Features: {len(FEATURES)} "
         f"({len(FEATURES) - n_academic} engagement + {n_academic} academic)")
     say(f"Balance:    {y.mean():.1%} struggling")
