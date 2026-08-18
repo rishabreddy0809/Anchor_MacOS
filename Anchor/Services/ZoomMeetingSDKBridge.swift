@@ -73,14 +73,14 @@ final class ZoomMeetingSDKBridge: NSObject, @unchecked Sendable {
 
         if let fwPath = Bundle.main.privateFrameworksPath {
             let count = (try? FileManager.default.contentsOfDirectory(atPath: fwPath).count) ?? -1
-            print("ANCHOR-DIAG Frameworks dir (\(fwPath)) item count = \(count)")
+            AnchorDiag.log("Frameworks dir (\(fwPath)) item count = \(count)")
         } else {
-            print("ANCHOR-DIAG Bundle.main.privateFrameworksPath is nil")
+            AnchorDiag.log("Bundle.main.privateFrameworksPath is nil")
         }
 
         let result = ZoomSDK.shared().initSDK(with: params)
         sdkLog.info("initSDK -> \(result.rawValue, privacy: .public)")
-        print("ANCHOR-DIAG initSDK -> \(result.rawValue)")
+        AnchorDiag.log("initSDK -> \(result.rawValue)")
         guard result == ZoomSDKError_Success else {
             throw ZoomError.unsupported("Zoom Meeting SDK failed to initialize (code \(result.rawValue)).")
         }
@@ -105,7 +105,7 @@ final class ZoomMeetingSDKBridge: NSObject, @unchecked Sendable {
 
         if authService.isAuthorized() {
             sdkLog.info("already authorized; skipping sdkAuth")
-            print("ANCHOR-DIAG already authorized; skipping sdkAuth")
+            AnchorDiag.log("already authorized; skipping sdkAuth")
             return
         }
 
@@ -116,7 +116,7 @@ final class ZoomMeetingSDKBridge: NSObject, @unchecked Sendable {
             segments=\(segments.count, privacy: .public) \
             identity=\(authService.getSDKIdentity() ?? "nil", privacy: .public)
             """)
-        print("ANCHOR-DIAG sdkAuth: jwt len=\(jwtToken.count) segments=\(segments.count) identity=\(authService.getSDKIdentity() ?? "nil")")
+        AnchorDiag.log("sdkAuth: jwt len=\(jwtToken.count) segments=\(segments.count) identity=\(authService.getSDKIdentity() ?? "nil")")
 
         let context = ZoomSDKAuthContext()
         context.jwtToken = jwtToken
@@ -125,7 +125,7 @@ final class ZoomMeetingSDKBridge: NSObject, @unchecked Sendable {
             self.authContinuation = continuation
             let result = authService.sdkAuth(context)
             sdkLog.info("sdkAuth -> \(result.rawValue, privacy: .public)")
-            print("ANCHOR-DIAG sdkAuth -> \(result.rawValue)")
+            AnchorDiag.log("sdkAuth -> \(result.rawValue)")
             if result != ZoomSDKError_Success {
                 self.authContinuation = nil
                 // Synchronous rejection — a local/parameter problem, distinct
@@ -176,7 +176,7 @@ final class ZoomMeetingSDKBridge: NSObject, @unchecked Sendable {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             self.joinContinuation = continuation
             let result = meetingService.joinMeeting(elements)
-            print("ANCHOR-DIAG joinMeeting -> \(result.rawValue)")
+            AnchorDiag.log("joinMeeting -> \(result.rawValue)")
             if result != ZoomSDKError_Success {
                 self.joinContinuation = nil
                 continuation.resume(throwing: ZoomError.unsupported(
@@ -216,7 +216,7 @@ final class ZoomMeetingSDKBridge: NSObject, @unchecked Sendable {
         let chatController = meetingService.getMeetingChatController()
         chatController.delegate = self
         sdkLog.info("chat delegate attached")
-        print("ANCHOR-DIAG chat delegate attached")
+        AnchorDiag.log("chat delegate attached")
     }
 
     /// Snapshot of everything said in chat so far, oldest first.
@@ -260,7 +260,7 @@ final class ZoomMeetingSDKBridge: NSObject, @unchecked Sendable {
             transcriptAvailability = .unsupported
             didRequestTranscription = true
             sdkLog.info("live transcription: feature disabled for this account")
-            print("ANCHOR-DIAG live transcription: feature disabled for this account")
+            AnchorDiag.log("live transcription: feature disabled for this account")
             return
         }
 
@@ -275,7 +275,7 @@ final class ZoomMeetingSDKBridge: NSObject, @unchecked Sendable {
             if permitted == ZoomSDKError_NoPermission, controller.isSupportRequestCaptions() {
                 let asked = controller.request(toStartCaptions: false)
                 sdkLog.info("live transcription: asked host to start captions -> \(asked.rawValue, privacy: .public)")
-                print("ANCHOR-DIAG live transcription: asked host to start captions -> \(asked.rawValue)")
+                AnchorDiag.log("live transcription: asked host to start captions -> \(asked.rawValue)")
             }
             didRequestTranscription = transcriptAvailability.isBlocked
             return
@@ -283,7 +283,7 @@ final class ZoomMeetingSDKBridge: NSObject, @unchecked Sendable {
 
         let result = controller.startLiveTranscription()
         sdkLog.info("startLiveTranscription -> \(result.rawValue, privacy: .public)")
-        print("ANCHOR-DIAG startLiveTranscription -> \(result.rawValue)")
+        AnchorDiag.log("startLiveTranscription -> \(result.rawValue)")
 
         if result == ZoomSDKError_Success {
             transcriptAvailability = .starting
@@ -455,7 +455,7 @@ final class ZoomMeetingSDKBridge: NSObject, @unchecked Sendable {
 
 extension ZoomMeetingSDKBridge: ZoomSDKAuthDelegate {
     func onZoomSDKAuthReturn(_ returnValue: ZoomSDKAuthError) {
-        print("ANCHOR-DIAG onZoomSDKAuthReturn -> \(returnValue.rawValue) (\(Self.describe(returnValue)))")
+        AnchorDiag.log("onZoomSDKAuthReturn -> \(returnValue.rawValue) (\(Self.describe(returnValue)))")
         let continuation = authContinuation
         authContinuation = nil
         if returnValue == ZoomSDKAuthError_Success {
@@ -539,7 +539,7 @@ extension ZoomMeetingSDKBridge: ZoomSDKAuthDelegate {
 
 extension ZoomMeetingSDKBridge: ZoomSDKMeetingServiceDelegate {
     func onMeetingStatusChange(_ state: ZoomSDKMeetingStatus, meetingError error: ZoomSDKMeetingError, end reason: EndMeetingReason) {
-        print("ANCHOR-DIAG onMeetingStatusChange state=\(state.rawValue) error=\(error.rawValue) reason=\(reason.rawValue)")
+        AnchorDiag.log("onMeetingStatusChange state=\(state.rawValue) error=\(error.rawValue) reason=\(reason.rawValue)")
 
         // Unconditional, before the continuation guard: on a reconnect this
         // fires again with no join in flight, and the chat controller may have
@@ -579,7 +579,7 @@ extension ZoomMeetingSDKBridge: ZoomSDKMeetingChatControllerDelegate {
 
     func onChatMessageNotification(_ chatInfo: ZoomSDKChatInfo) {
         let chat = makeChat(from: chatInfo)
-        print("ANCHOR-DIAG chat message from \(chat.senderName) (\(chat.message.count) chars)")
+        AnchorDiag.log("chat message from \(chat.senderName) (\(chat.message.count) chars)")
 
         chatMessages.append(chat)
         if chatMessages.count > Self.chatBufferLimit {
@@ -691,7 +691,7 @@ extension ZoomMeetingSDKBridge: ZoomSDKCloseCaptionControllerDelegate {
     }
 
     func onLiveTranscriptionStatus(_ status: ZoomSDKLiveTranscriptionStaus) {
-        print("ANCHOR-DIAG onLiveTranscriptionStatus -> \(status.rawValue)")
+        AnchorDiag.log("onLiveTranscriptionStatus -> \(status.rawValue)")
         MainActor.assumeIsolated {
             switch status {
             case ZoomSDK_LiveTranscription_Status_Start,
@@ -713,7 +713,7 @@ extension ZoomMeetingSDKBridge: ZoomSDKCloseCaptionControllerDelegate {
     /// The host approved the bot's request. This is the other half of the
     /// `requestToStartCaptions` call in `startLiveTranscription`.
     func onStartCaptionsRequestApproved() {
-        print("ANCHOR-DIAG live transcription: host approved the captions request")
+        AnchorDiag.log("live transcription: host approved the captions request")
         MainActor.assumeIsolated {
             didRequestTranscription = false
             startLiveTranscription()
