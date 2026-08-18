@@ -95,7 +95,19 @@ This section was written assuming the longest external dependency in the project
 
 ## 9. QA pass before calling it v1
 
-- [x] Automated coverage exists at all — an `AnchorTests` XCTest target, **211 passing tests** as of 2026-08-18 (the repo had none before that day). Grown in four passes, each pinning a layer where a mistake is silent rather than loud: score shaping and the three RiskLevel cut-offs; the academic escalation rules; the 16-feature vector and the cross-poll accumulators that build it (`FeatureCalculatorTests`); the Zoom redirect transports, driven over a real loopback socket (`ZoomRedirectTransportTests`); and the roster gate that decides who is scored at all (`MeetingRolesTests`). Those passes found five real defects between them — three in the feature vector, two in the redirect transports; the roster gate turned out to be already correct and is simply pinned now. See the commit messages for what and why. It still says nothing about the manual passes below, which all stay open.
+- [x] **Automated coverage exists at all** — an `AnchorTests` XCTest target, **211 passing tests** as of 2026-08-18 (the repo had none before 2026-08-17). Eleven files, each pinning a layer where a mistake is silent rather than loud:
+  - `ScoreShapingTests` (17) and `RiskLevelThresholdTests` (8) — score shaping and the three RiskLevel cut-offs.
+  - `AcademicEscalationTests` (29) — the hand-written academic rules, and the +0.20 bound on them.
+  - `FeatureCalculatorTests` (68) — the 16-feature vector and the cross-poll accumulators that build it.
+  - `MeetingRolesTests` (18) — the roster gate that decides who is scored at all.
+  - `ZoomRedirectTransportTests` (16) — the redirect transports, driven over a real loopback socket.
+  - `ZoomMeetingLinkTests` (19) — the invitation parser.
+  - `PollScheduleTests` (18) — the backoff ladder, its ceiling, jitter bounds, and which failures stop polling.
+  - `ModelRoutingTests` (8) — which of the two models a given student is scored by.
+  - `SupportContactTests` (8) — that no teacher-facing error string uses developer vocabulary, and that the technical sentence survives into the support mail.
+  - `ReleaseHygieneTests` (2) — that nothing logs to the console outside `#if DEBUG`.
+  - **Eleven real defects across those passes**, which is the argument for having written them: three in the feature vector; two in the redirect transports; two in `PollSchedule` (a `Retry-After` that nothing read, and jitter re-drawn every 500ms); the PKCE entropy status discarded; a hand-raise penalising the student holding it up; a student's name printed into the release log; and two error strings still speaking to a developer. The roster gate turned out to be already correct and is simply pinned. See the commit messages for what and why.
+  - It still says nothing about the manual passes below, which all stay open. **Every test here runs against code, never against Zoom, Google or a real class** — which is exactly why the manual lines cannot be closed by adding more of these.
 - [ ] Full session, start to finish, with a real unfamiliar class size
 - [ ] Network interruption recovery
 - [ ] Classroom disconnect/reconnect flow
