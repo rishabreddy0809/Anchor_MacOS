@@ -480,7 +480,7 @@ enum ClassroomError: LocalizedError, Equatable {
         case .notConnected:
             "Google Classroom isn't connected."
         case .missingClientID:
-            "No Google OAuth client ID has been set."
+            "Anchor hasn't been set up to connect to Google Classroom."
         case .authorizationCancelled:
             "Sign-in was cancelled."
         case .authorizationFailed(let reason):
@@ -508,16 +508,49 @@ enum ClassroomError: LocalizedError, Equatable {
 
     var recoverySuggestion: String? {
         switch self {
-        case .notConnected, .missingClientID:
+        case .notConnected:
             "Open Settings → Google Classroom to connect."
+        case .missingClientID:
+            "This copy of Anchor is missing part of its Google setup. It isn't something you can fix from here."
         case .tokenExpired, .authorizationFailed:
             "Reconnect Google Classroom in Settings."
         case .insufficientScope:
-            "Add the scope in the Google Cloud console under APIs & Services → "
-                + "OAuth consent screen → Data access, then disconnect and reconnect "
-                + "and tick every permission box Google offers."
+            "Anchor wasn't granted everything it needs to read Classroom. Reconnecting and "
+                + "ticking every box Google offers usually fixes it."
         case .rateLimited:
             "Anchor will retry automatically."
+        default:
+            nil
+        }
+    }
+
+    /// True where the teacher reading this cannot be the one to fix it.
+    /// See `ZoomError.isSetupProblem` for the reasoning; the two enums answer
+    /// the same question so the views can treat them alike.
+    ///
+    /// `.insufficientScope` is deliberately *not* here. Unlike the Zoom one it
+    /// has a real teacher-side remedy — Google shows a per-permission consent
+    /// screen and un-ticking a box produces exactly this error — so it keeps an
+    /// instruction rather than a support link.
+    var isSetupProblem: Bool {
+        switch self {
+        case .missingClientID:
+            true
+        case .notConnected, .authorizationCancelled, .authorizationFailed, .tokenExpired,
+             .insufficientScope, .rateLimited, .network, .decoding, .server:
+            false
+        }
+    }
+
+    /// Carried into the support mail rather than shown. See
+    /// `ZoomError.technicalDetail`.
+    var technicalDetail: String? {
+        switch self {
+        case .missingClientID:
+            "OAuthClientDefaults.googleClientID resolved empty, and no Keychain override is set."
+        case .insufficientScope(let scope):
+            "Missing scope \(scope ?? "(unnamed)"). Grant under APIs & Services → "
+                + "OAuth consent screen → Data access, then disconnect and reconnect."
         default:
             nil
         }

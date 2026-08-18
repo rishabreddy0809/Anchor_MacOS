@@ -7,6 +7,7 @@
 //  do rather than just showing a blank pane.
 //
 
+import AppKit
 import SwiftUI
 
 struct EmptyStateView: View {
@@ -142,14 +143,29 @@ struct EmptyStateView: View {
             )
 
         case .failed(let error):
+            let message = [error.errorDescription, error.recoverySuggestion]
+                .compactMap { $0 }
+                .joined(separator: " ")
+
+            // "Try again" is the wrong offer for a setup problem: retrying a
+            // missing scope or an unconfigured client fails identically every
+            // time, so the button trains the teacher that Anchor is simply
+            // broken. Where they cannot fix it, hand them the one action that
+            // can — reaching the person who can.
             return Presentation(
                 symbolName: "exclamationmark.triangle",
-                title: "Zoom disconnected",
-                message: [error.errorDescription, error.recoverySuggestion]
-                    .compactMap { $0 }
-                    .joined(separator: " "),
+                title: error.isSetupProblem ? "Anchor isn't set up for Zoom yet" : "Zoom disconnected",
+                message: message,
                 tint: Theme.riskHigh,
-                action: Action(title: "Try again") { zoom.start() }
+                action: error.isSetupProblem
+                    ? Action(title: "Email support") {
+                        let url = SupportContact.reportURL(
+                            summary: error.errorDescription ?? "Zoom setup problem",
+                            detail: error.technicalDetail
+                        ) ?? URL(string: "mailto:\(SupportContact.email)")
+                        if let url { NSWorkspace.shared.open(url) }
+                    }
+                    : Action(title: "Try again") { zoom.start() }
             )
 
         case .retrying(let after, _):

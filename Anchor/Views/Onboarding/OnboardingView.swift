@@ -416,7 +416,10 @@ private struct ZoomStep: View {
     @ObservedObject private var oauth = ZoomOAuthStore.shared
 
     @State private var isBusy = false
-    @State private var error: String?
+
+    /// The error itself rather than its description: `ErrorNotice` needs to
+    /// know whether the teacher can act on it, which only the value knows.
+    @State private var error: ZoomError?
 
     var body: some View {
         VStack(spacing: 14) {
@@ -445,23 +448,15 @@ private struct ZoomStep: View {
             )
 
             if let error {
-                errorLine(error)
+                ErrorNotice(
+                    message: [error.errorDescription, error.recoverySuggestion]
+                        .compactMap { $0 }
+                        .joined(separator: " "),
+                    isSetupProblem: error.isSetupProblem,
+                    technicalDetail: error.technicalDetail
+                )
             }
         }
-    }
-
-    private func errorLine(_ text: String) -> some View {
-        HStack(alignment: .top, spacing: 5) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 10))
-                .padding(.top, 1)
-            Text(text)
-                .font(.system(size: 10.5))
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
-        }
-        .foregroundStyle(Theme.riskHigh)
-        .frame(maxWidth: 380)
     }
 
     private func connect() {
@@ -475,9 +470,7 @@ private struct ZoomStep: View {
             case .failure(let failure):
                 // Cancelling isn't worth a red banner — the teacher closed the tab.
                 guard failure != .authorizationCancelled else { return }
-                error = [failure.errorDescription, failure.recoverySuggestion]
-                    .compactMap { $0 }
-                    .joined(separator: " ")
+                error = failure
             }
         }
     }
@@ -492,7 +485,7 @@ private struct ClassroomStep: View {
     @ObservedObject private var credentials = GoogleCredentialsStore.shared
 
     @State private var isBusy = false
-    @State private var error: String?
+    @State private var error: ClassroomError?
 
     var body: some View {
         VStack(spacing: 14) {
@@ -522,23 +515,15 @@ private struct ClassroomStep: View {
             )
 
             if let error {
-                errorLine(error)
+                ErrorNotice(
+                    message: [error.errorDescription, error.recoverySuggestion]
+                        .compactMap { $0 }
+                        .joined(separator: " "),
+                    isSetupProblem: error.isSetupProblem,
+                    technicalDetail: error.technicalDetail
+                )
             }
         }
-    }
-
-    private func errorLine(_ text: String) -> some View {
-        HStack(alignment: .top, spacing: 5) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 10))
-                .padding(.top, 1)
-            Text(text)
-                .font(.system(size: 10.5))
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
-        }
-        .foregroundStyle(Theme.riskHigh)
-        .frame(maxWidth: 380)
     }
 
     private func connect() {
@@ -547,10 +532,9 @@ private struct ClassroomStep: View {
             isBusy = true
             defer { isBusy = false }
             await classroom.connect()
-            if let failure = classroom.lastError {
-                error = [failure.errorDescription, failure.recoverySuggestion]
-                    .compactMap { $0 }
-                    .joined(separator: " ")
+            // Cancelling isn't worth a red banner here either — matches Zoom.
+            if let failure = classroom.lastError, failure != .authorizationCancelled {
+                error = failure
             }
         }
     }

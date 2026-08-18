@@ -598,6 +598,16 @@ struct SettingsView: View {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
 
+                // Nothing has gone wrong at this point — the teacher is
+                // browsing — so this opens the support page rather than a
+                // pre-filled bug report. The report path is attached to the
+                // errors themselves, where the detail is known.
+                Button("Get Help") {
+                    NSWorkspace.shared.open(SupportContact.supportPageURL)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
                 Button("Quit Anchor") {
                     NSApp.terminate(nil)
                 }

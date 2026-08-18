@@ -271,9 +271,9 @@ nonisolated enum ZoomError: LocalizedError, Equatable, Sendable {
     var errorDescription: String? {
         switch self {
         case .missingCredentials:
-            "No Zoom credentials saved."
+            "Anchor hasn't been set up with a Zoom account yet."
         case .missingSDKCredentials:
-            "No Meeting SDK Key/Secret saved — the bot can't join without them."
+            "Anchor can't join the meeting itself — part of its Zoom setup is missing."
         case .invalidCredentials(let reason):
             reason.map { "Zoom rejected these credentials: \($0)." }
                 ?? "Zoom rejected these credentials."
@@ -289,9 +289,11 @@ nonisolated enum ZoomError: LocalizedError, Equatable, Sendable {
             "Your Zoom sign-in has expired."
         case .keychainUnavailable:
             "Anchor couldn't save the Zoom sign-in to your Keychain."
-        case .insufficientScope(let scope):
-            if let scope { "Your Zoom app is missing the \"\(scope)\" scope." }
-            else { "Your Zoom app is missing a required scope." }
+        case .insufficientScope:
+            // The scope name is deliberately dropped here and kept in
+            // `technicalDetail`: it means nothing to a teacher, and naming it
+            // invites them to go looking for a setting that isn't theirs.
+            "Anchor hasn't been given permission to see who's in your meetings."
         case .planRequired(let detail):
             "This data needs a paid Zoom plan. \(detail)"
         case .noActiveMeeting:
@@ -316,15 +318,16 @@ nonisolated enum ZoomError: LocalizedError, Equatable, Sendable {
     var recoverySuggestion: String? {
         switch self {
         case .missingCredentials:
-            "Add your Account ID, Client ID and Client Secret in Settings."
+            "Anchor hasn't been given its Zoom account details yet. Whoever set Anchor up can add them."
         case .missingSDKCredentials:
-            "Create a Meeting SDK app in the Zoom Marketplace and add its SDK Key/Secret in Settings."
+            "This copy of Anchor is missing part of its Zoom setup, so it can't join the meeting itself. "
+                + "Everything else still works."
         case .invalidCredentials:
             "Check the credentials in Settings, or regenerate the Client Secret in the Zoom Marketplace."
         case .notSignedIn:
             "Open Settings → Zoom and click Connect Zoom."
         case .missingOAuthClient:
-            "This build is missing its Zoom OAuth client ID — add one under Settings → Zoom → Advanced."
+            "This copy of Anchor is missing part of its Zoom setup. It isn't something you can fix from here."
         case .authorizationCancelled:
             "Click Connect Zoom to try again."
         case .authorizationFailed:
@@ -335,7 +338,8 @@ nonisolated enum ZoomError: LocalizedError, Equatable, Sendable {
         case .keychainUnavailable:
             "Anchor still works for this session, but you'll have to reconnect next launch."
         case .insufficientScope:
-            "Add the scope to your Server-to-Server OAuth app, then re-activate it."
+            "Anchor's Zoom app hasn't been granted one of the permissions it needs. "
+                + "It isn't something you can fix from here."
         case .planRequired:
             "Anchor will keep running on the signals your plan does expose."
         case .noActiveMeeting:
@@ -378,6 +382,49 @@ nonisolated enum ZoomError: LocalizedError, Equatable, Sendable {
              .notSignedIn, .missingOAuthClient, .authorizationCancelled,
              .authorizationFailed, .authorizationExpired, .keychainUnavailable:
             false
+        }
+    }
+
+    /// True where the teacher reading this cannot be the one to fix it.
+    ///
+    /// The split that matters for wording is not severity but *audience*.
+    /// `.authorizationExpired` and `.noActiveMeeting` are things a teacher
+    /// resolves in one click; a missing scope or an unconfigured Meeting SDK
+    /// key is a property of the build they were handed. Telling a teacher to
+    /// re-activate a Server-to-Server OAuth app does not just fail to help —
+    /// it implies the mistake was theirs, which is how a misconfigured install
+    /// goes unreported. Views branch on this to offer `SupportContact`
+    /// instead of an instruction.
+    var isSetupProblem: Bool {
+        switch self {
+        case .missingCredentials, .missingSDKCredentials, .missingOAuthClient, .insufficientScope:
+            true
+        case .invalidCredentials, .notSignedIn, .authorizationCancelled, .authorizationFailed,
+             .authorizationExpired, .keychainUnavailable, .planRequired, .noActiveMeeting,
+             .meetingEnded, .rateLimited, .network, .decoding, .server, .unsupported, .cancelled:
+            false
+        }
+    }
+
+    /// The sentence that used to be `recoverySuggestion` for a setup problem,
+    /// kept for the person who can act on it.
+    ///
+    /// Not shown on screen. `SupportContact.reportURL` folds it into the mail
+    /// a teacher sends, which is the one place it reaches its actual reader —
+    /// so making the teacher-facing copy plainer costs the maintainer nothing.
+    var technicalDetail: String? {
+        switch self {
+        case .missingCredentials:
+            "Server-to-Server Account ID / Client ID / Client Secret are not in the Keychain."
+        case .missingSDKCredentials:
+            "No Meeting SDK Key/Secret. Provision via scripts/provision-zoom-sdk-secret.sh."
+        case .missingOAuthClient:
+            "OAuthClientDefaults.zoomClientID resolved empty, and no Keychain override is set."
+        case .insufficientScope(let scope):
+            "Missing scope \(scope ?? "(unnamed)"). Note that the two participant scopes "
+                + "cannot be granted below a Business/Education plan — see ZOOM_INTEGRATION.md."
+        default:
+            nil
         }
     }
 
