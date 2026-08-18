@@ -2,9 +2,10 @@
 ANCHOR STRUGGLE MODEL — PRODUCTION TRAINING RUN
 ==========================================================================
 Data:       training_50k.csv
-Rows:       50,000   Features: 16 (11 engagement + 5 academic)
-Balance:    32.1% struggling
-Distinct feature vectors: 49,427
+Population: 35,941 of 50,000 rows are matched in an LMS; training on those.
+Rows:       35,941   Features: 16 (11 engagement + 5 academic)
+Balance:    32.0% struggling
+Distinct feature vectors: 35,941
 
 --------------------------------------------------------------------------
 PRODUCTION RANGE CHECK (vs FeatureCalculator.swift)
@@ -19,39 +20,39 @@ PRODUCTION RANGE CHECK (vs FeatureCalculator.swift)
 --------------------------------------------------------------------------
 HYPERPARAMETER SEARCH — 220 candidates x 5-fold CV
 --------------------------------------------------------------------------
-  RandomForest       110 candidates   best CV ROC AUC 0.8754
-  GradientBoosting   110 candidates   best CV ROC AUC 0.8769
-  Evaluated 220 candidates (1100 fits) in 810s
+  RandomForest       110 candidates   best CV ROC AUC 0.8751
+  GradientBoosting   110 candidates   best CV ROC AUC 0.8778
+  Evaluated 220 candidates (1100 fits) in 533s
 
-  Winner: GradientBoosting  (CV ROC AUC 0.8769)
-     learning_rate        0.02
-     max_depth            5
-     max_features         0.5
-     min_samples_leaf     64
-     n_estimators         600
-     subsample            0.9
+  Winner: GradientBoosting  (CV ROC AUC 0.8778)
+     learning_rate        0.08
+     max_depth            2
+     max_features         sqrt
+     min_samples_leaf     32
+     n_estimators         400
+     subsample            1.0
 
   Top 5 candidates overall:
-    1. GradientBoosting     AUC 0.8769 (+/-0.0023)
-    2. GradientBoosting     AUC 0.8769 (+/-0.0023)
-    3. GradientBoosting     AUC 0.8769 (+/-0.0022)
-    4. GradientBoosting     AUC 0.8768 (+/-0.0022)
-    5. GradientBoosting     AUC 0.8768 (+/-0.0025)
+    1. GradientBoosting     AUC 0.8778 (+/-0.0062)
+    2. GradientBoosting     AUC 0.8777 (+/-0.0059)
+    3. GradientBoosting     AUC 0.8777 (+/-0.0060)
+    4. GradientBoosting     AUC 0.8775 (+/-0.0058)
+    5. GradientBoosting     AUC 0.8775 (+/-0.0060)
 
 ==========================================================================
 HELD-OUT TEST METRICS (2,000 rows, unseen during fit and search)
 ==========================================================================
-  Majority-class baseline: 67.91%
-  Accuracy:                81.83%
-  Precision (struggling):  75.33%
-  Recall (struggling):     64.51%
-  F1 (struggling):         0.695
-  ROC AUC:                 0.8785
-  Brier score:             0.1280  (lower is better)
-  Brier if isotonic-calibrated: 0.1279  (not exportable — see above)
+  Majority-class baseline: 67.96%
+  Accuracy:                81.43%
+  Precision (struggling):  73.25%
+  Recall (struggling):     66.22%
+  F1 (struggling):         0.696
+  ROC AUC:                 0.8783
+  Brier score:             0.1300  (lower is better)
+  Brier if isotonic-calibrated: 0.1299  (not exportable — see above)
 
-  Estimated Bayes ceiling: 86.01% (exact — from the generator's latent p)
-  Gap to ceiling:          +4.18%
+  Estimated Bayes ceiling: 85.27% (exact — from the generator's latent p)
+  Gap to ceiling:          +3.84%
 
   Labels are drawn from a latent state the features only partly reveal,
   so the ceiling above is where a perfect model lands. Scoring at or
@@ -61,41 +62,41 @@ HELD-OUT TEST METRICS (2,000 rows, unseen during fit and search)
 Per-class detail:
               precision    recall  f1-score   support
 
-      coping       0.84      0.90      0.87      6791
-  struggling       0.75      0.65      0.69      3209
+      coping       0.85      0.89      0.87      4886
+  struggling       0.73      0.66      0.70      2303
 
-    accuracy                           0.82     10000
-   macro avg       0.80      0.77      0.78     10000
-weighted avg       0.81      0.82      0.81     10000
+    accuracy                           0.81      7189
+   macro avg       0.79      0.77      0.78      7189
+weighted avg       0.81      0.81      0.81      7189
 
 Confusion matrix (rows=actual, cols=predicted):
                  pred coping   pred struggling
-  actual coping        6113            678
-  actual struggling    1139           2070
+  actual coping        4329            557
+  actual struggling     778           1525
 
 Calibration (predicted probability vs observed rate):
   predicted     n   actual   gap
-  0.0-0.1   3463     3.9%   -0.6%
-  0.1-0.2   1492    17.1%   +2.6%
-  0.2-0.3    930    24.9%   +0.3%
-  0.3-0.4    711    30.9%   -3.8%
-  0.4-0.5    656    45.1%   +0.7%
-  0.5-0.6    544    54.6%   -0.1%
-  0.6-0.7    466    65.2%   +0.1%
-  0.7-0.8    561    75.4%   +0.4%
-  0.8-0.9    632    83.4%   -1.7%
-  0.9-1.0    545    95.2%   +1.2%
+  0.0-0.1   2456     3.3%   -0.6%
+  0.1-0.2    979    14.8%   +0.3%
+  0.2-0.3    653    23.6%   -1.2%
+  0.3-0.4    539    36.9%   +1.9%
+  0.4-0.5    480    41.7%   -3.3%
+  0.5-0.6    452    58.8%   +3.9%
+  0.6-0.7    451    63.0%   -2.0%
+  0.7-0.8    454    74.4%   -0.6%
+  0.8-0.9    457    84.5%   -0.5%
+  0.9-1.0    268    93.7%   +0.3%
 
 --------------------------------------------------------------------------
 OPERATING POINTS (RiskLevel.swift cut-offs)
 --------------------------------------------------------------------------
   threshold                     precision  recall     F1   flagged
-  0.25  Watch, max sensitivity         60.0%   84.7%  0.702    45.3%
-  0.40  Watch  <- default              69.5%   73.7%  0.716    34.0%
-  0.50  (comparison only)              75.3%   64.5%  0.695    27.5%
-  0.55  Needs attention, max sens.     78.5%   60.0%  0.680    24.6%
-  0.70  Needs attention  <- default    84.5%   45.8%  0.594    17.4%
-  0.85  Needs attention, min sens.     91.8%   25.0%  0.393     8.8%
+  0.25  Watch, max sensitivity         58.7%   86.7%  0.700    47.3%
+  0.40  Watch  <- default              67.3%   74.9%  0.709    35.6%
+  0.50  (comparison only)              73.2%   66.2%  0.696    29.0%
+  0.55  Needs attention, max sens.     75.4%   60.8%  0.673    25.8%
+  0.70  Needs attention  <- default    82.7%   42.3%  0.560    16.4%
+  0.85  Needs attention, min sens.     91.7%   19.6%  0.323     6.9%
 
   A missed struggling student is the failure this product exists to
   prevent; a false alarm costs a teacher one question. The default
@@ -104,46 +105,46 @@ OPERATING POINTS (RiskLevel.swift cut-offs)
 --------------------------------------------------------------------------
 FEATURE IMPORTANCE
 --------------------------------------------------------------------------
-  grade_trend              0.5682  ####################################################################  <- academic
-  grade_average            0.1677  ####################  <- academic
-  confidence_level         0.0648  #######
-  missing_assignments      0.0422  #####  <- academic
-  late_submissions         0.0282  ###  <- academic
-  time_unmuted             0.0276  ###
-  is_muted                 0.0268  ###
-  message_length           0.0221  ##
-  days_since_submission    0.0169  ##  <- academic
-  hesitation_count         0.0105  #
-  hand_raise_count         0.0092  #
-  speaking_duration        0.0091  #
-  camera_on                0.0023  
-  hand_raised              0.0021  
-  is_speaking              0.0013  
-  has_question             0.0009  
+  grade_trend              0.4412  ####################################################  <- academic
+  grade_average            0.3406  ########################################  <- academic
+  confidence_level         0.0385  ####
+  missing_assignments      0.0332  ###  <- academic
+  message_length           0.0300  ###
+  days_since_submission    0.0239  ##  <- academic
+  late_submissions         0.0236  ##  <- academic
+  is_muted                 0.0235  ##
+  time_unmuted             0.0228  ##
+  hand_raise_count         0.0082  
+  hesitation_count         0.0077  
+  speaking_duration        0.0037  
+  is_speaking              0.0017  
+  hand_raised              0.0010  
+  camera_on                0.0003  
+  has_question             0.0003  
 
-Academic features combined: 82.3%
+Academic features combined: 86.2%
 
 ==========================================================================
 PRODUCTION SCENARIO GATES
 ==========================================================================
-  A. Obviously struggling             94.9%   expect > 75%   [PASS]
-  B. Quiet but fine                    2.1%   expect < 35%   [PASS]
-  C. Introvert, engaged                3.8%   expect < 35%   [PASS]
-  D. Talks a lot, failing             81.9%   expect > 60%   [PASS]
-  E. REST-only, nothing observed      10.3%   expect < 55%   [PASS]
-  F. Extreme academic tail            99.5%   expect > 80%   [PASS]
+  A. Obviously struggling             95.1%   expect > 75%   [PASS]
+  B. Quiet but fine                    2.0%   expect < 35%   [PASS]
+  C. Introvert, engaged                2.2%   expect < 35%   [PASS]
+  D. Talks a lot, failing             65.6%   expect > 60%   [PASS]
+  E. REST-only, nothing observed       9.7%   expect < 55%   [PASS]
+  F. Extreme academic tail            99.6%   expect > 80%   [PASS]
 
   6/6 gates passed
 
 ==========================================================================
 FEATURE DIRECTION GATES (one column swept, everything else held)
 ==========================================================================
-  missing_assignments       10.5% ->  22.0%  up    (want up   ) rank-corr +1.00  [PASS]
-  late_submissions          10.5% ->  22.0%  up    (want up   ) rank-corr +0.78  [PASS]
-  days_since_submission     10.5% ->  26.4%  up    (want up   ) rank-corr +0.58  [PASS]
-  grade_average             55.1% ->   5.5%  down  (want down ) rank-corr -0.99  [PASS]
-  grade_trend               83.5% ->   3.3%  down  (want down ) rank-corr -0.98  [PASS]
-  confidence_level          23.0% ->   4.9%  down  (want down ) rank-corr -1.00  [PASS]
+  missing_assignments        7.2% ->  17.0%  up    (want up   ) rank-corr +0.99  [PASS]
+  late_submissions           7.2% ->  17.7%  up    (want up   ) rank-corr +1.00  [PASS]
+  days_since_submission      7.2% ->  18.9%  up    (want up   ) rank-corr +0.68  [PASS]
+  grade_average             46.6% ->   3.4%  down  (want down ) rank-corr -0.99  [PASS]
+  grade_trend               66.5% ->   1.2%  down  (want down ) rank-corr -0.98  [PASS]
+  confidence_level          11.2% ->   4.6%  down  (want down ) rank-corr -0.99  [PASS]
 
   6/6 direction gates passed
 
