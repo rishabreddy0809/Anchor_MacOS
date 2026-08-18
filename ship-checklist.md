@@ -24,12 +24,14 @@ Decisions to lock in first, since they change what "done" means for everything b
 
 - [ ] **Deploy the site from a branch production actually serves — this is now a correctness problem, not housekeeping.** `website/landing` diverges between `app-split` (the default branch, which is what the `anchor-landing` Vercel project deploys) and `ship/pilot-readiness`, where the work lives. Four files: `privacy.tsx`, `index.tsx`, `site.ts`, `sitemap.xml`. Two of the four commits are privacy-relevant and neither is live — `93ec9f2` (the retention window, stated in the policy) and `044e81e` (dropping the `classroom.profile.emails` scope). The live policy is stamped "August 13" while `LEGAL_LAST_UPDATED` in the repo reads "August 17", which is the cheapest way to notice this from outside. Until it merges, every §1 line above describes a document nobody can read.
 
-## 2. Google OAuth verification — start this immediately, it's the longest external clock
+## 2. Google OAuth verification — settled, and it turned out not to be a clock at all
 
-- [ ] Move OAuth consent screen off Testing mode
-- [ ] Submit for Google verification (Classroom scopes are sensitive — expect to need a screen recording showing each scope's actual use)
-- [ ] Have privacy policy + ToS URLs ready before submitting (Google requires them)
-- [ ] Expect 2–6 weeks — kick this off in parallel with everything else, don't sequence it last
+This section was written assuming the longest external dependency in the project. It stopped being one on 2026-08-17, and the heading is left in place only so the reasoning is findable.
+
+- [x] **Consent screen is in Production, and no verification is needed** — settled 2026-08-17. Dropping the `classroom.profile.emails` scope (`044e81e`) is what did it: with that gone, nothing Anchor requests is restricted, and the app publishes to Production without review. The four Classroom scopes it still asks for are in `GoogleOAuthConfig.classroomScopes`, plus `userinfo.email` for identity. **Not re-verified here** — the evidence is the console state at the time, recorded in the comment above that constant; this line records the decision rather than re-testing it.
+- [x] **Privacy policy and ToS URLs exist and are live** — see §1. They were needed for the submission that no longer has to happen, and are still needed by a partner's reviewer.
+- [x] ~~Expect 2–6 weeks~~ — **does not apply.** The 2–6 week clock was the reason this section said "start immediately"; there is no queue to sit in. This is the single largest schedule item that came off the critical path.
+- [ ] **Know what it cost, because this is a live product constraint, not a closed one.** Google no longer returns roster email addresses, so `ClassroomStudent.matchKey` is nil on every entry and identity matching runs on normalised display names. That path refuses ambiguous names outright rather than guessing — two students who normalise alike both drop out — so **a class with two Emmas shows both as unmatched until the teacher links them by hand**. It was the fallback; it is now the ordinary path. Watch this in the first real class: it is the most likely way a pilot roster looks broken, and it is by design.
 
 ## 3. Zoom Marketplace readiness
 
