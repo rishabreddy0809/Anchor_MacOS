@@ -6,6 +6,12 @@ preparation for what comes after, so this file exists to make the sending
 mechanical: two ready emails, and the reasons behind each line so they survive
 being edited.
 
+**Who to send them to is now `PROSPECTS.md`** — fourteen organisations with
+contact routes, built 2026-08-19. Read its findings section before sending, not
+after: two of them change how these drafts should be targeted, and one of them
+requires cutting a sentence from a specific email. Both are noted in place
+below.
+
 **These are drafts to send, not templates to fill in.** Both are deliberately
 short. The instinct to add a paragraph explaining the model should be resisted —
 the reply you want is "tell me more", and every extra claim is another thing a
@@ -139,6 +145,20 @@ three people, so this email has to survive being forwarded.
 chain is short and can close in days, but the parents *are* the decision-makers,
 so consent scrutiny is higher and more personal, not lower.
 
+> **Targeting correction, 2026-08-19 — the copy is right, the aim was not.**
+> This draft assumes a co-op running live classes on Zoom. **Most local
+> homeschool co-ops meet in person** — a representative one states its classes
+> are Thursday mornings in one Michigan town and that it is explicitly *not a
+> drop-off activity*, with parents attending and assisting in the classrooms.
+> There is no video platform for Anchor to connect to, so those are not
+> prospects at all, however co-op-shaped they look.
+>
+> The reader this draft was actually written for — one person, also a parent,
+> who decides in days and reads the privacy paragraph properly — is the
+> **founder-led online programme**: Blue Tent, Learn Beyond The Book, Athena's
+> in `PROSPECTS.md`. Send it to them. And do not split the sending 50/50
+> between the two drafts, because the two pools are not the same size.
+
 **Subject:** `A quieter way to spot a struggling student in a live class`
 
 > Hi [name],
@@ -206,6 +226,12 @@ so consent scrutiny is higher and more personal, not lower.
 - **Don't add an accuracy figure**, even a hedged one, even if asked directly.
   The honest answer is that measuring it is what the pilot is for, and that
   answer has never lost a conversation that was going to convert.
+- **Don't send the "hour of a Zoom admin's time" line to a marketplace.** For
+  an organisation whose teachers are independent contractors setting their own
+  prices and schedules — Kepler Education is the one on the list — there is no
+  school Zoom account and no admin, so that sentence is simply false. Cut or
+  reword it for that email. `PROSPECTS.md` finding 3 has the rest of why that
+  organisation needs a different conversation.
 - **Don't mention the Zoom Marketplace app in email one.** It is the single most
   jargon-heavy part of setup and it reads as work. It belongs on the call, where
   "I'll walk your admin through it in an hour" is reassuring rather than

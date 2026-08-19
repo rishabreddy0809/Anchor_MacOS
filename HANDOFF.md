@@ -2,8 +2,9 @@
 
 Repo: `/Users/rishabreddypaili/Documents/Anchor`
 Branch: `ship/pilot-readiness`; **default is `main`** since 2026-08-19
-(`app-split` is retired — do not push it). Both are currently at
-`dfe1252`. Tests:
+(`app-split` is retired — do not push it). **Both branches always point at the
+same commit and are pushed** — `git log --oneline -1` for which one, because a
+hash written here is stale the moment the commit writing it lands. Tests:
 `xcodebuild test -project Anchor.xcodeproj -scheme Anchor -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
 → **229 passing**, 13 test files. Release config builds clean.
 
@@ -138,8 +139,24 @@ Everything Claude-owned and unblocked is done. What is left needs Rishab's
 accounts, his hardware, his decisions, or a partner who does not exist yet.
 
 1. **Send the outreach emails.** `OUTREACH.md` has both drafts ready — academy
-   and co-op — with the reasoning beside each. This is the real gate on the
-   whole timeline and nothing else moves without it.
+   and co-op — with the reasoning beside each, and **`PROSPECTS.md` (2026-08-19)
+   now has the fourteen organisations to send them to**, with contact routes and
+   which draft fits each. This is the real gate on the whole timeline and
+   nothing else moves without it. **Read `PROSPECTS.md`'s findings section
+   first** — three of the four contradict something the plan assumed:
+   - The segment mostly runs **Canvas, not Google Classroom** (0 of 6
+     discoverable LMSs were Google Classroom). Small, biased sample — **not** a
+     reason to build the Canvas connector, but it makes question 1 in the
+     emails the most load-bearing line in them.
+   - **Most local homeschool co-ops meet in person**, so that pool is far
+     smaller than the academy pool. The co-op *draft* is still right; its real
+     audience is the founder-led online programme. Do not split 50/50.
+   - **Kepler Education is the per-teacher branch in disguise** — independent
+     contractors, no school Zoom account, no admin. Cut the "hour of a Zoom
+     admin's time" sentence from that one email.
+   - Two warm routes the prospects publish themselves: The Potter's School runs
+     a **public Zoom open house every Monday, 11:00 and 20:00 US ET**, and
+     Excelsior Classes publishes a Calendly for a free 30-minute call.
 2. ~~Submit the pilot form once and check spam.~~ **Done 2026-08-19 — it
    lands, and `/apply` is linkable.** See *Do not redo* above. What this
    changes for item 1: the outreach drafts keep their `/apply` sentence, so
