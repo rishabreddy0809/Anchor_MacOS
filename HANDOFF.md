@@ -1,7 +1,7 @@
 # Anchor — continue pilot readiness
 
 Repo: `/Users/rishabreddypaili/Documents/Anchor`
-Branch: `ship/pilot-readiness` (default is `app-split`). Both are currently at
+Branch: `ship/pilot-readiness` (default is `main` since 2026-08-19). Both are currently at
 `a6714a7` and pushed. Tests:
 `xcodebuild test -project Anchor.xcodeproj -scheme Anchor -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
 → **229 passing**, 13 test files. Release config builds clean.
@@ -103,21 +103,25 @@ things nobody had asked about. Three habits did it:
 2. **Decide the Zoom account model** (recorded as *proposed: per-school*, left
    unticked because it is Rishab's call). It decides whether §7's bot is
    optional or load-bearing.
-3. **Connect `anchor-oauth-bounce` to Git** — still deliberately untouched: it
-   carries the Zoom authorization code, the Vercel CLI is not installed here,
-   and the flow cannot be verified end to end until Pass A runs. Checked live
-   on 19 Aug and healthy — 200, correct CSP/no-store headers, `content-length`
-   4195 **byte-identical** to `Web/oauth-zoom-bounce.html`, and
-   `ZoomOAuthConfig.bounceURL` matches character for character.
-   **The trap here is worse than at `anchor-landing`.** There, `main` did not
-   exist, so connecting deployed nothing. Here `main` *does* exist and `Web/`
-   is byte-identical between `main` and `app-split`, so accepting Vercel's
-   default would deploy correct content on day one, look completely
-   successful, and then **silently freeze** — future edits land on
-   `app-split`, nobody merges to `main`, and production keeps serving the old
-   page under green deployments. Set the production branch to `app-split`
-   explicitly; root directory `Web`; keep `deploy.sh` either way, since it is
-   the only thing that checks the two ends still agree.
+3. **Nothing — `anchor-oauth-bounce` is connected and the branch names are fixed.**
+   Done 2026-08-19 and verified live: bounce still returns 200, `no-store`,
+   `content-length: 4195` byte-identical to `Web/oauth-zoom-bounce.html`, and
+   `ZoomOAuthConfig.bounceURL` still matches character for character.
+   - Connected to `rishabreddy0809/Anchor_MacOS`, **Root Directory `Web` set
+     *before* connecting** — that ordering was the whole safety margin, since a
+     default-config deploy would have 404'd `/oauth/zoom`.
+   - The branch trap was removed at the root rather than worked around. The
+     repo had three branches and the dangerous one was `main`: it existed, so
+     every tool defaulted to it, while the work lived on `app-split`. `main`
+     held **zero files** `app-split` lacked, so it was folded in with
+     `git merge -s ours` — tree verified byte-identical before and after, no
+     commit orphaned, and it made `main` a fast-forward target so the rename
+     needed **no force-push**. GitHub's default is now `main`; both Vercel
+     projects track `main`; `anchor-oauth-bounce` needed no branch change
+     because Vercel's `main` default had become correct.
+   - **Workflow now:** work on `ship/pilot-readiness`, fast-forward `main`,
+     push both. `app-split` is retired — do not push it, and do not resurrect
+     it, or the same two-names-for-one-branch confusion comes straight back.
 
 ## Blocked on the human
 
