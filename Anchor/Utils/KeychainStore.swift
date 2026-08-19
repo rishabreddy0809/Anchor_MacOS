@@ -246,9 +246,14 @@ final class ZoomCredentialsStore: ObservableObject {
 /// network request, which looks identical to a malformed JWT.
 ///
 /// This is app-level configuration shipped with the build, not something a
-/// teacher provisions: the key is `OAuthClientDefaults.meetingSDKKey`, and only
-/// the secret needs to reach the Keychain once, the same way the OAuth client
-/// secret does.
+/// teacher provisions: the key defaults to `OAuthClientDefaults.meetingSDKKey`,
+/// and only the secret needs to reach the Keychain once, the same way the OAuth
+/// client secret does.
+///
+/// "App-level" means per *deployment*, not per teacher — a school running the
+/// per-school route creates its own Meeting SDK app and provisions both halves
+/// through `ANCHOR_ZOOM_SDK_KEY` / `_SECRET`, which `resolved()` below prefers
+/// over the shipped default. See ADMIN-SETUP.md step 2.
 nonisolated enum MeetingSDKCredentialStore {
 
     private static let service = "com.anchor.zoom.meetingsdk"

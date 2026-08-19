@@ -12,9 +12,18 @@
 //  secret in a desktop app either, which is why both flows use PKCE (see
 //  PKCE.swift) rather than relying on it.
 //
-//  Anything set here is a *default*: Settings → Advanced can override it, and
-//  an override in the Keychain always wins. Leave a value empty and Anchor asks
-//  for it instead of opening a browser.
+//  Anything set here is a *default*: an override in the Keychain always wins.
+//  Leave a value empty and Anchor asks for it instead of opening a browser.
+//
+//  **How an override gets into the Keychain differs by build**, and this is
+//  easy to get wrong from the outside. Settings → Advanced is `#if DEBUG` —
+//  ship-checklist §4 compiled it out at the declaration, not just the call
+//  site, because a teacher must never be asked for a credential. So in a
+//  Release build the *only* way to override these is the environment, read
+//  once at launch by `AppDelegate.seedCredentialsFromEnvironmentIfNeeded`:
+//  `ANCHOR_ZOOM_OAUTH_CLIENT_ID` / `_SECRET`, `ANCHOR_ZOOM_SDK_KEY` /
+//  `_SECRET`. That path is not DEBUG-gated and is what a per-school
+//  deployment uses — see ADMIN-SETUP.md step 3.
 //
 //  ── Filling these in ────────────────────────────────────────────────────────
 //
@@ -74,9 +83,11 @@ nonisolated enum OAuthClientDefaults {
     static let zoomClientID = "SMDINiavSZKmyIoF4XmM_A"
 
     /// Zoom requires this on the token exchange even for a native app. Left
-    /// empty in source so it isn't committed; provision it once through
-    /// Settings → Zoom → Advanced, or the ANCHOR_ZOOM_OAUTH_CLIENT_SECRET
-    /// environment variable, and it lives in the Keychain from then on.
+    /// empty in source so it isn't committed; provision it once through the
+    /// `ANCHOR_ZOOM_OAUTH_CLIENT_SECRET` environment variable — or Settings →
+    /// Zoom → Advanced, which exists in **DEBUG builds only** — and it lives
+    /// in the Keychain from then on. The environment is the only route in a
+    /// shipped build.
     static let zoomClientSecret = ""
 
     // MARK: - Meeting SDK
@@ -113,8 +124,8 @@ nonisolated enum OAuthClientDefaults {
     /// Left empty in source, like every other secret. Google issues one for a
     /// Desktop client and it is not a real secret — the flow's proof is PKCE,
     /// not this — but it still does not belong in a public repository.
-    /// Provision through Settings → Advanced or the environment; it lives in
-    /// the Keychain from then on.
+    /// Provision through the environment; it lives in the Keychain from then
+    /// on. Settings → Advanced also accepts it, but only in a DEBUG build.
     static let googleClientSecret = ""
 
     // MARK: - Helpers
