@@ -2,9 +2,9 @@
 
 Repo: `/Users/rishabreddypaili/Documents/Anchor`
 Branch: `ship/pilot-readiness` (default is `app-split`). Both are currently at
-`71db659` and pushed. Tests:
+`a6714a7` and pushed. Tests:
 `xcodebuild test -project Anchor.xcodeproj -scheme Anchor -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
-→ **220 passing**, 13 test files. Release config builds clean.
+→ **229 passing**, 13 test files. Release config builds clean.
 
 Deadline: term starts ~31 Aug 2026. Goal is 1–3 real pilot users.
 
@@ -14,7 +14,13 @@ database (under the *Anchor* page), and the Ship Readiness artifact
 **The artifact is the one that silently rots** — it was a full day stale on
 19 Aug while the other two were current. Its ticks are localStorage keyed on
 `anchor-readiness-ticks-vN`; **bump N whenever you mark things done**, or a
-returning browser keeps showing the old state forever. Currently `v4`.
+returning browser keeps showing the old state forever. Currently `v5`
+(29 of 56 ticked). Counts as of 2026-08-19: `ship-checklist.md` 30 done /
+8 partial / 24 open; Notion 40 done of 87.
+
+The seed only runs when the key has *no* stored value — after that
+localStorage beats the markup, which is correct for hand ticks and is exactly
+why an authored change needs a **new key** rather than an edit to the old one.
 
 ---
 
@@ -33,6 +39,17 @@ things nobody had asked about. Three habits did it:
 3. **Ask "where does this leave the reader?"** Removing the Advanced disclosure
    made three strings wrong; asking that question found them, and a scan then
    found three more.
+4. **Check that the recommendation on the table actually does what it claims.**
+   On 19 Aug the recorded fix for the `_CORRECTED` gap — drop it from
+   `candidateResourceNames` — turned out to be a **no-op**: the loader sweeps
+   every `.mlmodelc` in the bundle regardless of that list. It would have
+   looked like a fix, passed every test, shipped identical bytes, and left the
+   gap where it was. The stated saving was wrong by 2× in the same note.
+5. **Ask whether a guard can be caught being wrong in the shipped
+   configuration.** The stand-down guard could not: the full model is bundled
+   and wins, so the correct rule and the broken one both answered `true`, and
+   every pure-function test passed the *unfixed* code. That needed a seam
+   (`StruggleDetectionService(resourceNames:)`) before the test meant anything.
 
 ---
 
@@ -60,22 +77,47 @@ things nobody had asked about. Three habits did it:
 
 ---
 
+## Done on 2026-08-19
+
+- **The `_CORRECTED` fallback question is closed** (`bc6dd91`), and *not* the way
+  it was written up. `usesAcademicFeatures` now requires the **full** academic
+  set. Two corrections came out of reading the code rather than the note:
+  dropping the model from `candidateResourceNames` **would have changed
+  nothing** — the loader sweeps every `.mlmodelc` in the bundle and `Anchor/`
+  is a synchronised Xcode group, so a model ships by existing in the directory
+  — and the saving was **3.2 MB compiled, not 7.5 MB** (7.2 MB is the source
+  `.mlmodel`; the app is 685 MB anyway). Keeping `_CORRECTED` is now safe, so
+  reclaiming its 3.2 MB is an ordinary non-urgent call, not a correctness one.
+- **The four §9 manual passes are scripted** in `QA-PROTOCOL.md` (`a6714a7`),
+  left `[~]` because a protocol is not a pass.
+
 ## Next, in order
 
-1. **§9 manual QA** — none of the 220 tests touch Zoom, Google or a real class,
-   so this section cannot be closed by writing more of them. Needs a borrowed
-   Mac and a real class.
+1. **Run the four passes in `QA-PROTOCOL.md`** — none of the 229 tests touch
+   Zoom, Google or a real class, so §9 cannot be closed by writing more of
+   them. Needs a borrowed Mac and a real class. **Pass A additionally fails by
+   construction until Apple Developer enrollment lands.** Read §0 first:
+   deleting Anchor does *not* give a fresh install — four Keychain services
+   and the `Rishab-Reddy.Anchor` defaults domain survive it, and a pass run
+   without clearing them would have looked exactly like a real one.
 2. **Decide the Zoom account model** (recorded as *proposed: per-school*, left
    unticked because it is Rishab's call). It decides whether §7's bot is
    optional or load-bearing.
-3. **Decide the `_CORRECTED` fallback question** — a latent gap is written up in
-   §11 and Notion: a 13-feature model counts as "academic", stands
-   `AcademicEscalation` down wholesale, and is blind to the column the rules
-   escalate on. Latent only (needs `_16` *and* `_PRODUCTION` to fail).
-   Recommendation: drop it, which also removes 7.5 MB.
-4. **Connect `anchor-oauth-bounce` to Git** — same trap as `anchor-landing`,
-   still armed. Deliberately untouched: it is load-bearing for Zoom OAuth and
-   should not be changed while nobody can verify it.
+3. **Connect `anchor-oauth-bounce` to Git** — still deliberately untouched: it
+   carries the Zoom authorization code, the Vercel CLI is not installed here,
+   and the flow cannot be verified end to end until Pass A runs. Checked live
+   on 19 Aug and healthy — 200, correct CSP/no-store headers, `content-length`
+   4195 **byte-identical** to `Web/oauth-zoom-bounce.html`, and
+   `ZoomOAuthConfig.bounceURL` matches character for character.
+   **The trap here is worse than at `anchor-landing`.** There, `main` did not
+   exist, so connecting deployed nothing. Here `main` *does* exist and `Web/`
+   is byte-identical between `main` and `app-split`, so accepting Vercel's
+   default would deploy correct content on day one, look completely
+   successful, and then **silently freeze** — future edits land on
+   `app-split`, nobody merges to `main`, and production keeps serving the old
+   page under green deployments. Set the production branch to `app-split`
+   explicitly; root directory `Web`; keep `deploy.sh` either way, since it is
+   the only thing that checks the two ends still agree.
 
 ## Blocked on the human
 
