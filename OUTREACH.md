@@ -18,9 +18,14 @@ and homeschool co-ops*).
 
 ---
 
-## Before you send: the form probably works, but confirm it
+## Before you send: the form works — tested, link `/apply` freely
 
-The pilot form was recorded as broken — "applications from strangers fail
+**Settled 2026-08-19.** The form was submitted through the live site and the
+application landed in the **Primary inbox** within seconds — not spam, not
+Promotions. So **link `/apply` from both emails below**; the paragraph about
+cutting that line is kept only as a record of why it was ever in doubt.
+
+The pilot form had been recorded as broken — "applications from strangers fail
 silently". **Reading the code, that is not what happens**, and the difference
 decides whether these emails can link to `/apply` at all.
 
@@ -41,10 +46,20 @@ believes they applied and did not.**
 `onboarding@resend.dev` to Gmail is exactly what filters distrust, and that
 failure *is* silent, because nothing tells you an application arrived.
 
-> **Do this once, before the first send:** submit the live form yourself and
-> confirm it arrives — checking spam. If it lands, link `/apply` freely. If it
-> does not, cut the `/apply` line from both emails and ask for a reply instead;
-> the emails are written so removing that one sentence costs nothing.
+> **Done — 2026-08-19.** A live submission through `/apply` arrived in the
+> Primary inbox, flagged Important, `signed-by: resend.dev`. `from:resend.dev
+> in:spam` returns nothing across four sends. `reply-to` carried the
+> applicant's address rather than `onboarding@resend.dev`, so hitting Reply on
+> an application reaches the teacher. **Link `/apply`.** Do not re-run this
+> before every send — the thing that would change the answer is the sending
+> domain, and that only changes when `PILOT_FROM_EMAIL` is finally set.
+
+One caveat, so it is not over-read: that send came from the mailbox's own
+owner, and three earlier test applications already sit in it. A stranger's
+application does not inherit that history — but it does inherit the sending
+domain and its DKIM reputation, which is what actually decides the filter.
+**If the first real applicant emails to say they applied and you have nothing,
+check spam before assuming they are confused.**
 
 ---
 
