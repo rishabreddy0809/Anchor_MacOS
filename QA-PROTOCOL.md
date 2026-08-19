@@ -140,6 +140,20 @@ size* because the things that break at 28 students do not break at 3:
 name-matching collisions, poll pacing, and whether the dashboard is readable
 at all when the list does not fit.
 
+> ### ⚠️ This pass cannot be run on Rishab's own Zoom account
+>
+> Verified in the console on 2026-08-19: the account is **Basic**, which caps
+> meetings at **40 minutes**. A real class is 45–60, so the meeting ends before
+> the lesson does and "start to finish" is unachievable by construction.
+>
+> Basic also means the two participant scopes cannot be granted — the Dashboard
+> and Report categories are absent from the scope picker entirely — so the REST
+> path can never read who is in the room and **the bot is the only source of
+> live signal**. Both limits disappear on the partner's Business/Education
+> account, which is the whole point of the per-school route.
+>
+> **So Pass B is gated on the partner, not merely on a willing class.**
+
 1. Start the real class in Zoom. Connect Anchor to it and leave it running
    **for the whole lesson** — a five-minute spot check does not close this
    line, because scores are built from accumulated history.
