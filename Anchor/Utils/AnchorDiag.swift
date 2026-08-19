@@ -34,6 +34,29 @@ nonisolated enum AnchorDiag {
         #endif
     }
 
+    /// A message for the person who launched Anchor from a Terminal to
+    /// provision it — and the one thing here that is **not** `#if DEBUG`.
+    ///
+    /// Three reasons it is exempt rather than an oversight:
+    ///
+    ///   * **It has a reader in a Release build, and `log` above does not.**
+    ///     Provisioning in a shipped build *is* a Terminal launch
+    ///     (ADMIN-SETUP.md step 3), so the admin is standing at a shell with
+    ///     stderr attached. A refusal they cannot see is the silent no-op this
+    ///     exists to replace.
+    ///   * **It is not the harm `ReleaseHygieneTests` guards.** That rule bans
+    ///     `print`/`NSLog`/`debugPrint` because they reach the *unified log*,
+    ///     which anyone with Console.app can read, and the defect behind it was
+    ///     a student's name being written there every chat message. stderr goes
+    ///     to the launching process's stream and nowhere else.
+    ///   * **It can only ever carry variable names.** Never a credential value,
+    ///     never anything about a class or a student — call sites pass fixed
+    ///     strings. Keep it that way: this is the one channel here that
+    ///     survives into a build a teacher runs.
+    static func operatorMessage(_ message: String) {
+        FileHandle.standardError.write(Data(("Anchor: " + message + "\n").utf8))
+    }
+
     /// Logs only when the message changes, for callers on a polling loop.
     ///
     /// The identity trace runs on every 10-second refresh and is identical

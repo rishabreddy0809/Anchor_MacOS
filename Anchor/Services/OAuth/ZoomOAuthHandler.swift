@@ -342,6 +342,41 @@ final class ZoomOAuthStore: ObservableObject {
         }
     }
 
+    /// Applies only the halves the caller actually asked about.
+    ///
+    /// The environment-seeding counterpart to `saveClientOverride` above, and
+    /// the reason it exists: that method takes a non-optional `id`, so the old
+    /// seeding code had to gate the whole block on the client ID being present.
+    /// Setting only `ANCHOR_ZOOM_OAUTH_CLIENT_SECRET` therefore wrote nothing
+    /// and said nothing — a rotation that looked like it worked. And supplying
+    /// only the ID passed `secret: nil`, which cleared a provisioned secret.
+    /// `.leave` fixes both by writing neither. See CredentialSeed.swift.
+    func applyClientOverride(id: CredentialIntent, secret: CredentialIntent) {
+        do {
+            if id.writes {
+                if let value = id.storedValue.flatMap(OAuthClientDefaults.value) {
+                    try keychain.save(Data(value.utf8), account: Self.clientIDAccount)
+                    clientIDOverride = value
+                } else {
+                    try keychain.delete(account: Self.clientIDAccount)
+                    clientIDOverride = nil
+                }
+            }
+            if secret.writes {
+                if let value = secret.storedValue.flatMap(OAuthClientDefaults.value) {
+                    try keychain.save(Data(value.utf8), account: Self.clientSecretAccount)
+                    clientSecretOverride = value
+                } else {
+                    try keychain.delete(account: Self.clientSecretAccount)
+                    clientSecretOverride = nil
+                }
+            }
+            lastError = nil
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
     /// Snapshot for the token provider, which runs off the main actor.
     func snapshot() -> ZoomOAuthTokens? { tokens }
 }

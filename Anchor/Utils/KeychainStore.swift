@@ -280,9 +280,29 @@ nonisolated enum MeetingSDKCredentialStore {
     static var isConfigured: Bool { resolved() != nil }
 
     /// Passing `nil` clears that half, so provisioning can also un-provision.
+    ///
+    /// **Not the right entry point for environment seeding**, and that mistake
+    /// is what `apply(key:secret:)` below exists to prevent: an absent
+    /// environment variable arrives here as `nil` and silently deletes a
+    /// provisioned value. Use this only where the caller genuinely means both
+    /// halves, such as Settings → Advanced in a DEBUG build.
     static func save(key: String?, secret: String?) {
         write(key, account: keyAccount)
         write(secret, account: secretAccount)
+    }
+
+    /// Applies only the halves the caller actually asked about.
+    ///
+    /// `.leave` writes nothing — which is the whole point. Rotating just the
+    /// secret used to arrive as `save(key: nil, secret: new)` and delete a
+    /// school's provisioned key, after which `resolved()` fell back to Anchor's
+    /// own shipped `meetingSDKKey` and paired it with the school's secret. That
+    /// mismatch fails inside `sdkAuth` before any network request, and reports
+    /// itself as a *missing* credential when both were present. See
+    /// CredentialSeed.swift.
+    static func apply(key: CredentialIntent, secret: CredentialIntent) {
+        if key.writes { write(key.storedValue, account: keyAccount) }
+        if secret.writes { write(secret.storedValue, account: secretAccount) }
     }
 
     private static func stored(_ account: String) -> String? {

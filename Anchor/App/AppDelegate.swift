@@ -179,44 +179,58 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Lets credentials be provisioned once from the environment instead of
-    /// being typed into Settings — useful for a managed deployment. The values
-    /// are written to the Keychain and never persisted anywhere else, so the
-    /// environment variables are only needed on that first launch.
+    /// being typed into Settings — which in a shipped build is not merely
+    /// convenient but the only route, since Settings → Advanced is compiled out
+    /// (ship-checklist §4). See ADMIN-SETUP.md step 3.
+    ///
+    /// The decision about *what* to write lives in `CredentialSeed`, on purpose
+    /// and not for tidiness: this function used to read the environment and
+    /// write storage in one step, and could not tell an absent variable from an
+    /// empty one. Two defects came out of that, both of which only appear on a
+    /// partial run — a rotation rather than a first setup. Read
+    /// CredentialSeed.swift before changing anything here; the rule is tested
+    /// there, and it is tested there because nothing at this layer can be.
     private func seedCredentialsFromEnvironmentIfNeeded(_ environment: [String: String]) {
-        // The browser sign-in app's own credentials. Separate from the
-        // Server-to-Server pair below — different Marketplace app, different
-        // purpose — and only needed where OAuthClientDefaults was left blank.
-        if let clientID = environment["ANCHOR_ZOOM_OAUTH_CLIENT_ID"], !clientID.isEmpty {
-            ZoomOAuthStore.shared.saveClientOverride(
-                id: clientID,
-                secret: environment["ANCHOR_ZOOM_OAUTH_CLIENT_SECRET"]
-            )
-        }
+        let seed = CredentialSeed.read(from: environment)
 
-        // The Meeting SDK Key/Secret the in-meeting bot signs its JWT with.
-        // App-level rather than per-teacher: the key ships in
-        // OAuthClientDefaults, so normally only the secret arrives here.
-        if environment["ANCHOR_ZOOM_SDK_SECRET"] != nil
-            || environment["ANCHOR_ZOOM_SDK_KEY"] != nil {
-            MeetingSDKCredentialStore.save(
-                key: environment["ANCHOR_ZOOM_SDK_KEY"],
-                secret: environment["ANCHOR_ZOOM_SDK_SECRET"]
-            )
-        }
+        // An ordinary double-click names nothing, so it must touch no storage
+        // at all — not even to rewrite a value with itself.
+        guard !seed.isEmpty else { return }
 
-        guard let accountID = environment["ANCHOR_ZOOM_ACCOUNT_ID"],
-              let clientID = environment["ANCHOR_ZOOM_CLIENT_ID"],
-              let clientSecret = environment["ANCHOR_ZOOM_CLIENT_SECRET"],
-              !accountID.isEmpty, !clientID.isEmpty, !clientSecret.isEmpty
-        else { return }
-
-        ZoomCredentialsStore.shared.save(
-            ZoomCredentials(
-                accountID: accountID,
-                clientID: clientID,
-                clientSecret: clientSecret
-            )
+        ZoomOAuthStore.shared.applyClientOverride(
+            id: seed.oauthClientID,
+            secret: seed.oauthClientSecret
         )
+
+        // App-level rather than per-teacher: the key ships in
+        // OAuthClientDefaults, so normally only the secret arrives here — which
+        // is exactly the case that used to delete the key beside it.
+        MeetingSDKCredentialStore.apply(key: seed.sdkKey, secret: seed.sdkSecret)
+
+        if let s2s = seed.serverToServer {
+            ZoomCredentialsStore.shared.save(
+                ZoomCredentials(
+                    accountID: s2s.accountID,
+                    clientID: s2s.clientID,
+                    clientSecret: s2s.clientSecret
+                )
+            )
+        } else if seed.serverToServerIsPartial {
+            // The triple authenticates together, so a partial set is refused
+            // rather than half-applied. Refusing *silently* is what the old code
+            // did, and it is how an admin finishes a setup call believing a
+            // value landed.
+            //
+            // Deliberately not `AnchorDiag.log`, which is `#if DEBUG` and would
+            // therefore say nothing in the only build an admin ever provisions.
+            // `operatorMessage` writes to stderr, which is attached to the
+            // Terminal they ran this from and is where they are still looking.
+            AnchorDiag.operatorMessage(
+                "Server-to-Server provisioning ignored: ANCHOR_ZOOM_ACCOUNT_ID, "
+                    + "ANCHOR_ZOOM_CLIENT_ID and ANCHOR_ZOOM_CLIENT_SECRET must all "
+                    + "be supplied together. Nothing was written."
+            )
+        }
     }
 
     /// Clicking the dock icon reopens the main window.
