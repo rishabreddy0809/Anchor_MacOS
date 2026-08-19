@@ -73,8 +73,29 @@ nonisolated final class StruggleDetectionService: @unchecked Sendable {
         let declaredInputs: Set<String>
         let name: String
 
+        /// Whether this model should be *preferred* for a student who has
+        /// academic signals — i.e. whether it can read any of them at all.
+        ///
+        /// Deliberately `isDisjoint` and not `isSubset`: a model reading two of
+        /// the five columns still beats one reading none for a matched student,
+        /// so this stays a permissive routing preference. It is *not* the same
+        /// question as `readsFullAcademicSet`, and conflating the two is what
+        /// this pair of properties exists to keep apart.
         var isAcademic: Bool {
             !StruggleFeatures.academicFeatureNames.isDisjoint(with: declaredInputs)
+        }
+
+        /// Whether this model can stand in for `AcademicEscalation` *entirely*.
+        ///
+        /// Strict subset check, because the rules escalate on all five columns
+        /// individually — a model blind to `grade_average`,
+        /// `days_since_submission` or `late_submissions` cannot replace the
+        /// rules that fire on them, and standing those rules down for it would
+        /// leave that evidence read by nobody. See `usesAcademicFeatures`.
+        var readsFullAcademicSet: Bool {
+            // Routed through the static so the tested rule and the shipped one
+            // cannot drift apart into two subtly different subset checks.
+            StruggleDetectionService.standsDownAcademicRules(declaredInputs: declaredInputs)
         }
     }
 
@@ -112,7 +133,19 @@ nonisolated final class StruggleDetectionService: @unchecked Sendable {
     /// `StudentStruggleModel_CORRECTED` is the previous 13-feature model, kept
     /// one rung down as a fallback: it is a genuinely usable model (it scores
     /// an obviously-struggling student at ~86%), just blind to
-    /// `grade_average`, `days_since_submission` and `late_submissions`.
+    /// `grade_average`, `days_since_submission` and `late_submissions`. Being
+    /// partial, it does *not* stand `AcademicEscalation` down — see
+    /// `usesAcademicFeatures`, which is what makes keeping it here safe.
+    ///
+    /// **This list is a preference order, not an allow-list.** `candidateModelURLs`
+    /// appends every `.mlmodelc` in the bundle after the named ones, and
+    /// `Anchor/` is a synchronised Xcode group with no membership exceptions —
+    /// so a model ships, and loads, purely by existing in that directory.
+    /// Removing a name from here changes which model is preferred and nothing
+    /// else: it does not unship the file, does not reclaim its bytes, and does
+    /// not stop it being loaded. The only way to drop a model is to delete it
+    /// from `Anchor/`. Recorded because the opposite was believed once, and an
+    /// edit here would have looked like a fix while changing nothing.
     ///
     /// Nothing else belongs in this list. `Anchor_Accurate` used to sit here
     /// and was removed on 2026-08-12: it was trained with
@@ -139,7 +172,29 @@ nonisolated final class StruggleDetectionService: @unchecked Sendable {
         "StruggleModel"
     ]
 
-    private init() {}
+    /// Names this instance probes, and whether it also sweeps the bundle.
+    ///
+    /// The shipping singleton uses the static list and the sweep. The only
+    /// other caller is the test suite, which needs to ask what the service does
+    /// when the model that loads is a *partial* one — the case the stand-down
+    /// guard exists for and the one the shipped bundle cannot produce, since
+    /// the full 16-feature model is present and always wins. Without this seam
+    /// that guard can only be tested as a pure function over column sets, which
+    /// leaves the property itself — the thing `AcademicEscalation` actually
+    /// reads — asserted by nothing.
+    private let resourceNames: [String]
+    private let sweepsBundle: Bool
+
+    private init() {
+        resourceNames = Self.candidateResourceNames
+        sweepsBundle = true
+    }
+
+    /// Test-only. Loads exactly the named models and nothing else.
+    init(resourceNames: [String], sweepsBundle: Bool = false) {
+        self.resourceNames = resourceNames
+        self.sweepsBundle = sweepsBundle
+    }
 
     // MARK: - Loading
 
@@ -291,25 +346,50 @@ nonisolated final class StruggleDetectionService: @unchecked Sendable {
         }
     }
 
-    /// Whether the loaded model consumes the Google Classroom features.
+    /// Whether the loaded academic model can replace `AcademicEscalation`.
     ///
-    /// True for `StudentStruggleModel_PRODUCTION`, which declares all five, so
-    /// `AcademicEscalation` stands down and the academic signals move the
-    /// score through the model itself. It stays false only if the app falls
-    /// all the way back to a model that predates them, in which case the
-    /// rule-based escalation layer resumes — see `AcademicEscalation`.
-    /// Whether an academic-declaring model is loaded *at all*.
+    /// This is the *only* consumer's question — `AcademicEscalation.apply`
+    /// stands the rules down when this is true — so it is answered strictly:
+    /// the model must declare all five academic columns, not merely some.
     ///
-    /// Deliberately a property of the bundle rather than of one student: it is
-    /// what `AcademicEscalation` stands down for, and that layer is the
-    /// fallback for a build whose model cannot read academic columns. A student
-    /// with no Classroom match gets the engagement model, but the escalation
-    /// rules have no snapshot to escalate on for them either, so the two agree.
+    /// It used to be `academicModel != nil`, which asked "did a model declaring
+    /// *any* academic column load?". That is the routing question, and the two
+    /// coincide for every model Anchor ships first-choice, so the difference
+    /// was invisible. It stops coinciding on a partial model:
+    /// `StudentStruggleModel_CORRECTED` declares 13 columns — the 11 engagement
+    /// ones plus `grade_trend` and `missing_assignments` — and is blind to
+    /// `grade_average`, `days_since_submission` and `late_submissions`. Under
+    /// the old test it counted as academic and stood down *all five* rules,
+    /// including the `daysSinceSubmission >= 14` escalation, so a student two
+    /// weeks past due was read by neither the model nor the rules. Silent, and
+    /// in the one direction this product exists to prevent.
+    ///
+    /// Requiring the full set makes the two layers exhaustive by construction
+    /// rather than by coincidence of which files happen to be in the bundle:
+    /// whatever a partial model cannot see, the rules still cover. The cost is
+    /// that a partial model double-counts the columns it *can* see — bounded at
+    /// +0.20 by `maximumAdjustment`, and in the safe direction, which is the
+    /// trade this guard is choosing on purpose.
+    ///
+    /// Deliberately a property of the bundle rather than of one student: a
+    /// student with no Classroom match gets the engagement model, but the
+    /// escalation rules have no snapshot to escalate on for them either, so the
+    /// two agree.
     var usesAcademicFeatures: Bool {
         loadIfNeeded()
         lock.lock()
         defer { lock.unlock() }
-        return academicModel != nil
+        return academicModel?.readsFullAcademicSet ?? false
+    }
+
+    /// The stand-down rule as a pure function of a model's declared columns.
+    ///
+    /// Extracted for the same reason as `modelKind`: the decision can be wrong
+    /// without anything observable happening — the rules simply stop firing and
+    /// every score still looks plausible — so it has to be testable without a
+    /// bundle, a Core ML runtime, or a trained model.
+    static func standsDownAcademicRules(declaredInputs: Set<String>) -> Bool {
+        StruggleFeatures.academicFeatureNames.isSubset(of: declaredInputs)
     }
 
     /// Every usable model in the bundle, in probe order.
@@ -359,16 +439,22 @@ nonisolated final class StruggleDetectionService: @unchecked Sendable {
     private func candidateModelURLs() -> [URL] {
         var urls: [URL] = []
 
-        for name in Self.candidateResourceNames {
+        for name in resourceNames {
             if let url = Bundle.main.url(forResource: name, withExtension: "mlmodelc") {
                 urls.append(url)
             }
         }
-        urls += Bundle.main.urls(forResourcesWithExtension: "mlmodelc", subdirectory: nil) ?? []
 
-        for url in Bundle.main.urls(forResourcesWithExtension: "mlmodel", subdirectory: nil) ?? [] {
-            if let compiled = try? MLModel.compileModel(at: url) {
-                urls.append(compiled)
+        // The sweep is what makes the list above a preference order rather than
+        // an allow-list: anything in the bundle loads whether or not it is
+        // named. Skipped only by the test seam, which needs a known model set.
+        if sweepsBundle {
+            urls += Bundle.main.urls(forResourcesWithExtension: "mlmodelc", subdirectory: nil) ?? []
+
+            for url in Bundle.main.urls(forResourcesWithExtension: "mlmodel", subdirectory: nil) ?? [] {
+                if let compiled = try? MLModel.compileModel(at: url) {
+                    urls.append(compiled)
+                }
             }
         }
 
