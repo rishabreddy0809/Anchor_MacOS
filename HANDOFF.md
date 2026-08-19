@@ -1,8 +1,9 @@
 # Anchor — continue pilot readiness
 
 Repo: `/Users/rishabreddypaili/Documents/Anchor`
-Branch: `ship/pilot-readiness` (default is `main` since 2026-08-19). Both are currently at
-`a6714a7` and pushed. Tests:
+Branch: `ship/pilot-readiness`; **default is `main`** since 2026-08-19
+(`app-split` is retired — do not push it). Both are currently at
+`1a30ca7` and pushed. Tests:
 `xcodebuild test -project Anchor.xcodeproj -scheme Anchor -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
 → **229 passing**, 13 test files. Release config builds clean.
 
@@ -69,6 +70,18 @@ things nobody had asked about. Three habits did it:
   **Do not "activate for production"** — that means Marketplace publication,
   which is the review queue the partner-account strategy exists to avoid.
 - **Mac App Store is not viable** (nested `us.zoom.*` bundles).
+- **Rishab's Zoom account is Basic, and that is measured, not assumed** (console,
+  2026-08-19). The two participant scopes **cannot be added at all** — the Add
+  Scopes picker says "available based on your account privileges" and the
+  product list has **no Dashboard and no Report category**. So the bot is the
+  *only* live-signal source, not the richer of two. **Basic also caps meetings
+  at 40 minutes**, so a full-length class cannot run on this account — QA Pass B
+  is gated on the partner's Business/Education account, not on finding a willing
+  class. Do not re-litigate this by reading docs; it was checked in the UI.
+- **All three Marketplace apps re-verified 2026-08-19** and match what was
+  recorded. The *Anchor* app's Client ID begins `SMDINiavSZKmylo…` (matches
+  `OAuthClientDefaults.zoomClientID`), carries exactly the three documented
+  scopes, and its consent screen reads "Anchor".
 - **§7 (the differentiator) is built** — all five lines. Only a live lesson is missing.
 - **Zoom API ToU §3.2.9 forbids** training ML models on Customer Content without
   Zoom's written permission; the consent exception is per-customer and the model
@@ -93,35 +106,24 @@ things nobody had asked about. Three habits did it:
 
 ## Next, in order
 
-1. **Run the four passes in `QA-PROTOCOL.md`** — none of the 229 tests touch
-   Zoom, Google or a real class, so §9 cannot be closed by writing more of
-   them. Needs a borrowed Mac and a real class. **Pass A additionally fails by
-   construction until Apple Developer enrollment lands.** Read §0 first:
-   deleting Anchor does *not* give a fresh install — four Keychain services
-   and the `Rishab-Reddy.Anchor` defaults domain survive it, and a pass run
-   without clearing them would have looked exactly like a real one.
-2. **Decide the Zoom account model** (recorded as *proposed: per-school*, left
-   unticked because it is Rishab's call). It decides whether §7's bot is
-   optional or load-bearing.
-3. **Nothing — `anchor-oauth-bounce` is connected and the branch names are fixed.**
-   Done 2026-08-19 and verified live: bounce still returns 200, `no-store`,
-   `content-length: 4195` byte-identical to `Web/oauth-zoom-bounce.html`, and
-   `ZoomOAuthConfig.bounceURL` still matches character for character.
-   - Connected to `rishabreddy0809/Anchor_MacOS`, **Root Directory `Web` set
-     *before* connecting** — that ordering was the whole safety margin, since a
-     default-config deploy would have 404'd `/oauth/zoom`.
-   - The branch trap was removed at the root rather than worked around. The
-     repo had three branches and the dangerous one was `main`: it existed, so
-     every tool defaulted to it, while the work lived on `app-split`. `main`
-     held **zero files** `app-split` lacked, so it was folded in with
-     `git merge -s ours` — tree verified byte-identical before and after, no
-     commit orphaned, and it made `main` a fast-forward target so the rename
-     needed **no force-push**. GitHub's default is now `main`; both Vercel
-     projects track `main`; `anchor-oauth-bounce` needed no branch change
-     because Vercel's `main` default had become correct.
-   - **Workflow now:** work on `ship/pilot-readiness`, fast-forward `main`,
-     push both. `app-split` is retired — do not push it, and do not resurrect
-     it, or the same two-names-for-one-branch confusion comes straight back.
+Everything Claude-owned and unblocked is done. What is left needs Rishab's
+accounts, his hardware, his decisions, or a partner who does not exist yet.
+
+1. **Send the outreach emails.** `OUTREACH.md` has both drafts ready — academy
+   and co-op — with the reasoning beside each. This is the real gate on the
+   whole timeline and nothing else moves without it.
+2. **Submit the pilot form once and check spam.** Two minutes.
+   `RESEND_API_KEY` is confirmed present in Vercel production and
+   `PILOT_FROM_EMAIL` is absent, so the form *does* send, from the sandbox
+   address, to Rishab's inbox. The only unresolved question is whether Gmail
+   filters it. If it lands, `/apply` can be linked from the emails; if not,
+   `OUTREACH.md` is written so that one sentence gets cut.
+3. **Apple Developer enrollment** — still the longest lead, and it gates the
+   certificate → notarization → anyone installing at all → QA Pass A.
+4. **Decide the Zoom account model.** The per-teacher branch is now *priced*:
+   Basic means no participant scopes and a 40-minute cap. Per-school is no
+   longer just a review-queue dodge, it is what makes a full-length lesson and
+   REST participant data possible at all.
 
 ## Blocked on the human
 
