@@ -3,7 +3,7 @@
 Repo: `/Users/rishabreddypaili/Documents/Anchor`
 Branch: `ship/pilot-readiness`; **default is `main`** since 2026-08-19
 (`app-split` is retired — do not push it). Both are currently at
-`1a30ca7` and pushed. Tests:
+`dfe1252`. Tests:
 `xcodebuild test -project Anchor.xcodeproj -scheme Anchor -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
 → **229 passing**, 13 test files. Release config builds clean.
 
@@ -15,9 +15,24 @@ database (under the *Anchor* page), and the Ship Readiness artifact
 **The artifact is the one that silently rots** — it was a full day stale on
 19 Aug while the other two were current. Its ticks are localStorage keyed on
 `anchor-readiness-ticks-vN`; **bump N whenever you mark things done**, or a
-returning browser keeps showing the old state forever. Currently `v5`
-(29 of 56 ticked). Counts as of 2026-08-19: `ship-checklist.md` 30 done /
-8 partial / 24 open; Notion 40 done of 87.
+returning browser keeps showing the old state forever. Currently `v10`
+(36 of 60 ticked).
+
+**These numbers were themselves stale when re-counted on 19 Aug** — the line
+above used to read `v5` (29 of 56) while the artifact was live on `v9`, and
+the checklist counts were out by three, one and four. That is the same rot
+this paragraph exists to warn about, arriving in the paragraph doing the
+warning. **Re-count rather than copying the previous handoff forward.** The
+two commands, so there is no excuse:
+
+```sh
+grep -c '^- \[x\]' ship-checklist.md   # and '^- \[~\]', '^- \[ \]'
+python3 -c "import re,io;s=io.open('ship-checklist.md').read();print([len(re.findall(r'^- \['+c+r'\]',s,re.M)) for c in ('x','~',' ')])"
+```
+
+Counts as of 2026-08-19, re-counted: `ship-checklist.md` **33 done / 9 partial
+/ 20 open** (top-level boxes only — sub-bullets carry no box); Notion **46 done
+of 87**, 1 in progress, 40 not started.
 
 The seed only runs when the key has *no* stored value — after that
 localStorage beats the markup, which is correct for hand ticks and is exactly
@@ -86,6 +101,19 @@ things nobody had asked about. Three habits did it:
 - **Zoom API ToU §3.2.9 forbids** training ML models on Customer Content without
   Zoom's written permission; the consent exception is per-customer and the model
   "may only be used by the Customer who consented". This blocks the pooled retrain.
+- **The pilot form works and the mail is not filtered — submitted, not inferred**
+  (2026-08-19). It arrives in the **Primary inbox** in seconds, flagged Important;
+  `signed-by: resend.dev`, `mailed-by: amazonses.com`, TLS; `from:resend.dev in:spam`
+  returns nothing across four sends. `reply-to` carries the applicant's address, so
+  Reply on an application reaches the teacher rather than Resend's sandbox — worth
+  knowing, because a dropped `reply_to` looks identical in the inbox and only fails
+  when you answer the first real lead. **Do not re-submit to re-check.** The only
+  thing that would change the answer is the sending domain, which changes when
+  `PILOT_FROM_EMAIL` is finally set. **`/apply` can be linked from both outreach
+  emails.** The one caveat, recorded so it is not over-read: that send came from the
+  mailbox's own owner and three earlier test applications already sit in it, so a
+  stranger does not inherit that history — only the domain and its DKIM reputation,
+  which is what actually decides the filter.
 - SourceKit reports phantom "cannot find type in scope" errors. Trust xcodebuild.
 
 ---
@@ -112,12 +140,10 @@ accounts, his hardware, his decisions, or a partner who does not exist yet.
 1. **Send the outreach emails.** `OUTREACH.md` has both drafts ready — academy
    and co-op — with the reasoning beside each. This is the real gate on the
    whole timeline and nothing else moves without it.
-2. **Submit the pilot form once and check spam.** Two minutes.
-   `RESEND_API_KEY` is confirmed present in Vercel production and
-   `PILOT_FROM_EMAIL` is absent, so the form *does* send, from the sandbox
-   address, to Rishab's inbox. The only unresolved question is whether Gmail
-   filters it. If it lands, `/apply` can be linked from the emails; if not,
-   `OUTREACH.md` is written so that one sentence gets cut.
+2. ~~Submit the pilot form once and check spam.~~ **Done 2026-08-19 — it
+   lands, and `/apply` is linkable.** See *Do not redo* above. What this
+   changes for item 1: the outreach drafts keep their `/apply` sentence, so
+   there is no edit to make before sending.
 3. **Apple Developer enrollment** — still the longest lead, and it gates the
    certificate → notarization → anyone installing at all → QA Pass A.
 4. **Decide the Zoom account model.** The per-teacher branch is now *priced*:
@@ -130,8 +156,11 @@ accounts, his hardware, his decisions, or a partner who does not exist yet.
 - **Apple Developer Program enrollment** — longest lead; gates the certificate →
   notarization → anyone installing at all.
 - **A real domain** — gates the Resend verified sender, which gates
-  `PILOT_FROM_EMAIL`. Until then pilot applications from strangers fail
-  silently; the outbound support path works, the inbound one does not.
+  `PILOT_FROM_EMAIL`. **It no longer gates the inbound path**: that sentence
+  used to read "pilot applications from strangers fail silently", and the live
+  test on 19 Aug disproved it. What the domain still buys is credibility —
+  `anchorteach.vercel.app` in a footer and `onboarding@resend.dev` in a
+  forwarded thread are both read by the same cautious reviewer — not delivery.
 - **Partner outreach** — still the real gate on the whole timeline.
 - **The fresh-install click** — press both Connect buttons on a Mac that has
   never had Anchor, and watch what happens *after* browser consent.
