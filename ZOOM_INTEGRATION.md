@@ -193,26 +193,40 @@ underlying reason than Zoom's).
 > diagnosing this. It is not required by the above and did not change the
 > outcome.
 >
-> **The rest of this note used to say it was "harmless and arguably correct for
-> a desktop client, since `ZoomOAuthHandler` already sends PKCE and omits the
-> Basic header when no secret is present." That reasoning is wrong, measured
-> 2026-08-20.** Zoom's token endpoint refuses a PKCE-only exchange outright: a
-> real `client_id` in the body, a garbage one, and none at all all return
-> byte-identical `400 invalid_client`, while `grant_type=not_a_real_grant`
-> returns `unsupported_grant_type` — the control proving Zoom really does reach
-> client authentication and fail it rather than returning a catch-all. So
-> omitting the Basic header does not make Anchor a working public client; it
-> makes the request unauthenticated. `hasClientCredentials` now requires the
-> secret (see `ZoomOAuthConfig.canCompleteTokenExchange`).
+> **This note used to call the toggle "harmless and arguably correct for a
+> desktop client". It is not harmless — it is load-bearing, and Anchor was not
+> using it. Corrected 2026-08-20.**
 >
-> **This leaves one thing genuinely unresolved, and it is a console click
-> rather than a code question.** If the toggle above is still on, then a Zoom
-> setting named *Use Public Client OAuth (PKCE, no secret)* does not remove the
-> secret requirement on the token endpoint — worth knowing before anyone relies
-> on it for the Production registration. If it was turned back off at some
-> point, the probe simply measured a confidential client behaving correctly.
-> Nothing downstream changes either way: per-school provisions the secret in
-> step 3 regardless.
+> Enabling **Use Public Client OAuth** mints a **second identifier**: a
+> *Public Client ID*, shown beneath the toggle and distinct from the app's
+> confidential Client ID. That is the one redeemable with PKCE and no secret.
+> Anchor shipped only the confidential id and sent it on the secretless path,
+> which returns `400 invalid_client` forever.
+>
+> Measured against `zoom.us`:
+>
+> | request | result |
+> |---|---|
+> | confidential id, PKCE, no secret | `400 invalid_client` |
+> | **public id, PKCE, no secret** | **`400 invalid_grant` "Invalid authorization code"** |
+> | public id, `refresh_token` grant | `400 invalid_grant` "Invalid refresh token" |
+> | public id + a bogus Basic header | `400 invalid_grant` — the header is ignored |
+>
+> `invalid_grant` means the client authenticated and the deliberately bogus
+> code was rejected, which is as far as a probe reaches without a real one.
+>
+> **Console state, read 2026-08-20** (Development tab, *Anchor* app): toggle
+> **on**; Public Client ID `kzU8QEfESJKsvxA3EzCe9A`; OAuth Redirect URL
+> `https://anchor-oauth-bounce.vercel.app/oauth/zoom`, matching
+> `ZoomOAuthConfig.bounceURL` character for character; **Use Strict Mode for
+> Redirect URLs** off; **Subdomain Check** off. Note that Zoom's own generated
+> *OAuth URL* on that page uses the **confidential** id — so the console will
+> hand you the wrong one for a PKCE flow if you copy it.
+>
+> **Do not turn this toggle off.** `OAuthClientDefaults.zoomPublicClientID` is
+> shipped and `ZoomOAuthConfig.effectiveClientID` selects it whenever no secret
+> is provisioned, which is every install a teacher gets. Turning it off breaks
+> Connect Zoom for all of them, and breaks it *after* the consent screen.
 
 ---
 

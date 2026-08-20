@@ -123,59 +123,87 @@ nonisolated enum OAuthRedirectTransport: Sendable, Equatable {
 nonisolated struct ZoomOAuthConfig: Sendable {
     var clientID: String
 
-    /// Zoom requires this on the token endpoint even for a native app.
+    /// Zoom requires this **with `clientID`**, and it is optional only because
+    /// `publicClientID` below exists.
     ///
-    /// **Measured against zoom.us, 2026-08-20, not read out of a doc.** This
-    /// file used to carry a PKCE-only branch (`post` puts `client_id` in the
-    /// body when there is no secret) written on the assumption that PKCE stands
-    /// in for client authentication the way it does at Google. It does not, and
-    /// the branch had never once run against Zoom because the secret is always
-    /// present in a developer's Keychain. Five probes against
-    /// `POST https://zoom.us/oauth/token` settle it:
+    /// ── The correction of 2026-08-20, in the order it actually happened ─────
     ///
-    ///   - Real `client_id` in the body, no `Authorization` →
-    ///     `400 {"error":"invalid_client"}`.
-    ///   - **No client identification at all → byte-identical response.**
-    ///   - **A `client_id` of `THIS_ID_DOES_NOT_EXIST` → byte-identical again.**
-    ///     So Zoom never reads `client_id` out of the body: Anchor's real,
-    ///     correct registration buys exactly nothing over garbage or silence.
-    ///   - `grant_type=not_a_real_grant` → `unsupported_grant_type`, *not*
-    ///     `invalid_client`. This is the control that makes the rest mean
-    ///     something. Zoom validates the grant type first, so `invalid_client`
-    ///     on a supported grant is Zoom genuinely reaching client
-    ///     authentication and failing it — not a catch-all it returns for
-    ///     anything malformed.
-    ///   - `grant_type=refresh_token` with `client_id` in the body → also
-    ///     `invalid_client`, so this is not only the initial exchange. A
-    ///     secretless install could not refresh either.
+    /// This file carried a PKCE-only branch — `client_id` in the body, no Basic
+    /// header — that had never run, because a developer's Keychain always holds
+    /// a secret. Probing `zoom.us` with the shipped `zoomClientID` and no
+    /// secret returned `400 invalid_client`, byte-identical to sending no
+    /// client identification at all and to sending a garbage id. The conclusion
+    /// drawn was that Zoom refuses PKCE-only outright. **That was wrong, and
+    /// the reason it was wrong is worth keeping.**
     ///
-    /// The trap is that `GET /oauth/authorize` **accepts** the PKCE challenge
-    /// and redirects to sign-in carrying `code_challenge` through untouched. So
-    /// nothing fails early. A teacher on a secretless install would get a real
-    /// Zoom consent screen, approve Anchor, and only *then* hit
-    /// "Invalid client_id or client_secret" — the worst possible place to
-    /// discover it, and the reason `canCompleteTokenExchange` gates the button
-    /// rather than the error message being improved.
+    /// Opening the Marketplace console showed **Use Public Client OAuth** is
+    /// enabled on this app, and that enabling it mints a **second, different
+    /// identifier** — a *Public Client ID*. Re-probed with that one:
     ///
-    /// Kept `Optional` rather than made non-optional: `revoke` and
-    /// `basicAuthorization` still have to describe the secretless state, and
-    /// the type is what a *deployment* has, not what Zoom requires. What Zoom
-    /// requires is the rule below.
+    ///     public id, PKCE, no secret  → 400 invalid_grant "Invalid authorization code"
+    ///     confidential id, same call  → 400 invalid_client
+    ///     public id, refresh_token    → 400 invalid_grant "Invalid refresh token"
+    ///
+    /// `invalid_grant` means Zoom **authenticated the client** and went on to
+    /// reject the deliberately bogus code — which is as far as a probe can get
+    /// without a real one. So Zoom supports PKCE-only fine; Anchor was
+    /// presenting the confidential client's id on the public client's flow.
+    /// The branch was right and the identifier was wrong.
+    ///
+    /// The lesson is narrower than "check the console": **an error message
+    /// naming a credential can mean the credential is wrong rather than
+    /// missing.** `invalid_client` was read as "this endpoint demands a
+    /// secret". It actually meant "this id is not a client that authenticates
+    /// this way". Nothing in the response distinguished those, and only the
+    /// console did.
     var clientSecret: String?
 
-    /// Whether a registration can complete Zoom's token exchange at all.
+    /// The same Marketplace app's public-client identifier, redeemable with
+    /// PKCE and no secret.
+    var publicClientID: String?
+
+    /// The id to present on **both** the authorization request and the token
+    /// exchange.
+    ///
+    /// One accessor rather than two call sites choosing independently, because
+    /// the invariant is not obvious and breaking it is silent: an authorization
+    /// code is issued *to a client*, so a code obtained under one id and
+    /// redeemed under the other fails at the exchange — after the teacher has
+    /// already approved Anchor, which is the expensive place to fail.
+    ///
+    /// Confidential wins when a secret exists so an admin-provisioned install
+    /// keeps behaving exactly as it did; the public client is the fallback that
+    /// makes an un-provisioned install work at all.
+    var effectiveClientID: String? {
+        if let clientSecret, !clientSecret.trimmed.isEmpty,
+           !clientID.trimmed.isEmpty {
+            return clientID
+        }
+        if let publicClientID, !publicClientID.trimmed.isEmpty {
+            return publicClientID
+        }
+        return nil
+    }
+
+    /// Whether this registration can complete Zoom's token exchange at all.
     ///
     /// Pure and static so the rule can be tested without a Keychain, a
     /// MainActor or a network — the same reason `CredentialSeed` is a value.
-    /// Both halves are trimmed-empty-checked because a secret provisioned with
-    /// a stray newline is not a secret, and `OAuthClientDefaults.value` already
-    /// folds `""` to `nil` on the shipped constants; a Keychain override does
-    /// not go through it.
-    static func canCompleteTokenExchange(clientID: String?, clientSecret: String?) -> Bool {
+    /// Everything is trimmed-empty-checked because a value provisioned with a
+    /// stray newline is not a value, and `OAuthClientDefaults.value` already
+    /// folds `""` to `nil` on the shipped constants while a Keychain override
+    /// does not go through it.
+    static func canCompleteTokenExchange(
+        clientID: String?,
+        clientSecret: String?,
+        publicClientID: String?
+    ) -> Bool {
+        if let publicClientID, !publicClientID.trimmed.isEmpty { return true }
         guard let clientID, !clientID.trimmed.isEmpty else { return false }
         guard let clientSecret, !clientSecret.trimmed.isEmpty else { return false }
         return true
     }
+
     /// HTTPS rather than loopback, because Zoom will not honour an `http://`
     /// loopback redirect — see `OAuthRedirectTransport.hostedBounce`.
     ///
@@ -301,25 +329,36 @@ final class ZoomOAuthStore: ObservableObject {
         clientSecretOverride ?? OAuthClientDefaults.value(OAuthClientDefaults.zoomClientSecret)
     }
 
+    /// No Keychain override: the public client id is not a per-deployment
+    /// value. A school that provisions its own Marketplace app provisions the
+    /// confidential pair, and `effectiveClientID` prefers that pair whenever
+    /// the secret is present — so an override here would only ever be a way to
+    /// get the two halves out of step.
+    var publicClientID: String? {
+        OAuthClientDefaults.value(OAuthClientDefaults.zoomPublicClientID)
+    }
+
     /// Whether Connect can open a browser at all.
     ///
-    /// This asks for the **secret too**, and that is a deliberate tightening
-    /// made on 2026-08-20. It used to be `clientID != nil`, and since
-    /// `OAuthClientDefaults.zoomClientID` ships non-empty, that made Connect
-    /// Zoom live and enabled on every fresh install — including the ones with
-    /// no secret, which is every install not provisioned through
-    /// `ANCHOR_ZOOM_OAUTH_CLIENT_SECRET`. Those installs cannot complete the
-    /// token exchange; see `ZoomOAuthConfig.clientSecret` for the probes that
-    /// prove it. The old rule therefore promised a working button, sent the
-    /// teacher through Zoom's real consent screen, and failed *after* they had
-    /// granted access.
+    /// **Revised twice on 2026-08-20 and the second revision undoes most of the
+    /// first.** It was `clientID != nil`; it became "client ID *and* secret"
+    /// after a probe suggested Zoom refused PKCE-only; and it is now "a public
+    /// client id, or a confidential id with its secret" — because the probe had
+    /// used the wrong identifier and Zoom refuses no such thing.
     ///
-    /// Refusing up front is worse-looking and better: an honest disabled
-    /// button with a reason costs a school's admin one environment variable,
-    /// where the old behaviour cost a teacher their trust at the first thing
-    /// Anchor ever asked them to do.
+    /// The middle version would have disabled Connect Zoom on every
+    /// un-provisioned install: honest about a failure that was not real, and
+    /// costing exactly the reach the public client exists to provide. It is
+    /// recorded rather than quietly reverted because the failure mode it was
+    /// built for is real — a button that works until *after* consent — and the
+    /// next person to see `invalid_client` should reach for the console before
+    /// reaching for this gate.
     var hasClientCredentials: Bool {
-        ZoomOAuthConfig.canCompleteTokenExchange(clientID: clientID, clientSecret: clientSecret)
+        ZoomOAuthConfig.canCompleteTokenExchange(
+            clientID: clientID,
+            clientSecret: clientSecret,
+            publicClientID: publicClientID
+        )
     }
 
     init() {
@@ -340,8 +379,16 @@ final class ZoomOAuthStore: ObservableObject {
     }
 
     func config() -> ZoomOAuthConfig? {
-        guard let clientID else { return nil }
-        return ZoomOAuthConfig(clientID: clientID, clientSecret: clientSecret)
+        // `clientID` may legitimately be absent on a public-client-only
+        // deployment, so the guard is on there being *some* usable id rather
+        // than on the confidential one specifically.
+        let config = ZoomOAuthConfig(
+            clientID: clientID ?? "",
+            clientSecret: clientSecret,
+            publicClientID: publicClientID
+        )
+        guard config.effectiveClientID != nil else { return nil }
+        return config
     }
 
     // MARK: Tokens
@@ -481,7 +528,7 @@ actor ZoomOAuthClient {
         )!
         components.queryItems = [
             URLQueryItem(name: "response_type", value: "code"),
-            URLQueryItem(name: "client_id", value: config.clientID),
+            URLQueryItem(name: "client_id", value: config.effectiveClientID),
             URLQueryItem(name: "redirect_uri", value: redirectURI),
             URLQueryItem(name: "state", value: state),
             URLQueryItem(name: "code_challenge", value: PKCE.makeCodeChallenge(from: verifier)),
@@ -635,7 +682,7 @@ actor ZoomOAuthClient {
         var components = URLComponents(url: ZoomOAuthConfig.revokeEndpoint, resolvingAgainstBaseURL: false)!
         var query = [URLQueryItem(name: "token", value: tokens.accessToken)]
         if config.clientSecret == nil {
-            query.append(URLQueryItem(name: "client_id", value: config.clientID))
+            query.append(URLQueryItem(name: "client_id", value: config.effectiveClientID))
         }
         components.queryItems = query
         guard let url = components.url else { return }
@@ -682,7 +729,7 @@ actor ZoomOAuthClient {
         if let basic = Self.basicAuthorization(config: config) {
             request.setValue(basic, forHTTPHeaderField: "Authorization")
         } else {
-            body["client_id"] = config.clientID
+            body["client_id"] = config.effectiveClientID
         }
         request.httpBody = Self.encode(form: body).data(using: .utf8)
 

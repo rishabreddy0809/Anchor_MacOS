@@ -82,7 +82,27 @@ nonisolated enum OAuthClientDefaults {
     /// uses. This one authenticates the teacher.
     static let zoomClientID = "SMDINiavSZKmyIoF4XmM_A"
 
-    /// Zoom requires this on the token exchange even for a native app. Left
+    /// Client ID of the same app's **public client**, used when no secret is
+    /// available — which is every install not provisioned by an admin.
+    ///
+    /// **A separate identifier from `zoomClientID`, and that is the whole
+    /// point.** Zoom's Marketplace app carries two: the confidential Client ID
+    /// above, which must be presented with `zoomClientSecret` over HTTP Basic,
+    /// and this one, issued when **Use Public Client OAuth** is enabled and
+    /// designed to be redeemed with PKCE and no secret at all. Anchor shipped
+    /// only the confidential ID and used it on the secretless path, which can
+    /// never work — see `ZoomOAuthConfig.effectiveClientID` for the probes.
+    ///
+    /// Public by design like every other identifier here: a public client's ID
+    /// is not a credential, which is what "public client" means. PKCE is what
+    /// proves the request is Anchor's.
+    ///
+    /// Read from the console 2026-08-20 on the *Anchor* app's Development tab,
+    /// where **Use Public Client OAuth** is on.
+    static let zoomPublicClientID = "kzU8QEfESJKsvxA3EzCe9A"
+
+    /// Required alongside `zoomClientID` — but **not** required to sign a
+    /// teacher in, because `zoomPublicClientID` above needs no secret. Left
     /// empty in source so it isn't committed; provision it once through the
     /// `ANCHOR_ZOOM_OAUTH_CLIENT_SECRET` environment variable — or Settings →
     /// Zoom → Advanced, which exists in **DEBUG builds only** — and it lives

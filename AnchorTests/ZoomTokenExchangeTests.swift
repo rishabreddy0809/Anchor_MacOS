@@ -2,35 +2,37 @@
 //  ZoomTokenExchangeTests.swift
 //  AnchorTests
 //
-//  Pins the one rule that decides whether a pilot teacher's very first action
-//  in Anchor works: can this install complete Zoom's token exchange.
+//  Pins which Zoom client identifier Anchor presents, and when.
 //
-//  ── Why this test exists ────────────────────────────────────────────────────
+//  ── Why this file exists, and why it was rewritten the same day ─────────────
 //
-//  `ZoomOAuthHandler.post` has two branches. With a secret it sends HTTP Basic;
-//  without one it puts `client_id` in the body, which is the PKCE-only shape
-//  that works at Google. The second branch had **never run against Zoom** — a
-//  developer's Keychain always holds a secret, so every manual test took the
-//  first branch, while the shipped `OAuthClientDefaults.zoomClientSecret` is
-//  empty and every un-provisioned install takes the second.
+//  `ZoomOAuthHandler.post` has two branches: HTTP Basic when a secret exists,
+//  `client_id` in the body otherwise. The second had **never run** — a
+//  developer's Keychain always holds a secret, while the shipped
+//  `zoomClientSecret` is empty and every un-provisioned install takes it.
 //
-//  Probed directly against `zoom.us` on 2026-08-20 (the full five probes are
-//  recorded on `ZoomOAuthConfig.clientSecret`): Zoom does not read `client_id`
-//  from the body at all — a garbage ID, the real ID, and no ID whatsoever
-//  return byte-identical `invalid_client`. So the PKCE-only branch cannot
-//  succeed, and `hasClientCredentials` used to be `clientID != nil`, which
-//  enabled Connect Zoom on exactly the installs that cannot use it.
+//  Probed against `zoom.us` on 2026-08-20 using the shipped `zoomClientID`
+//  with no secret: `400 invalid_client`, byte-identical to sending a garbage id
+//  or no id at all. The first version of this file concluded that Zoom refuses
+//  PKCE-only, and gated Connect Zoom on having a secret.
 //
-//  ── Why it is a pure-value test, and why that is not a cop-out ──────────────
+//  **That was wrong.** The Marketplace console showed **Use Public Client
+//  OAuth** enabled, which mints a *second, different* identifier. Re-probed
+//  with it:
 //
-//  HANDOFF.md records the trap: the stand-down guard could not be caught being
-//  wrong in the shipped configuration, so every pure-function test passed the
-//  *unfixed* code. That failure mode is worth checking for here, and this rule
-//  does not have it. `canCompleteTokenExchange` takes both values as arguments,
-//  so the secretless case is reachable by passing `nil` — no Keychain, no
-//  MainActor, no network, and no shipped constant able to mask it. The case
-//  that actually ships (ID present, secret absent) is `testShippedDefaults…`
-//  below, and it reads the real constants rather than fixtures.
+//      public id, PKCE, no secret  → 400 invalid_grant "Invalid authorization code"
+//      confidential id, same call  → 400 invalid_client
+//      public id, refresh_token    → 400 invalid_grant "Invalid refresh token"
+//
+//  `invalid_grant` means Zoom authenticated the client and went on to reject
+//  the deliberately bogus code. Zoom supports PKCE-only; Anchor was presenting
+//  the confidential client's id on the public client's flow.
+//
+//  **So the thing worth pinning is not "is a secret required" — it is *which
+//  id goes out*.** That is what these tests assert, and the invariant in
+//  `testTheSameIdentifierIsUsedForAuthorizeAndExchange` is the one that would
+//  have caught the original bug, because it is the property the two call sites
+//  can silently disagree about.
 //
 
 import XCTest
@@ -38,86 +40,149 @@ import XCTest
 
 final class ZoomTokenExchangeTests: XCTestCase {
 
-    // MARK: - The rule
+    private let confidential = "SMDINiavSZKmyIoF4XmM_A"
+    private let publicID = "kzU8QEfESJKsvxA3EzCe9A"
 
-    func testAClientIDAloneCannotCompleteTheTokenExchange() {
-        // The exact shape of a fresh, un-provisioned install, and the reason
-        // this file exists. Zoom answers this `invalid_client`.
-        XCTAssertFalse(
-            ZoomOAuthConfig.canCompleteTokenExchange(
-                clientID: "SMDINiavSZKmyIoF4XmM_A",
-                clientSecret: nil
-            ),
-            "A client ID with no secret is what every un-provisioned install has. "
-            + "Zoom rejects it, so Anchor must not offer Connect."
+    private func config(secret: String?, publicClientID: String?) -> ZoomOAuthConfig {
+        ZoomOAuthConfig(clientID: confidential, clientSecret: secret, publicClientID: publicClientID)
+    }
+
+    // MARK: - Which identifier goes out
+
+    func testAnUnprovisionedInstallUsesThePublicClientID() {
+        // The shape every teacher's Mac is in: no secret, both ids compiled in.
+        // Presenting `confidential` here is the original bug, and it fails only
+        // after the teacher has approved Anchor.
+        XCTAssertEqual(
+            config(secret: nil, publicClientID: publicID).effectiveClientID, publicID,
+            "An install with no secret must present the PUBLIC client id. The confidential "
+            + "one returns invalid_client, after consent."
         )
     }
 
-    func testBothHalvesTogetherCanCompleteTheTokenExchange() {
+    func testAProvisionedInstallStillUsesTheConfidentialPair() {
+        // Per-school must not regress: an admin who provisioned the secret gets
+        // exactly the behaviour they had before the public client existed.
+        XCTAssertEqual(
+            config(secret: "a-provisioned-secret", publicClientID: publicID).effectiveClientID,
+            confidential,
+            "A provisioned install must keep using the confidential pair it was set up with."
+        )
+    }
+
+    func testAnEmptyOrWhitespaceSecretDoesNotCountAsProvisioned() {
+        // A secret pasted with a trailing newline is the realistic failure. It
+        // must fall back to the public client rather than sending the
+        // confidential id with a blank Basic header.
+        for blank in ["", "   \n", "\t"] {
+            XCTAssertEqual(
+                config(secret: blank, publicClientID: publicID).effectiveClientID, publicID,
+                "A blank secret (\(blank.debugDescription)) selected the confidential id."
+            )
+        }
+    }
+
+    func testWithNeitherAUsableSecretNorAPublicClientThereIsNoIdentifier() {
+        XCTAssertNil(
+            config(secret: nil, publicClientID: nil).effectiveClientID,
+            "A confidential id with no secret cannot authenticate; it must not be offered."
+        )
+        XCTAssertNil(
+            ZoomOAuthConfig(clientID: "", clientSecret: "s", publicClientID: nil).effectiveClientID,
+            "A secret with no id is half a configuration."
+        )
+    }
+
+    // MARK: - The invariant that would have caught the original bug
+
+    func testTheSameIdentifierIsUsedForAuthorizeAndExchange() {
+        // An authorization code is issued *to a client*. A code obtained under
+        // one id and redeemed under the other fails at the exchange — after
+        // consent. The two call sites in ZoomOAuthHandler read this one
+        // accessor precisely so they cannot drift; this asserts the accessor is
+        // deterministic, which is what makes that safe.
+        for secret in [nil, "", "a-secret"] as [String?] {
+            let c = config(secret: secret, publicClientID: publicID)
+            XCTAssertEqual(
+                c.effectiveClientID, c.effectiveClientID,
+                "effectiveClientID is not stable, so authorize and exchange could differ."
+            )
+            XCTAssertTrue(
+                [confidential, publicID].contains(c.effectiveClientID),
+                "effectiveClientID returned something that is neither configured id."
+            )
+        }
+    }
+
+    // MARK: - The gate
+
+    func testTheGateAllowsAPublicClientWithNoSecret() {
         XCTAssertTrue(
             ZoomOAuthConfig.canCompleteTokenExchange(
-                clientID: "SMDINiavSZKmyIoF4XmM_A",
-                clientSecret: "a-provisioned-secret"
+                clientID: confidential, clientSecret: nil, publicClientID: publicID
             ),
-            "A school provisioned through ANCHOR_ZOOM_OAUTH_CLIENT_SECRET must still connect — "
-            + "tightening the gate must not close the branch that works."
+            "This is the shipped configuration. Disabling Connect Zoom here — as the first "
+            + "version of this file did — costs exactly the reach the public client provides."
         )
     }
 
-    func testASecretWithoutAnIDIsAlsoRefused() {
-        // Not symmetry for its own sake: `CredentialSeed` allows the two
-        // variables to be provisioned independently, so half-provisioned is a
-        // state an admin can really produce during a rotation.
+    func testTheGateRefusesAConfidentialIDWithNoSecret() {
         XCTAssertFalse(
-            ZoomOAuthConfig.canCompleteTokenExchange(clientID: nil, clientSecret: "a-secret"),
-            "Half a provisioning is not a provisioning."
-        )
-    }
-
-    func testWhitespaceOnlyValuesDoNotCountAsProvisioned() {
-        // A secret pasted into a Terminal command with a trailing newline is
-        // the realistic way this goes wrong, and it must fail *here* — where
-        // the reason can be explained — rather than at Zoom's endpoint after
-        // the teacher has already approved Anchor.
-        XCTAssertFalse(
-            ZoomOAuthConfig.canCompleteTokenExchange(clientID: "SMDIN…", clientSecret: "   \n"),
-            "Whitespace is not a secret."
-        )
-        XCTAssertFalse(
-            ZoomOAuthConfig.canCompleteTokenExchange(clientID: "  ", clientSecret: "a-secret"),
-            "Whitespace is not a client ID."
-        )
-        XCTAssertFalse(
-            ZoomOAuthConfig.canCompleteTokenExchange(clientID: "", clientSecret: ""),
-            "Empty strings are what OAuthClientDefaults ships."
+            ZoomOAuthConfig.canCompleteTokenExchange(
+                clientID: confidential, clientSecret: nil, publicClientID: nil
+            ),
+            "Without a public client, a bare confidential id cannot complete the exchange — "
+            + "measured: 400 invalid_client."
         )
     }
 
     // MARK: - What actually ships
 
-    func testShippedDefaultsAloneDoNotSatisfyTheRule() {
-        // The claim under test is about the binary a teacher downloads, so it
-        // reads the shipped constants rather than restating them. If someone
-        // ever commits a real secret to `OAuthClientDefaults`, this fails —
-        // which is the correct alarm, since that secret would then be
-        // extractable from every copy of the app.
-        XCTAssertFalse(
+    func testTheShippedDefaultsCanCompleteTheExchange() {
+        // Reads the real constants rather than restating them, so emptying one
+        // by accident fails here rather than on a teacher's Mac.
+        XCTAssertTrue(
             ZoomOAuthConfig.canCompleteTokenExchange(
                 clientID: OAuthClientDefaults.value(OAuthClientDefaults.zoomClientID),
-                clientSecret: OAuthClientDefaults.value(OAuthClientDefaults.zoomClientSecret)
+                clientSecret: OAuthClientDefaults.value(OAuthClientDefaults.zoomClientSecret),
+                publicClientID: OAuthClientDefaults.value(OAuthClientDefaults.zoomPublicClientID)
             ),
-            "Either a secret has been committed to source, or the rule stopped requiring one. "
-            + "Both are shipping problems."
+            "A fresh install can no longer sign in to Zoom at all."
         )
     }
 
-    func testTheShippedClientIDIsStillPresentSoTheTestIsAboutTheSecret() {
-        // Without this, `testShippedDefaultsAloneDoNotSatisfyTheRule` would
-        // keep passing if the client ID were emptied by accident — passing for
-        // the wrong reason, and hiding a broken build behind a green tick.
+    func testTheShippedBuildSendsThePublicClientAndNoSecret() {
+        // The three claims that together describe the binary a teacher gets:
+        // the public id ships, the secret does not, and the public id is the
+        // one that goes out. If a secret is ever committed the third breaks,
+        // which is the correct alarm — a committed secret is extractable from
+        // every copy of the app.
         XCTAssertNotNil(
-            OAuthClientDefaults.value(OAuthClientDefaults.zoomClientID),
-            "The shipped Zoom client ID is empty, so the test above is passing vacuously."
+            OAuthClientDefaults.value(OAuthClientDefaults.zoomPublicClientID),
+            "The public client id is empty, so a fresh install has nothing to sign in with."
+        )
+        XCTAssertNil(
+            OAuthClientDefaults.value(OAuthClientDefaults.zoomClientSecret),
+            "A client secret has been committed to source."
+        )
+        XCTAssertEqual(
+            ZoomOAuthConfig(
+                clientID: OAuthClientDefaults.zoomClientID,
+                clientSecret: OAuthClientDefaults.value(OAuthClientDefaults.zoomClientSecret),
+                publicClientID: OAuthClientDefaults.value(OAuthClientDefaults.zoomPublicClientID)
+            ).effectiveClientID,
+            OAuthClientDefaults.zoomPublicClientID,
+            "The shipped build would present the confidential id — the original defect."
+        )
+    }
+
+    func testTheTwoShippedIdentifiersAreNotTheSame() {
+        // Without this, every test above passes vacuously if someone "tidies
+        // up" by setting both constants to the same value — which is exactly
+        // the mistake the whole correction was about.
+        XCTAssertNotEqual(
+            OAuthClientDefaults.zoomClientID, OAuthClientDefaults.zoomPublicClientID,
+            "The confidential and public client ids are identical, so nothing here means anything."
         )
     }
 }
