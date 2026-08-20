@@ -212,4 +212,75 @@ final class CredentialSeedTests: XCTestCase {
         XCTAssertFalse(seed.serverToServerIsPartial)
         XCTAssertNil(seed.serverToServer)
     }
+
+    // MARK: - The document the admin actually follows
+
+    // Everything above pins what Anchor does with a variable it was given. This
+    // pins the step before: that the variable names in ADMIN-SETUP.md step 3 are
+    // the ones `CredentialSeed.read` looks for.
+    //
+    // The failure is the same shape as the two defects this file was written
+    // about, and lands in the same place -- a rotation call, months later, with
+    // someone waiting. Rename a constant in Swift and the document keeps
+    // printing the old name. The admin pastes a four-line command, Anchor
+    // launches normally, nothing is written and nothing is said, and the call
+    // ends with everyone believing the school is provisioned. The first sign is
+    // a teacher's Connect button being disabled weeks later.
+    //
+    // Checked by hand on 2026-08-20 -- the four names match -- and pinned here
+    // so it stays checked.
+
+    private func adminSetupDocument() throws -> String {
+        let url = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()        // AnchorTests/
+            .deletingLastPathComponent()        // repo root
+            .appendingPathComponent("ADMIN-SETUP.md")
+        return try String(contentsOf: url, encoding: .utf8)
+    }
+
+    /// Every `ANCHOR_*` name the document tells an admin to set.
+    private func namesInAdminSetup(_ source: String) throws -> Set<String> {
+        let pattern = try NSRegularExpression(pattern: "ANCHOR_[A-Z_]+")
+        let range = NSRange(source.startIndex..<source.endIndex, in: source)
+        return Set(pattern.matches(in: source, range: range).compactMap {
+            Range($0.range, in: source).map { String(source[$0]) }
+        })
+    }
+
+    func testEveryVariableAdminSetupNamesIsOneTheCodeActuallyReads() throws {
+        let named = try namesInAdminSetup(try adminSetupDocument())
+
+        // Read back through `CredentialSeed.read` rather than against a list of
+        // string literals. A literal list would be a second copy of the names
+        // and could rot in exactly the way this test exists to prevent.
+        for name in named.sorted() {
+            let seed = CredentialSeed.read(from: [name: "a-value"])
+            XCTAssertFalse(
+                seed.isEmpty,
+                """
+                ADMIN-SETUP.md tells an admin to set \(name), and setting it                 provisions nothing. The command in step 3 would run, say nothing,                 and write nothing.
+                """
+            )
+        }
+    }
+
+    func testAdminSetupStillNamesTheFourVariablesItsCommandDependsOn() throws {
+        // Without this the test above passes vacuously the moment someone
+        // reformats the document and the regex stops matching -- an empty set
+        // satisfies a for-loop. The four are the pair for browser sign-in and
+        // the pair for the bot.
+        let named = try namesInAdminSetup(try adminSetupDocument())
+        XCTAssertEqual(
+            named,
+            [
+                "ANCHOR_ZOOM_OAUTH_CLIENT_ID",
+                "ANCHOR_ZOOM_OAUTH_CLIENT_SECRET",
+                "ANCHOR_ZOOM_SDK_KEY",
+                "ANCHOR_ZOOM_SDK_SECRET"
+            ],
+            """
+            The set of variables ADMIN-SETUP.md names has changed. If a variable was             added, check it is read; if one was dropped, check the feature it             provisioned is genuinely gone. The Server-to-Server trio is deliberately             absent -- that document records the bot no longer needs it.
+            """
+        )
+    }
 }
