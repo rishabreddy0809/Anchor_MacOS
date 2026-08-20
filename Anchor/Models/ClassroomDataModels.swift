@@ -123,6 +123,61 @@ nonisolated enum ClassroomNameKey {
     }
 }
 
+/// Which roster entries Anchor cannot tie to a Zoom participant on its own, and
+/// why.
+///
+/// ── Why this is a type rather than a `filter` at the call site ──────────────
+///
+/// It used to be one: `monitoredRoster.filter { $0.matchKey == nil }`, feeding
+/// a count that a note in Settings displays. That predicate was written when
+/// Google still returned roster addresses and `matchKey` was nil for the odd
+/// student. **Anchor dropped `classroom.profile.emails` on 2026-08-17, so
+/// `matchKey` is now nil for every entry** — and the count silently became the
+/// whole class.
+///
+/// The number is not the damage. The sentence it drives is: *"N student(s) on
+/// this roster have no email address from Google, so they can't be matched to a
+/// Zoom participant. Their coursework won't affect any score."* On a normal
+/// install that told every teacher, about every student, two things that are
+/// false. Name matching is the ordinary path now and it works; their coursework
+/// does reach their score. It is the first thing shown after connecting
+/// Classroom, which makes it the worst place in the app to be wrong.
+///
+/// Both rules are pure and static so they can be tested without a view model,
+/// a Google grant or a MainActor — the `CredentialSeed` shape, for the same
+/// reason: the defect was in a decision, and decisions are testable where
+/// published properties are not.
+nonisolated enum RosterMatchability {
+
+    /// Entries with nothing to match on at all: no address *and* no name that
+    /// normalises to anything. These are genuinely unreachable — a manual link
+    /// is the only route, and even that needs the teacher to recognise them.
+    static func unmatchable(in roster: [ClassroomStudent]) -> [ClassroomStudent] {
+        roster.filter { $0.rosterKey == nil }
+    }
+
+    /// Entries that could only be matched by name, where more than one student
+    /// normalises to that name.
+    ///
+    /// `AcademicMatchTable` refuses these on purpose — a wrong match shows one
+    /// student's grades under another's name — so they need the teacher to link
+    /// them by hand. Counted separately from `unmatchable` because the fix is
+    /// different: this one is a two-click recovery, that one is not.
+    ///
+    /// An entry with an address is excluded even when its name collides: the
+    /// address decides, and a shared name cannot unmake it.
+    static func ambiguouslyNamed(in roster: [ClassroomStudent]) -> [ClassroomStudent] {
+        var owners: [String: [ClassroomStudent]] = [:]
+        for student in roster where student.matchKey == nil {
+            guard let key = student.nameMatchKey else { continue }
+            if !owners[key, default: []].contains(where: { $0.id == student.id }) {
+                owners[key, default: []].append(student)
+            }
+        }
+        return owners.values.filter { $0.count > 1 }.flatMap { $0 }
+    }
+}
+
 // MARK: - Assignment
 
 /// One piece of coursework.

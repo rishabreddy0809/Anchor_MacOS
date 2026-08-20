@@ -111,6 +111,12 @@ final class ClassroomViewModel: ObservableObject {
     @Published private(set) var lastError: ClassroomError?
     /// Students on the monitored rosters with no email — they can never be matched.
     @Published private(set) var unmatchableStudentCount = 0
+
+    /// Students who can only be matched by name and share that name with
+    /// someone else on the roster, so Anchor refuses to guess between them.
+    /// Separate from `unmatchableStudentCount` because the recovery is
+    /// different — this one is a manual link away. See `RosterMatchability`.
+    @Published private(set) var ambiguouslyNamedStudentCount = 0
     /// The monitored course the live meeting belongs to, when its recorded class
     /// has been linked to one. Written by `EngagementStore` on each ingest — the
     /// view model has no way to know which Zoom meeting is running.
@@ -385,6 +391,7 @@ final class ClassroomViewModel: ObservableObject {
         lastSyncedByCourse = [:]
         lastSyncErrorByCourse = [:]
         unmatchableStudentCount = 0
+        ambiguouslyNamedStudentCount = 0
     }
 
     // MARK: - Courses
@@ -899,7 +906,14 @@ final class ClassroomViewModel: ObservableObject {
     /// Recomputed across every monitored roster rather than tracked per class:
     /// the count is shown once, as one number, in Settings.
     private func recountUnmatchableStudents() {
-        unmatchableStudentCount = monitoredRoster.filter { $0.matchKey == nil }.count
+        // `matchKey == nil` used to be the whole rule and stopped being right on
+        // 2026-08-17, when the email scope was dropped and that became true of
+        // every entry. The count fed a note claiming the entire class was
+        // unmatchable and their coursework counted for nothing — both false, and
+        // shown on the first screen after connecting Classroom.
+        let roster = monitoredRoster
+        unmatchableStudentCount = RosterMatchability.unmatchable(in: roster).count
+        ambiguouslyNamedStudentCount = RosterMatchability.ambiguouslyNamed(in: roster).count
     }
 
     private func handle(_ error: ClassroomError) {

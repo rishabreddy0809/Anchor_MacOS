@@ -514,7 +514,13 @@ nonisolated struct AcademicRollup: Sendable {
             //
             // A student who normalises to no name at all is still skipped: there
             // is genuinely no key to file them under.
-            guard let matchKey = student.rosterKey else { continue }
+            // Named for what it holds. This binding was called `matchKey`
+            // while holding a `rosterKey`, and that is not a cosmetic slip: a
+            // reader who takes the name at face value concludes snapshots are
+            // filed under `matchKey` and writes the lookup that way — which is
+            // exactly the defect found in `CourseStudentHistoryView` on
+            // 2026-08-20, silently emptying that panel on every install.
+            guard let rosterKey = student.rosterKey else { continue }
 
             var missing: [ClassroomAssignment] = []
             var late = 0
@@ -566,7 +572,7 @@ nonisolated struct AcademicRollup: Sendable {
             graded.sort { $0.date < $1.date }
             let fractions = graded.map(\.fraction)
 
-            result[matchKey] = AcademicSnapshot(
+            result[rosterKey] = AcademicSnapshot(
                 studentID: student.id,
                 name: student.name,
                 email: student.email,

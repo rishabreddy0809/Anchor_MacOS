@@ -54,7 +54,17 @@ struct CourseStudentHistoryView: View {
     }
 
     private var snapshot: AcademicSnapshot? {
-        student?.matchKey.flatMap { classroom.snapshots(forCourse: courseID)[$0] }
+        // `rosterKey`, not `matchKey`. Snapshots are *filed* under `rosterKey`
+        // (GoogleClassroomService), which falls back to the normalised name —
+        // and since the email scope was dropped on 2026-08-17 that fallback is
+        // the only key any of them are filed under. Looking up by `matchKey`
+        // therefore missed every snapshot on every normal install, and this
+        // whole panel rendered empty with nothing on screen to say why.
+        //
+        // The rest of this file already used `rosterKey`; this one call site was
+        // missed in that sweep, which is the argument for the scan in
+        // TeacherFacingCopyTests rather than a fix here alone.
+        student?.rosterKey.flatMap { classroom.snapshots(forCourse: courseID)[$0] }
     }
 
     /// Every recorded appearance of this student across every recorded class

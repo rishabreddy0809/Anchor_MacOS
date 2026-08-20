@@ -121,6 +121,10 @@ struct ClassroomConnectionPanel: View {
             if classroom.unmatchableStudentCount > 0 {
                 unmatchedNote
             }
+
+            if classroom.ambiguouslyNamedStudentCount > 0 {
+                sharedNameNote
+            }
         }
     }
 
@@ -387,16 +391,46 @@ struct ClassroomConnectionPanel: View {
         .foregroundStyle(error.requiresUserAction ? Theme.riskHigh : Theme.riskElevated)
     }
 
-    /// Students Google won't give an email for can never be matched — say so
-    /// once here rather than leaving the teacher to notice gaps per student.
+    /// Students Anchor has nothing at all to match on — say so once here rather
+    /// than leaving the teacher to notice gaps per student.
+    ///
+    /// **This note used to fire for the whole class**, because its count was
+    /// `matchKey == nil` and Google stopped returning roster addresses on
+    /// 2026-08-17. It also said their coursework would not affect any score,
+    /// which was false for exactly the same reason: matching moved to the name
+    /// and kept working. Now it counts entries with no address *and* no usable
+    /// name, which is the case it was always describing.
     private var unmatchedNote: some View {
         HStack(alignment: .top, spacing: 5) {
             Image(systemName: "info.circle")
                 .font(.system(size: 9))
                 .padding(.top, 1)
-            Text("\(classroom.unmatchableStudentCount) student(s) on this roster have no "
-                 + "email address from Google, so they can't be matched to a Zoom "
-                 + "participant. Their coursework won't affect any score.")
+            Text("\(classroom.unmatchableStudentCount) student(s) on this roster have "
+                 + "neither an email address nor a usable name, so Anchor has nothing to "
+                 + "match them on. Link them by hand from a student's card during a class.")
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .font(.system(size: 10))
+        .foregroundStyle(.secondary)
+    }
+
+    /// The common case, and the one worth naming separately: two students whose
+    /// names normalise alike.
+    ///
+    /// Anchor refuses to guess between them on purpose — showing one student's
+    /// grades under another's name is worse than showing none — so this is a
+    /// recovery the teacher can complete in two clicks, not a dead end. Said
+    /// here, once, because noticing it per-student means noticing it mid-class.
+    private var sharedNameNote: some View {
+        HStack(alignment: .top, spacing: 5) {
+            Image(systemName: "person.2")
+                .font(.system(size: 9))
+                .padding(.top, 1)
+            Text("\(classroom.ambiguouslyNamedStudentCount) student(s) share a name with "
+                 + "someone else on this roster. Anchor won't guess which is which, so "
+                 + "they stay unlinked until you pick — use Link to student… on their "
+                 + "card during a class.")
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
         }
