@@ -155,4 +155,96 @@ final class RetentionPolicyTests: XCTestCase {
             """
         )
     }
+
+    // MARK: - The deletion itself, not just the policy sentence
+
+    // Everything above pins what Anchor *says*. Until 2026-08-20 nothing pinned
+    // what it *does*: this file's own note recorded that `pruneExpiredSessions`
+    // was covered only by a manual pass. The obstacle was real rather than
+    // laziness -- that method ends in `saveNow()`, writing to the developer's
+    // actual `session-archive.json`, so a test that called it would have
+    // deleted the running developer's own class history to prove a point about
+    // deleting history. `sessionsSurvivingRetention` is the rule lifted out of
+    // it, which is the part a school is being promised.
+
+    /// Builds a session that ended `daysAgo` before `now`, or one still running.
+    private func session(endedDaysAgo daysAgo: Double?, now: Date, topic: String) -> ClassSession {
+        let started = now.addingTimeInterval(-(daysAgo ?? 0) * 86_400 - 3_600)
+        return ClassSession(
+            classroomID: UUID(),
+            instanceKey: topic,
+            topic: topic,
+            startedAt: started,
+            endedAt: daysAgo.map { now.addingTimeInterval(-$0 * 86_400) }
+        )
+    }
+
+    func testSessionsPastTheWindowAreDroppedAndRecentOnesKept() {
+        let now = Date()
+        let cutoff = Window.term.cutoff(from: now)!
+
+        let kept = [
+            session(endedDaysAgo: 0, now: now, topic: "this morning"),
+            session(endedDaysAgo: 119, now: now, topic: "just inside"),
+        ]
+        let dropped = [
+            session(endedDaysAgo: 121, now: now, topic: "just outside"),
+            session(endedDaysAgo: 400, now: now, topic: "last year"),
+        ]
+
+        let survivors = SessionArchive.sessionsSurvivingRetention(kept + dropped, cutoff: cutoff)
+
+        XCTAssertEqual(
+            survivors.map { $0.topic }, ["this morning", "just inside"],
+            "The 120-day window is a published promise in both directions: records past it "
+            + "must go, and records inside it must stay."
+        )
+    }
+
+    func testALiveSessionIsNeverDroppedHoweverOldItLooks() {
+        // The failure this guards is not hypothetical arithmetic. Anchor is a
+        // menu bar app that can stay running for weeks, `finalizeCurrentSession`
+        // prunes on every class ending, and a session left open by a crash keeps
+        // `endedAt == nil` until the next launch closes it. A rule that measured
+        // `startedAt` instead would delete a class while it was being taught.
+        let now = Date()
+        let cutoff = Window.term.cutoff(from: now)!
+        let live = session(endedDaysAgo: nil, now: now.addingTimeInterval(-500 * 86_400), topic: "still running")
+
+        XCTAssertNil(live.endedAt, "fixture is wrong: this session must be live")
+        XCTAssertEqual(
+            SessionArchive.sessionsSurvivingRetention([live], cutoff: cutoff).count, 1,
+            "A class still in progress was deleted mid-lesson. That is the worst possible "
+            + "expression of a retention policy."
+        )
+    }
+
+    func testTheBoundaryDayItselfSurvives() {
+        // `<` not `<=`: a session that ended exactly on the boundary has not yet
+        // outlived the window the teacher was promised. Pinned because this is
+        // the single character most likely to be changed by someone tidying up.
+        let now = Date()
+        let cutoff = Window.term.cutoff(from: now)!
+        let exactly = ClassSession(
+            classroomID: UUID(), instanceKey: "boundary", topic: "boundary",
+            startedAt: cutoff.addingTimeInterval(-3_600), endedAt: cutoff
+        )
+
+        XCTAssertEqual(
+            SessionArchive.sessionsSurvivingRetention([exactly], cutoff: cutoff).count, 1,
+            "A session ending exactly on the cutoff was dropped a day early."
+        )
+    }
+
+    func testKeepEverythingDeletesNothing() {
+        // `.forever` returns a nil cutoff, so `pruneExpiredSessions` returns
+        // before reaching the rule at all. Asserted here so the enum and the
+        // filter cannot drift into disagreeing about what "keep everything"
+        // means -- a teacher who switched this off and lost records anyway
+        // would have no reason to trust any other setting.
+        XCTAssertNil(
+            Window.forever.cutoff(from: Date()),
+            "\"Keep everything\" produced a cutoff, so pruning would run against it."
+        )
+    }
 }

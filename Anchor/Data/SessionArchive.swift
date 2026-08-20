@@ -276,16 +276,48 @@ final class SessionArchive: ObservableObject {
         guard let cutoff = retention.cutoff(from: now) else { return }
 
         let before = sessions.count
-        sessions.removeAll { session in
-            guard let endedAt = session.endedAt else { return false }
-            return endedAt < cutoff
-        }
+        sessions = Self.sessionsSurvivingRetention(sessions, cutoff: cutoff)
         let dropped = before - sessions.count
         guard dropped > 0 else { return }
 
         pruneEmptyClassrooms()
         logger.info("Retention dropped \(dropped) session(s) older than \(self.retention.days ?? 0) days")
         saveNow()
+    }
+
+    /// Which sessions survive a given cutoff.
+    ///
+    /// Extracted from `pruneExpiredSessions` on 2026-08-20 so that the deletion
+    /// rule can be tested at all. It could not be before, and the reason is
+    /// worth stating because it is a trap rather than an oversight:
+    /// `pruneExpiredSessions` ends in `saveNow()`, which writes to the real
+    /// `~/Library/Application Support/Anchor/session-archive.json`. **A test
+    /// that drove the method directly would have overwritten the running
+    /// developer's own class history** — so "just call it and assert" was never
+    /// available, and the checklist's note that the mechanics were untested was
+    /// describing a real obstacle, not laziness.
+    ///
+    /// Pure and static, the same shape as `CredentialSeed` and
+    /// `ZoomOAuthConfig.canCompleteTokenExchange`: no disk, no MainActor, no
+    /// preferences. What the caller keeps is the counting, the logging, the
+    /// classroom sweep and the save — none of which is the rule.
+    ///
+    /// The rule itself is one line longer than it looks, and the extra line is
+    /// the important one: **a session still in progress is never dropped**,
+    /// however old its start time looks. `endedAt` is nil until
+    /// `closeOrphanedSessions` or `finalizeCurrentSession` sets it, and
+    /// deleting a live class mid-lesson would be the worst possible expression
+    /// of a retention policy. `<` rather than `<=` because a session that ended
+    /// exactly on the boundary has not yet outlived the window a teacher was
+    /// promised.
+    nonisolated static func sessionsSurvivingRetention(
+        _ sessions: [ClassSession],
+        cutoff: Date
+    ) -> [ClassSession] {
+        sessions.filter { session in
+            guard let endedAt = session.endedAt else { return true }
+            return endedAt >= cutoff
+        }
     }
 
     /// Deletes Anchor's own leftover copies of the archive once they age out.
