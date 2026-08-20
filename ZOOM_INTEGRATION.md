@@ -215,13 +215,38 @@ underlying reason than Zoom's).
 > `invalid_grant` means the client authenticated and the deliberately bogus
 > code was rejected, which is as far as a probe reaches without a real one.
 >
-> **Console state, read 2026-08-20** (Development tab, *Anchor* app): toggle
-> **on**; Public Client ID `kzU8QEfESJKsvxA3EzCe9A`; OAuth Redirect URL
-> `https://anchor-oauth-bounce.vercel.app/oauth/zoom`, matching
-> `ZoomOAuthConfig.bounceURL` character for character; **Use Strict Mode for
-> Redirect URLs** off; **Subdomain Check** off. Note that Zoom's own generated
-> *OAuth URL* on that page uses the **confidential** id — so the console will
-> hand you the wrong one for a PKCE flow if you copy it.
+> **Console state, read 2026-08-20, both tabs.** Values read out of the DOM
+> rather than off a screenshot, because Zoom renders a populated field in the
+> same grey as a placeholder and a first pass misread one as empty.
+>
+> | | **Development** | **Production** |
+> |---|---|---|
+> | Client ID | `SMDINiavSZKmyIoF4XmM_A` | `Vgi566QtQhaoeAOptZpqug` |
+> | Use Public Client OAuth | **on** | **off** |
+> | Public Client ID | `kzU8QEfESJKsvxA3EzCe9A` | **does not exist** |
+> | OAuth Redirect URL | bounce URL ✓ | bounce URL ✓ |
+> | OAuth Allow List | bounce URL ✓ | bounce URL ✓ |
+> | Use Strict Mode | off | off |
+> | Subdomain Check | off | off |
+>
+> Both redirect values match `ZoomOAuthConfig.bounceURL` character for
+> character, on both tabs.
+>
+> **The Production row is the one that will bite.** Switching to Production is
+> *not* just swapping a client id: the public-client toggle is **off** there,
+> so **no Public Client ID exists on Production at all**. Enabling it mints a
+> *third* identifier — different again from `kzU8QEfESJKsvxA3EzCe9A` — and that
+> is the value `OAuthClientDefaults.zoomPublicClientID` would have to become.
+> Anything that ships the Development public id against Production fails the
+> exchange the same way the confidential id did, and fails it after consent.
+>
+> Note also that Zoom's own generated *OAuth URL* on that page is built with
+> the **confidential** id, so the console hands you the wrong one for a PKCE
+> flow if you copy it.
+>
+> Production also now carries a developer contact (recorded as empty on
+> 18 Aug): Rishab Reddy Paili / rishabreddy0809@gmail.com. **Publish: Not
+> ready** — unchanged, and deliberately so.
 >
 > **Do not turn this toggle off.** `OAuthClientDefaults.zoomPublicClientID` is
 > shipped and `ZoomOAuthConfig.effectiveClientID` selects it whenever no secret

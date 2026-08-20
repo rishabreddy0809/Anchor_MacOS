@@ -164,10 +164,21 @@ things nobody had asked about. Three habits did it:
     authorize call and the token exchange read. **They must never differ** — a
     code is issued to a client, so obtaining it under one id and redeeming it
     under the other fails *after* the teacher approves Anchor.
-  - Console state read 2026-08-20: redirect URL
-    `https://anchor-oauth-bounce.vercel.app/oauth/zoom` registered and matching
-    `bounceURL`; Strict Mode off; Subdomain Check off; **the OAuth Allow List
-    field looked empty** — not changed, and worth a glance.
+  - **Console state read 2026-08-20, both tabs, values taken from the DOM.**
+    Development: toggle **on**, public id `kzU8QEfESJKsvxA3EzCe9A`.
+    **Production: toggle off, and therefore no Public Client ID exists at
+    all**; its confidential id is `Vgi566QtQhaoeAOptZpqug`. Redirect URL *and*
+    allow list hold the bounce URL on **both** tabs; Strict Mode and Subdomain
+    Check off on both.
+  - **Switching to Production is not a client-id swap.** Enabling the toggle
+    there mints a *third* identifier, different again from the Development
+    public id, and that is what `zoomPublicClientID` would have to become.
+    Shipping the Development public id against Production fails the exchange
+    exactly as the confidential id did — after consent.
+  - **An earlier note here said the allow list "looked empty". It is not.**
+    Zoom renders a populated field in the same grey as a placeholder, so a
+    screenshot cannot tell them apart; reading `input.value` can. Worth
+    remembering for any console this project reads again.
   - **Google is unaffected** and its same-shaped branch is correct: Google
     documents `client_secret` as optional for installed apps.
 - **The published privacy policy matches the app.** Re-fetched 2026-08-20: 120
@@ -258,10 +269,10 @@ endpoint, the live privacy page, the deployed bounce page, the setup document.
    provisioning is needed for sign-in. If it fails *after* the consent screen,
    the public client id did not reach the build. (Note this expectation flipped
    twice on 20 Aug; the build to trust is `4fd94eb` or later.)
-5. **Glance at the OAuth Allow List** on the *Anchor* app while you are in the
-   console — it appeared empty. The redirect URL itself is registered and
-   correct, so sign-in should work regardless; `ZOOM_INTEGRATION.md` §2a is the
-   context. One minute, low stakes.
+5. ~~Glance at the OAuth Allow List.~~ **Done 2026-08-20 — it is populated on
+   both tabs, and the "looked empty" reading was a misread of Zoom's grey
+   styling.** Nothing to do. The Production finding above came out of the same
+   pass and is the part worth carrying forward.
 
 ## Blocked on the human
 
