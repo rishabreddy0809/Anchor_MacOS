@@ -6,7 +6,7 @@ Branch: `ship/pilot-readiness`; **default is `main`** since 2026-08-19
 same commit and are pushed** — `git log --oneline -1` for which one, because a
 hash written here is stale the moment the commit writing it lands. Tests:
 `xcodebuild test -project Anchor.xcodeproj -scheme Anchor -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
-→ **241 passing**, 14 test files. Release config builds clean.
+→ **260 passing**, 16 test files. Release config builds clean.
 
 Deadline: term starts ~31 Aug 2026. Goal is 1–3 real pilot users.
 
@@ -16,9 +16,11 @@ database (under the *Anchor* page), and the Ship Readiness artifact
 **The artifact is the one that silently rots** — it was a full day stale on
 19 Aug while the other two were current. Its ticks are localStorage keyed on
 `anchor-readiness-ticks-vN`; **bump N whenever you mark things done**, or a
-returning browser keeps showing the old state forever. Currently `v10`
-(36 of 60 ticked) — the 19 Aug findings edits did **not** bump it, correctly:
-the rule is the authored *done-state*, and adding findings changed none of it.
+returning browser keeps showing the old state forever. Currently `v13`
+(40 of 64 ticked). It went v10 → v11 → v12 → v13 across 20 Aug, once per batch
+of authored done-items; the findings-only edits on 19 **and** 20 Aug did not
+bump it, correctly — the rule is the authored *done-state*, and rewriting a
+finding changes none of it.
 
 **These numbers were themselves stale when re-counted on 19 Aug** — the line
 above used to read `v5` (29 of 56) while the artifact was live on `v9`, and
@@ -32,9 +34,14 @@ grep -c '^- \[x\]' ship-checklist.md   # and '^- \[~\]', '^- \[ \]'
 python3 -c "import re,io;s=io.open('ship-checklist.md').read();print([len(re.findall(r'^- \['+c+r'\]',s,re.M)) for c in ('x','~',' ')])"
 ```
 
-Counts as of 2026-08-19, re-counted: `ship-checklist.md` **33 done / 9 partial
-/ 20 open** (top-level boxes only — sub-bullets carry no box); Notion **46 done
-of 87**, 1 in progress, 40 not started.
+Counts as of 2026-08-20, re-counted with the commands above:
+`ship-checklist.md` **39 done / 10 partial / 17 open** (top-level boxes only —
+sub-bullets carry no box). Notion gained five Done rows on 20 Aug.
+
+**Do not copy those numbers forward.** They were 33/9/20 in the previous
+handoff and were already 35/11/18 when this session re-counted them — stale
+within a day, in the paragraph warning about staleness, for the second handoff
+running.
 
 The seed only runs when the key has *no* stored value — after that
 localStorage beats the markup, which is correct for hand ticks and is exactly
@@ -129,6 +136,41 @@ things nobody had asked about. Three habits did it:
   it targets `DerivedData/.../Build/Products/**Debug**`, so it does not work
   against an installed `.dmg`. **Per-teacher therefore means no bot, and with
   the participant scopes already unreachable, no live signal at all.**
+- **Zoom does NOT accept a PKCE-only token exchange. Measured against
+  `zoom.us` on 2026-08-20 — do not re-litigate it, and do not "fix" the gate
+  back.** `OAuthClientDefaults`'s comment was the true one; the PKCE-only
+  branch in `ZoomOAuthHandler.post` was false and **had never run**, because a
+  developer's Keychain always holds a secret while the shipped
+  `zoomClientSecret` is empty. Five probes: a real `client_id` in the body with
+  no `Authorization`, **no client identification at all**, and
+  `client_id=THIS_ID_DOES_NOT_EXIST` all return **byte-identical**
+  `400 invalid_client` — Zoom never reads `client_id` from the body. The
+  control that makes those mean something: `grant_type=not_a_real_grant`
+  returns `unsupported_grant_type`, so Zoom validates the grant *first* and
+  `invalid_client` on a supported grant is a genuine client-auth failure, not a
+  catch-all. `refresh_token` fails identically.
+  **The trap was that nothing failed early** — `/oauth/authorize` *accepts* the
+  PKCE challenge and redirects to sign-in carrying it through, and
+  `hasClientCredentials` was `clientID != nil` while `zoomClientID` ships
+  non-empty. So Connect Zoom was live on exactly the installs that cannot use
+  it, and a pilot teacher would have cleared Zoom's real consent screen,
+  approved Anchor, and only then hit "Invalid client_id or client_secret" — at
+  the first thing Anchor ever asked of them. `hasClientCredentials` now
+  requires the secret (`ZoomOAuthConfig.canCompleteTokenExchange`).
+  **Google is unaffected and its same-shaped branch is correct** — Google
+  documents `client_secret` as optional for installed apps.
+- **The published privacy policy matches the app.** Re-fetched 2026-08-20: 120
+  days, one term, "Last updated August 17, 2026", and the dropped-email-scope
+  paragraph. The `[~]` warning that said otherwise was two days stale.
+- **The deployed bounce page works and matches the app** (2026-08-20): 200, and
+  it forwards to `127.0.0.1:51789/oauth/zoom`. `/apply`, `/support`, `/terms`,
+  `/pilot-terms` all 200; a bogus path still 404s. Now pinned by
+  `OAuthBounceContractTests` — but **only the committed file, not the
+  deployment**, since `anchor-oauth-bounce` has no Git connection.
+- **The app icon and branding assets are done** — verified 2026-08-20 against
+  the built artifact, not the source. `AppIcon.icns` ships, the Icon Composer
+  document compiles into `Assets.car`, and `og.png` is exactly the 1200×630 the
+  meta tags declare. The tenth tracked task found already done.
 - SourceKit reports phantom "cannot find type in scope" errors. Trust xcodebuild.
 
 ---
@@ -141,57 +183,71 @@ things nobody had asked about. Three habits did it:
   dropping the model from `candidateResourceNames` **would have changed
   nothing** — the loader sweeps every `.mlmodelc` in the bundle and `Anchor/`
   is a synchronised Xcode group, so a model ships by existing in the directory
-  — and the saving was **3.2 MB compiled, not 7.5 MB** (7.2 MB is the source
-  `.mlmodel`; the app is 685 MB anyway). Keeping `_CORRECTED` is now safe, so
-  reclaiming its 3.2 MB is an ordinary non-urgent call, not a correctness one.
+  — and the saving was **3.2 MB compiled, not 7.5 MB**.
 - **The four §9 manual passes are scripted** in `QA-PROTOCOL.md` (`a6714a7`),
   left `[~]` because a protocol is not a pass.
 
+## Done on 2026-08-20
+
+Five commits, `7fdc61f` → `a95cdbb`. Tests 241 → **260**.
+
+1. **The PKCE question is settled, and it was a live defect** (`7fdc61f`). See
+   *Do not redo* — this is the one thing on this page most worth reading before
+   touching Zoom.
+2. **The findings were carried into the artifact, and two cards there were
+   stale** (`81edacb`). The privacy-policy card was still a red Blocker for a
+   contradiction fixed on 18 Aug; the onboarding card said "Zoom is probably
+   fine, Google is the one to check" and had it exactly backwards.
+   `ZOOM_INTEGRATION.md` §2a carried the same error at its source and is fixed.
+3. **The retention *deletion* is tested, not just the sentence** (`41bb9cc`).
+   The old note called `pruneExpiredSessions` untestable and the obstacle was
+   real: it ends in `saveNow()`, which writes the **developer's own**
+   `session-archive.json`, so a direct test would have deleted real class
+   history. Rule lifted out pure as `sessionsSurvivingRetention`.
+4. **The OAuth bounce contract is pinned** (`dde1c4a`), plus
+   `isPrunableSidecar` (`250bd4d`) — the predicate standing between the
+   retention sweep and `removeItem` on a file that is not Anchor's.
+5. **`ADMIN-SETUP.md` is pinned against the code that reads it** (`a95cdbb`).
+
+**Sixteen canaries across six rules.** Every rule added on 19–20 Aug was
+checked by planting the violation it exists to catch and watching it fail. Two
+of them failed *fewer* cases than expected on the first plant, which is how you
+find out a case was weaker than it read.
+
 ## Next, in order
 
-Everything Claude-owned and unblocked is done. What is left needs Rishab's
-accounts, his hardware, his decisions, or a partner who does not exist yet.
+Everything Claude-owned and unblocked is done, and that sentence has now
+survived a session that found four more things to do after writing it. **The
+way they were found is the only reliable method this project has: pick a claim
+that is load-bearing for a pilot teacher, and check the artifact rather than
+the sentence about the artifact.** All four came from that — the token
+endpoint, the live privacy page, the deployed bounce page, the setup document.
 
-1. **Send the outreach emails.** `OUTREACH.md` has both drafts ready — academy
-   and co-op — with the reasoning beside each, and **`PROSPECTS.md` (2026-08-19)
-   now has the fourteen organisations to send them to**, with contact routes and
-   which draft fits each. This is the real gate on the whole timeline and
-   nothing else moves without it. **Read `PROSPECTS.md`'s findings section
-   first** — three of the four contradict something the plan assumed:
-   - The segment mostly runs **Canvas, not Google Classroom** (0 of 6
-     discoverable LMSs were Google Classroom). Small, biased sample — **not** a
-     reason to build the Canvas connector, but it makes question 1 in the
-     emails the most load-bearing line in them.
-   - **Most local homeschool co-ops meet in person**, so that pool is far
-     smaller than the academy pool. The co-op *draft* is still right; its real
-     audience is the founder-led online programme. Do not split 50/50.
-   - **Kepler Education is the per-teacher branch in disguise** — independent
-     contractors, no school Zoom account, no admin. Cut the "hour of a Zoom
-     admin's time" sentence from that one email.
-   - Two warm routes the prospects publish themselves: The Potter's School runs
-     a **public Zoom open house every Monday, 11:00 and 20:00 US ET**, and
-     Excelsior Classes publishes a Calendly for a free 30-minute call.
-2. ~~Submit the pilot form once and check spam.~~ **Done 2026-08-19 — it
-   lands, and `/apply` is linkable.** See *Do not redo* above. What this
-   changes for item 1: the outreach drafts keep their `/apply` sentence, so
-   there is no edit to make before sending.
-3. **Apple Developer enrollment** — still the longest lead, and it gates the
-   certificate → notarization → anyone installing at all → QA Pass A.
-4. **Decide the Zoom account model.** The per-teacher branch is now *priced*
-   three ways, not two: no participant scopes, a 40-minute cap, **and no bot**
-   (see *Do not redo* above). Per-school is no longer a review-queue dodge —
-   it is the only branch where Anchor has a live signal at all.
-5. **Settle whether Zoom accepts a PKCE-only token exchange.** Found 2026-08-19
-   and not resolved on purpose. `OAuthClientDefaults` says Zoom *"requires this
-   on the token exchange even for a native app"*; `ZoomOAuthHandler.post` has a
-   PKCE-only branch that assumes it does not. Both cannot be right, the shipped
-   secret is empty so the PKCE-only branch is what runs on a teacher's Mac, and
-   it has **never run**. `hasClientCredentials` is only `clientID != nil`, so
-   Connect Zoom is *live* on a fresh install. If the comment is the true one,
-   every pilot teacher clears Zoom's consent screen and then fails at the token
-   exchange. **Do not settle it by reading docs** — that is the mistake this
-   project keeps making. It wants the one click, or a throwaway manual exchange
-   against the Development app.
+1. **Send the outreach emails.** `OUTREACH.md` has both drafts; `PROSPECTS.md`
+   has the fourteen organisations. **Read `PROSPECTS.md`'s findings first** —
+   three of four contradict something the plan assumed: the segment mostly runs
+   **Canvas, not Google Classroom**; **most local co-ops meet in person**, so
+   that pool is far smaller than the academy pool; and **Kepler Education is
+   the per-teacher branch in disguise**, so cut the "hour of a Zoom admin's
+   time" sentence from that one. Two warm routes the prospects publish
+   themselves: The Potter's School's **public Zoom open house, Mondays 11:00
+   and 20:00 US ET**, and Excelsior Classes' Calendly.
+2. **Apple Developer enrollment** — still the longest lead, gating certificate
+   → notarization → anyone installing at all → QA Pass A.
+3. **Decide the Zoom account model.** *This is no longer a balanced choice.*
+   Per-teacher has lost the participant scopes, gained a 40-minute cap, lost
+   the bot, and — as of 20 Aug — **lost browser sign-in too**. There is nothing
+   left on that side. Still `[ ]` because recording the price is not making the
+   call.
+4. **One console click, and it is a real question.** `ZOOM_INTEGRATION.md` §2a
+   says **Use Public Client OAuth** was enabled on the Development app and
+   calls it harmless. The endpoint disagrees. Either it was turned back off, or
+   **a Zoom setting named "PKCE, no secret" does not mean it** — worth knowing
+   before anyone relies on it for the Production registration. Nothing
+   downstream moves either way.
+5. **The fresh-install click now has a predicted outcome**, which is new.
+   Connect Zoom should be **disabled**, with a sentence naming who finishes
+   setup. If it is live on that Mac, the fix did not reach the build.
 
 ## Blocked on the human
 
