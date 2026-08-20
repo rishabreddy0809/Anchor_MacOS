@@ -455,14 +455,25 @@ final class ZoomMeetingSDKBridge: NSObject, @unchecked Sendable {
 
 extension ZoomMeetingSDKBridge: ZoomSDKAuthDelegate {
     func onZoomSDKAuthReturn(_ returnValue: ZoomSDKAuthError) {
-        AnchorDiag.log("onZoomSDKAuthReturn -> \(returnValue.rawValue) (\(Self.describe(returnValue)))")
+        AnchorDiag.log("onZoomSDKAuthReturn -> \(returnValue.rawValue) (\(Self.diagnosticDescription(returnValue)))")
         let continuation = authContinuation
         authContinuation = nil
         if returnValue == ZoomSDKAuthError_Success {
             continuation?.resume()
         } else {
+            // `describe` is written for the log and says things like "check the
+            // Meeting SDK app's Client ID/Secret" and "activate the Meeting SDK
+            // app in the Marketplace". Those are right, and they are addressed
+            // to whoever registered the app — not to the teacher this error is
+            // about to be rendered in front of, who has no Marketplace account
+            // and cannot act on either.
+            //
+            // `.unsupported` renders its payload verbatim as `errorDescription`,
+            // so passing `describe` here put the log line on screen. One
+            // sentence, two readers. Split: the diagnostic goes to the log
+            // above, and the teacher gets what actually happened to them.
             continuation?.resume(throwing: ZoomError.unsupported(
-                "Zoom Meeting SDK auth failed: \(Self.describe(returnValue))."
+                Self.teacherFacingAuthFailure(returnValue)
             ))
         }
     }
@@ -470,7 +481,44 @@ extension ZoomMeetingSDKBridge: ZoomSDKAuthDelegate {
     /// `ZoomSDKAuthError` and `ZoomSDKError` are different enums whose raw
     /// values overlap, so a bare number is genuinely ambiguous — and this one
     /// carries the actionable cause, which is worth spelling out.
-    static func describe(_ error: ZoomSDKAuthError) -> String {
+    /// What the *teacher* is told when the bot cannot authenticate.
+    ///
+    /// Deliberately the same sentence for almost every cause, because from the
+    /// teacher's chair they are the same event: the bot is not in the meeting,
+    /// everything else still works, and none of it is theirs to fix. The one
+    /// case worth separating is a network problem, which is transient and might
+    /// clear on its own.
+    ///
+    /// The cause is not lost — `describe` still writes it to the log, and it is
+    /// the log that reaches whoever set the school up.
+    static func teacherFacingAuthFailure(_ error: ZoomSDKAuthError) -> String {
+        switch error {
+        case ZoomSDKAuthError_Timeout, ZoomSDKAuthError_NetworkIssue:
+            "Anchor couldn't reach Zoom to join the meeting as an assistant. "
+            + "Everything else still works, and it will try again next time."
+        default:
+            "Anchor isn't set up to join this meeting as an assistant, so it "
+            + "can't read raised hands or speaking time. Everything else still "
+            + "works. Whoever set Anchor up for your school can put this right."
+        }
+    }
+
+    /// The diagnostic, for the log and the support mail. Says the developer
+    /// things `teacherFacingAuthFailure` deliberately does not.
+    ///
+    /// **Named for its audience, and the name is load-bearing.** It was
+    /// `describe`, and `onZoomSDKAuthReturn` handed its output straight to
+    /// `ZoomError.unsupported`, which renders a payload verbatim — so "check the
+    /// Meeting SDK app's Client ID/Secret" went on screen in front of a teacher
+    /// with no Marketplace account. `TeacherFacingSourceScanTests` skips this
+    /// function by that name, the same way it skips `technicalDetail`, so
+    /// rendering it to a teacher again is a visible mistake at the call site
+    /// rather than an invisible one in the string.
+    ///
+    /// The sibling `describe(_ : ZoomSDKMeetingError)` keeps its name on
+    /// purpose: its copy *is* teacher-facing ("the meeting passcode is wrong or
+    /// missing") and must stay inside the scan.
+    static func diagnosticDescription(_ error: ZoomSDKAuthError) -> String {
         switch error {
         case ZoomSDKAuthError_Success:
             "success"

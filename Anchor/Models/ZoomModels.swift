@@ -353,7 +353,17 @@ nonisolated enum ZoomError: LocalizedError, Equatable, Sendable {
             "This copy of Anchor is missing part of its Zoom setup, so it can't join the meeting itself. "
                 + "Everything else still works."
         case .invalidCredentials:
-            "Check the credentials in Settings, or regenerate the Client Secret in the Zoom Marketplace."
+            // Was: "Check the credentials in Settings, or regenerate the Client
+            // Secret in the Zoom Marketplace." Both halves were impossible.
+            // Settings → Advanced is `#if DEBUG`, so the credential UI it sent
+            // teachers to does not exist in their build; and regenerating a
+            // secret needs a Marketplace account they do not have.
+            //
+            // It survived because `isSetupProblem` said `false`, and the scan
+            // in SupportContactTests only reads setup problems. The
+            // classification was the hole, not the list.
+            "The Zoom details Anchor was set up with aren't being accepted. "
+                + "Whoever set Anchor up for your school can put this right."
         case .notSignedIn:
             "Open Settings → Zoom and click Connect Zoom."
         case .missingOAuthClient:
@@ -427,9 +437,20 @@ nonisolated enum ZoomError: LocalizedError, Equatable, Sendable {
     /// instead of an instruction.
     var isSetupProblem: Bool {
         switch self {
-        case .missingCredentials, .missingSDKCredentials, .missingOAuthClient, .insufficientScope:
+        case .missingCredentials, .missingSDKCredentials, .missingOAuthClient,
+             .insufficientScope, .invalidCredentials:
+            // `.invalidCredentials` moved here on 2026-08-20. It sat in the
+            // `false` list beside `.notSignedIn` and `.noActiveMeeting`, which
+            // genuinely *are* the teacher's to fix — and it is not: on a shipped
+            // build no teacher ever typed a Zoom credential, so credentials that
+            // are wrong are wrong at the setup that installed them.
+            //
+            // The misclassification was not cosmetic. `isSetupProblem` decides
+            // which cases the vocabulary scan reads, so calling this
+            // teacher-fixable removed it from the guard *and* justified giving
+            // it an instruction, and it got both.
             true
-        case .invalidCredentials, .notSignedIn, .authorizationCancelled, .authorizationFailed,
+        case .notSignedIn, .authorizationCancelled, .authorizationFailed,
              .authorizationExpired, .keychainUnavailable, .planRequired, .noActiveMeeting,
              .meetingEnded, .rateLimited, .network, .decoding, .server, .unsupported, .cancelled:
             false
@@ -453,6 +474,15 @@ nonisolated enum ZoomError: LocalizedError, Equatable, Sendable {
         case .insufficientScope(let scope):
             "Missing scope \(scope ?? "(unnamed)"). Note that the two participant scopes "
                 + "cannot be granted below a Business/Education plan — see ZOOM_INTEGRATION.md."
+        case .invalidCredentials(let reason):
+            // Zoom's own words, which are the whole diagnostic value here —
+            // "Invalid client_id or client_secret" says which half to look at.
+            // A setup problem with no technicalDetail sends a support mail that
+            // says only "something is misconfigured", so this is required, not
+            // decorative: `testEverySetupProblemKeepsItsTechnicalDetail`.
+            "Zoom rejected the client credentials: \(reason ?? "no reason given"). "
+                + "Check the pair provisioned by ADMIN-SETUP.md step 3 against the "
+                + "Marketplace app's Development tab."
         default:
             nil
         }

@@ -329,10 +329,27 @@ final class ClassroomViewModel: ObservableObject {
             : "Your classes and rosters still load, but Anchor can't read assignments, "
                 + "grades or missing work, so coursework won't affect any student's score."
 
+        // The instruction here used to be "add the scope in the Google Cloud
+        // console under APIs & Services → OAuth consent screen → Data access,
+        // then disconnect and reconnect here", and it was wrong twice over.
+        //
+        // Wrong about the reader: a teacher has no Cloud project and cannot
+        // open that console. Neither vocabulary scan caught it — the view scan
+        // reads `Anchor/Views` and this is a service; the enum scan reads
+        // ZoomError and ClassroomError and this is a computed string.
+        //
+        // Wrong about the cause, which matters more. Google presents the four
+        // Classroom permissions as **separate tick boxes** on its own consent
+        // screen, and QA-PROTOCOL.md records that a teacher ticking three of
+        // four is likely rather than hypothetical. That is far and away the
+        // common way to arrive here, and the app already requests every scope
+        // it needs — so nothing in any console is missing. The fix is to
+        // reconnect and leave the boxes ticked, which is two clicks away in the
+        // window they are already looking at.
         return "Google granted \(granted) of \(total) Classroom permissions — missing "
-            + "\(names). \(cost) To fix it, add the scope in the Google Cloud console "
-            + "under APIs & Services → OAuth consent screen → Data access, then "
-            + "disconnect and reconnect here."
+            + "\(names). \(cost) Google asks for these as separate tick boxes, so the "
+            + "usual cause is one being left unticked. Disconnect and connect again, "
+            + "and accept all of them."
     }
 
     // MARK: - Connect

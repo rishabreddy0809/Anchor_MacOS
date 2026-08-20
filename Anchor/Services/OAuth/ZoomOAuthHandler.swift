@@ -671,10 +671,25 @@ actor ZoomOAuthClient {
         )
 
         guard let refreshToken = response.refresh_token else {
+            // `authorizationFailed` renders its payload straight into
+            // `errorDescription` ("Zoom sign-in failed: …"), so this string is
+            // read by the teacher. The registration hint it used to carry —
+            // check the app is General (user-managed) rather than
+            // Server-to-Server — is correct and is addressed to whoever created
+            // the Marketplace app, which is never the teacher.
+            //
+            // It goes to stderr instead, where the admin doing the setup call is
+            // still looking. Same split as the Meeting SDK auth failure, and the
+            // same reason: one sentence was serving two readers.
+            AnchorDiag.operatorMessage(
+                "Zoom returned no refresh token. This normally means the Marketplace app "
+                    + "is a Server-to-Server OAuth app rather than a General (user-managed) "
+                    + "one — only the latter can issue a refresh token to a signed-in user."
+            )
             throw ZoomError.authorizationFailed(
-                "Zoom did not return a refresh token, so the connection would expire "
-                + "within the hour. Check that the Marketplace app is a General "
-                + "(user-managed) app rather than Server-to-Server OAuth."
+                "Zoom didn't give Anchor a lasting connection, so it would have "
+                + "stopped working within the hour. Whoever set Anchor up for your "
+                + "school can put this right."
             )
         }
 
