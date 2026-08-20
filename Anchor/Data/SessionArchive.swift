@@ -341,10 +341,7 @@ final class SessionArchive: ObservableObject {
 
         for url in entries {
             let name = url.lastPathComponent
-            guard name != live,
-                  name.hasPrefix("session-archive.corrupt-")
-                    || name.hasPrefix("session-archive.backup-")
-            else { continue }
+            guard Self.isPrunableSidecar(name, liveArchiveName: live) else { continue }
 
             let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?
                 .contentModificationDate
@@ -353,6 +350,31 @@ final class SessionArchive: ObservableObject {
             try? FileManager.default.removeItem(at: url)
             logger.info("Removed archive sidecar past retention: \(name, privacy: .public)")
         }
+    }
+
+    /// Whether a file in Anchor's Application Support directory is one of its
+    /// own aged-out archive copies.
+    ///
+    /// Extracted 2026-08-20 for the same reason as
+    /// `sessionsSurvivingRetention`, and with more at stake: the caller calls
+    /// `FileManager.removeItem`, so this predicate is the only thing standing
+    /// between the retention sweep and **deleting a file that is not Anchor's
+    /// to delete**. Application Support directories accumulate other people's
+    /// data, and a predicate that widened by accident would take it silently —
+    /// the sweep runs on every launch and logs only what it removed.
+    ///
+    /// Two properties are worth stating because both are easy to lose in a
+    /// tidy-up. The live archive is excluded **by name passed in** rather than
+    /// by a constant, so a test can prove the exclusion without the real path
+    /// existing. And the match is `hasPrefix` on Anchor's two known sidecar
+    /// shapes only — never a suffix, never `contains`, never "anything starting
+    /// with session-archive" — because `session-archive.json` itself starts
+    /// that way and a stray `contains` would match a file merely *mentioning*
+    /// the name.
+    nonisolated static func isPrunableSidecar(_ name: String, liveArchiveName: String) -> Bool {
+        guard name != liveArchiveName else { return false }
+        return name.hasPrefix("session-archive.corrupt-")
+            || name.hasPrefix("session-archive.backup-")
     }
 
     private static func makeDecoder() -> JSONDecoder {

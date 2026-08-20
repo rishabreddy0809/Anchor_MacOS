@@ -247,4 +247,50 @@ final class RetentionPolicyTests: XCTestCase {
             "\"Keep everything\" produced a cutoff, so pruning would run against it."
         )
     }
+
+    // MARK: - What the sweep is allowed to delete
+
+    // `pruneStaleSidecarFiles` calls `FileManager.removeItem`, and the only
+    // thing between it and a file that is not Anchor's is one predicate. An
+    // Application Support directory holds other applications' data; the sweep
+    // runs on every launch and logs only what it removed, so a predicate that
+    // widened by accident would take things silently and permanently.
+
+    private func prunable(_ name: String) -> Bool {
+        SessionArchive.isPrunableSidecar(name, liveArchiveName: "session-archive.json")
+    }
+
+    func testOnlyAnchorsOwnAgedCopiesQualify() {
+        XCTAssertTrue(prunable("session-archive.corrupt-2026-01-05T09-30-00Z.json"))
+        XCTAssertTrue(prunable("session-archive.backup-2026-01-05.json"))
+    }
+
+    func testTheLiveArchiveIsNeverPrunable() {
+        // The one file whose deletion would destroy the teacher's whole history.
+        XCTAssertFalse(
+            prunable("session-archive.json"),
+            "The retention sweep would delete the live archive itself."
+        )
+    }
+
+    func testNothingElseInTheDirectoryQualifies() {
+        // Each of these is a plausible neighbour rather than a random string:
+        // another app's store, Anchor's own preferences, and the two shapes a
+        // loosened `contains` or suffix match would start catching.
+        let mustSurvive = [
+            "com.someoneelse.app.json",
+            "Preferences",
+            "notes-about-session-archive.corrupt-files.txt",
+            "old.session-archive.corrupt-2026.json",
+            "session-archive.json.backup-2026",
+            ".DS_Store",
+            ""
+        ]
+        for name in mustSurvive {
+            XCTAssertFalse(
+                prunable(name),
+                "The retention sweep would have deleted \"\(name)\", which is not Anchor's to delete."
+            )
+        }
+    }
 }
