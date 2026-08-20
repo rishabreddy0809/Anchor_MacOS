@@ -202,6 +202,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             secret: seed.oauthClientSecret
         )
 
+        // A provisioned client ID with no secret beside it used to be papered
+        // over: `effectiveClientID` found no secret and fell through to the
+        // *shipped* public client, so Anchor signed the teacher into its own
+        // Marketplace app instead of the school's. It no longer does — see
+        // `ZoomOAuthConfig.offeredPublicClientID` — which means the visible
+        // symptom is now a Connect button that is simply off.
+        //
+        // That is the honest outcome and it is still a bad one to discover
+        // weeks later, so say it here, on stderr, in the Terminal the admin is
+        // still looking at. Checked against the *resulting state* rather than
+        // against this launch's variables, because rotating only the secret is
+        // legitimate and must not be reported as a fault.
+        //
+        // `operatorMessage` and not `AnchorDiag.log`, which is `#if DEBUG` and
+        // would therefore say nothing in the only build anyone provisions.
+        if ZoomOAuthStore.shared.clientIDOverride != nil,
+           ZoomOAuthStore.shared.clientSecretOverride == nil {
+            AnchorDiag.operatorMessage(
+                "ANCHOR_ZOOM_OAUTH_CLIENT_ID is provisioned with no "
+                    + "ANCHOR_ZOOM_OAUTH_CLIENT_SECRET beside it. Connect Zoom stays off "
+                    + "until both are set. Anchor will not fall back to its own Marketplace "
+                    + "app here, because a teacher on your account cannot authorize it — "
+                    + "they would see \"You cannot authorize\" after approving Anchor."
+            )
+        }
+
         // App-level rather than per-teacher: the key ships in
         // OAuthClientDefaults, so normally only the secret arrives here — which
         // is exactly the case that used to delete the key beside it.

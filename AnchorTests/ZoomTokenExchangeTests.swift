@@ -136,6 +136,118 @@ final class ZoomTokenExchangeTests: XCTestCase {
         )
     }
 
+    // MARK: - A half-provisioned school must not fall back to Anchor's own app
+
+    /// A school's own Marketplace app, provisioned through ADMIN-SETUP.md
+    /// step 3. Deliberately unlike either shipped id so a fallback shows up as
+    /// a swap rather than as a near-miss.
+    private let schoolID = "SCHOOLownCONFIDENTIALid"
+
+    func testAProvisionedClientIDSuppressesTheShippedPublicClient() {
+        // The defect this section exists for. Step 3 sets four variables in one
+        // command; if the secret half does not land — a mistyped name, a
+        // quoting mistake, one of the two Keychain writes failing — the store
+        // holds the school's id and no secret. `effectiveClientID` then falls
+        // through to the public client, and the public client belongs to
+        // *Anchor's* registration, not the school's.
+        XCTAssertNil(
+            ZoomOAuthConfig.offeredPublicClientID(
+                shipped: publicID, provisionedClientID: schoolID
+            ),
+            "Anchor's own public client was offered as the fallback for a school's "
+            + "confidential id. The teacher would be signed in to the wrong Marketplace app."
+        )
+    }
+
+    func testAHalfProvisionedSchoolIsRefusedBeforeConsentRatherThanAfter() {
+        // What the suppression buys, stated as the outcome rather than the
+        // mechanism: the whole config is unusable, so Connect Zoom is off with
+        // a reason. The alternative is not "it works" — it is "You cannot
+        // authorize", which ADMIN-SETUP.md records as the most misleading page
+        // in the flow, because a skipped step 3 and a typo'd redirect URL
+        // produce the identical screen.
+        let offered = ZoomOAuthConfig.offeredPublicClientID(
+            shipped: publicID, provisionedClientID: schoolID
+        )
+        XCTAssertFalse(
+            ZoomOAuthConfig.canCompleteTokenExchange(
+                clientID: schoolID, clientSecret: nil, publicClientID: offered
+            ),
+            "A school id with no secret was offered as connectable."
+        )
+        XCTAssertNotEqual(
+            ZoomOAuthConfig(
+                clientID: schoolID, clientSecret: nil, publicClientID: offered
+            ).effectiveClientID,
+            publicID,
+            "Anchor would authorize under its own id while the deployment named another."
+        )
+    }
+
+    func testAFullyProvisionedSchoolIsUnaffected() {
+        // The path that has actually been used must not move. Both halves
+        // present: the confidential pair wins, and the shipped public client is
+        // not theirs to fall back to anyway.
+        let offered = ZoomOAuthConfig.offeredPublicClientID(
+            shipped: publicID, provisionedClientID: schoolID
+        )
+        XCTAssertEqual(
+            ZoomOAuthConfig(
+                clientID: schoolID, clientSecret: "school-secret", publicClientID: offered
+            ).effectiveClientID,
+            schoolID,
+            "A fully provisioned school stopped using its own registration."
+        )
+    }
+
+    func testAnUnprovisionedInstallKeepsThePublicClient() {
+        // The reach the 20 Aug correction bought, and the thing this rule is
+        // most likely to break by over-reaching. No id was provisioned, so the
+        // shipped registration is the one in play and its public client is
+        // fair game.
+        XCTAssertEqual(
+            ZoomOAuthConfig.offeredPublicClientID(shipped: publicID, provisionedClientID: nil),
+            publicID,
+            "A fresh install lost browser sign-in — exactly the regression the public "
+            + "client was added to prevent."
+        )
+    }
+
+    func testASecretWithNoProvisionedIDIsNotIncoherent() {
+        // The asymmetry, and the reason this rule keys on the *id* alone.
+        // A provisioned secret with no provisioned id completes the SHIPPED
+        // registration — which is how the developer's own Mac is set up, and
+        // how a school could choose to use Anchor's app rather than its own.
+        // Keying on "either half overridden" would have broken both.
+        XCTAssertEqual(
+            ZoomOAuthConfig.offeredPublicClientID(shipped: publicID, provisionedClientID: nil),
+            publicID,
+            "A secret-only provisioning was treated as naming a different registration."
+        )
+        XCTAssertEqual(
+            ZoomOAuthConfig(
+                clientID: confidential, clientSecret: "the-real-secret", publicClientID: publicID
+            ).effectiveClientID,
+            confidential,
+            "The shipped confidential pair stopped working when its secret was provisioned."
+        )
+    }
+
+    func testABlankProvisionedIDCountsAsNotProvisioned() {
+        // `clientIDOverride` is folded through `OAuthClientDefaults.value`, so
+        // it should never arrive blank — but a Keychain value that survived a
+        // paste with a trailing newline is the realistic failure everywhere
+        // else in this file, and a blank id here would silently switch off
+        // sign-in for a fresh install rather than merely mis-selecting an id.
+        for blank in ["", "   \n", "\t"] {
+            XCTAssertEqual(
+                ZoomOAuthConfig.offeredPublicClientID(shipped: publicID, provisionedClientID: blank),
+                publicID,
+                "A blank provisioned id (\(blank.debugDescription)) suppressed the public client."
+            )
+        }
+    }
+
     // MARK: - What actually ships
 
     func testTheShippedDefaultsCanCompleteTheExchange() {

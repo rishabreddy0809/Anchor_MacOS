@@ -105,6 +105,14 @@ ANCHOR_ZOOM_SDK_SECRET='<step 2 Client Secret>' \
 - **Once is enough.** The values are written to the Keychain on that launch and
   read from there afterwards, so every later launch is an ordinary
   double-click. The environment variables are not needed again.
+- **`ANCHOR_ZOOM_OAUTH_CLIENT_ID` and `ANCHOR_ZOOM_OAUTH_CLIENT_SECRET` must
+  arrive together.** They are one registration, and Anchor will not complete
+  half of it with the id it ships: the shipped public client belongs to
+  *Anchor's* Marketplace app, so falling back to it would sign your teachers
+  into the wrong app and fail with the "You cannot authorize" page below. If
+  only the id lands, **Connect Zoom stays off** and this launch prints a line
+  to the Terminal saying so — read it before closing the window. Rotating only
+  the secret later is fine; both halves are then present.
 - Quote the values. Zoom secrets can contain characters the shell would
   otherwise interpret.
 - Nothing is echoed or written to a file. Close the Terminal window afterwards
@@ -122,6 +130,11 @@ ANCHOR_ZOOM_SDK_SECRET='<step 2 Client Secret>' \
 > is not where the problem is.
 >
 > **If you see "You cannot authorize", check step 3 before step 1.**
+>
+> Since 2026-08-20 this trap has one fewer way in: a *half*-run step 3 — the
+> client ID without its secret — no longer reaches Zoom at all. It leaves
+> Connect Zoom off, with a reason, and prints one to the Terminal. Only a step
+> 3 that was skipped entirely still produces the misleading page.
 
 ## Step 4 — the teacher's part
 

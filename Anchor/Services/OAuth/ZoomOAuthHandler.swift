@@ -185,6 +185,45 @@ nonisolated struct ZoomOAuthConfig: Sendable {
         return nil
     }
 
+    /// The public client id this install is actually allowed to present.
+    ///
+    /// **The three identifiers are not independent settings.** The confidential
+    /// id, its secret and the public id are all issued to *one* Marketplace
+    /// registration. Anchor may present the shipped registration or a
+    /// deployment-provisioned one, and must never present halves of both.
+    ///
+    /// The case this exists for is a per-school install where ADMIN-SETUP.md
+    /// step 3 landed the client ID and not the secret — a mistyped variable
+    /// name, a quoting mistake, one of the two Keychain writes failing. Without
+    /// this rule `effectiveClientID` finds no secret, falls through to the
+    /// *shipped* public client, and signs the teacher into **Anchor's own**
+    /// Marketplace app rather than the school's. A teacher on the school's
+    /// account is then an external user of an unpublished app, so Zoom answers
+    /// **"You cannot authorize"** — which ADMIN-SETUP.md already records as the
+    /// most misleading page in this flow, because a skipped step 3 and a typo'd
+    /// redirect URL produce the identical screen and the natural reaction is to
+    /// go back and re-check step 1, which is not where the problem is.
+    ///
+    /// Suppressing the fallback turns that into a Connect button that is off
+    /// with a reason — before consent, and on the admin's own machine while
+    /// they are still on the setup call.
+    ///
+    /// **The asymmetry is deliberate: this keys on the provisioned *id*, never
+    /// on the secret.** A provisioned secret with no provisioned id is not
+    /// incoherent — it completes the *shipped* registration, which is how the
+    /// developer's own Mac is configured and how a school could choose to use
+    /// Anchor's app rather than register its own. A rule of "either half
+    /// overridden" would have broken both.
+    ///
+    /// Blank counts as absent for the same reason it does everywhere else here:
+    /// a value that survived a paste with a trailing newline is not a value,
+    /// and treating one as a provisioned id would switch off sign-in on an
+    /// install that has provisioned nothing.
+    static func offeredPublicClientID(shipped: String?, provisionedClientID: String?) -> String? {
+        if let provisionedClientID, !provisionedClientID.trimmed.isEmpty { return nil }
+        return shipped
+    }
+
     /// Whether this registration can complete Zoom's token exchange at all.
     ///
     /// Pure and static so the rule can be tested without a Keychain, a
@@ -331,11 +370,21 @@ final class ZoomOAuthStore: ObservableObject {
 
     /// No Keychain override: the public client id is not a per-deployment
     /// value. A school that provisions its own Marketplace app provisions the
-    /// confidential pair, and `effectiveClientID` prefers that pair whenever
-    /// the secret is present — so an override here would only ever be a way to
-    /// get the two halves out of step.
+    /// confidential pair, so an override here would only ever be a way to get
+    /// the two halves out of step.
+    ///
+    /// It is *withheld* rather than overridden when a deployment has named its
+    /// own confidential id, because the shipped public client belongs to
+    /// Anchor's registration and not to theirs. The comment this replaces said
+    /// `effectiveClientID` "prefers that pair whenever the secret is present",
+    /// which is true and was not enough: when the secret is *absent* the
+    /// preference does not fire, and the fallback silently substituted Anchor's
+    /// app for the school's. See `ZoomOAuthConfig.offeredPublicClientID`.
     var publicClientID: String? {
-        OAuthClientDefaults.value(OAuthClientDefaults.zoomPublicClientID)
+        ZoomOAuthConfig.offeredPublicClientID(
+            shipped: OAuthClientDefaults.value(OAuthClientDefaults.zoomPublicClientID),
+            provisionedClientID: clientIDOverride
+        )
     }
 
     /// Whether Connect can open a browser at all.
