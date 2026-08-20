@@ -181,6 +181,16 @@ things nobody had asked about. Three habits did it:
     remembering for any console this project reads again.
   - **Google is unaffected** and its same-shaped branch is correct: Google
     documents `client_secret` as optional for installed apps.
+  - **What this does NOT do, because it was claimed on 20 Aug and is false:
+    it does not let other teachers sign in.** The *Anchor* app is Draft /
+    "Active for internal users", so a teacher on any other Zoom account fails
+    at `/oauth/authorize` with **"You cannot authorize"** and never reaches the
+    token exchange. The credential fix sits *behind* the distribution limit.
+    What it genuinely buys: anyone on the app's own account can now sign in
+    with **no provisioning at all** — which is what makes QA Pass A on a
+    borrowed Mac meaningful — and a partner school with its own app has a
+    working secretless path if they want it. **Per-teacher at large still needs
+    Marketplace publication, exactly as before.**
 - **The published privacy policy matches the app.** Re-fetched 2026-08-20: 120
   days, one term, "Last updated August 17, 2026", and the dropped-email-scope
   paragraph. The `[~]` warning that said otherwise was two days stale.
@@ -258,17 +268,19 @@ endpoint, the live privacy page, the deployed bounce page, the setup document.
    and 20:00 US ET**, and Excelsior Classes' Calendly.
 2. **Apple Developer enrollment** — still the longest lead, gating certificate
    → notarization → anyone installing at all → QA Pass A.
-3. **Decide the Zoom account model.** Per-teacher is **thin but no longer
-   empty** — it has browser sign-in back (see *Do not redo*), so Anchor can
-   list meetings and identify the teacher. It still has no participant scopes,
-   a 40-minute cap on Basic, and no bot, so **no live engagement signal**.
-   Per-school is the branch that buys the signal. Still `[ ]`: this is the call
-   to make and record.
-4. **The fresh-install click has a predicted outcome now.** Connect Zoom should
-   be **enabled** and should complete — the public client ships, so no
-   provisioning is needed for sign-in. If it fails *after* the consent screen,
-   the public client id did not reach the build. (Note this expectation flipped
-   twice on 20 Aug; the build to trust is `4fd94eb` or later.)
+3. **Decide the Zoom account model — and note that 20 Aug did not actually
+   move it**, despite two claims that day saying it had. Per-teacher at large
+   still needs Marketplace publication (see *Do not redo*), still has no
+   grantable participant scopes, still caps at 40 minutes on Basic, and still
+   has no bot. Per-school remains the only branch with a live signal. Still
+   `[ ]`: this is the call to make and record.
+4. **The fresh-install click has a predicted outcome now, and this is the
+   thing 20 Aug really did buy.** Connect Zoom should be **enabled** and should
+   complete on a Mac with no provisioning — *signed in as you*, since you are
+   the app's account. Previously that test could only ever have failed for want
+   of a secret, which would have told you nothing about the app. If it fails
+   after the consent screen, the public client id did not reach the build.
+   (Expectation flipped twice on 20 Aug; trust `4fd94eb` or later.)
 5. ~~Glance at the OAuth Allow List.~~ **Done 2026-08-20 — it is populated on
    both tabs, and the "looked empty" reading was a misread of Zoom's grey
    styling.** Nothing to do. The Production finding above came out of the same
