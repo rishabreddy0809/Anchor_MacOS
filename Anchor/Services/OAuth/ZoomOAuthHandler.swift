@@ -122,9 +122,60 @@ nonisolated enum OAuthRedirectTransport: Sendable, Equatable {
 
 nonisolated struct ZoomOAuthConfig: Sendable {
     var clientID: String
-    /// Zoom requires this on the token endpoint even for a native app, so it is
-    /// optional only in the sense that a PKCE-only Zoom app would omit it.
+
+    /// Zoom requires this on the token endpoint even for a native app.
+    ///
+    /// **Measured against zoom.us, 2026-08-20, not read out of a doc.** This
+    /// file used to carry a PKCE-only branch (`post` puts `client_id` in the
+    /// body when there is no secret) written on the assumption that PKCE stands
+    /// in for client authentication the way it does at Google. It does not, and
+    /// the branch had never once run against Zoom because the secret is always
+    /// present in a developer's Keychain. Five probes against
+    /// `POST https://zoom.us/oauth/token` settle it:
+    ///
+    ///   - Real `client_id` in the body, no `Authorization` →
+    ///     `400 {"error":"invalid_client"}`.
+    ///   - **No client identification at all → byte-identical response.**
+    ///   - **A `client_id` of `THIS_ID_DOES_NOT_EXIST` → byte-identical again.**
+    ///     So Zoom never reads `client_id` out of the body: Anchor's real,
+    ///     correct registration buys exactly nothing over garbage or silence.
+    ///   - `grant_type=not_a_real_grant` → `unsupported_grant_type`, *not*
+    ///     `invalid_client`. This is the control that makes the rest mean
+    ///     something. Zoom validates the grant type first, so `invalid_client`
+    ///     on a supported grant is Zoom genuinely reaching client
+    ///     authentication and failing it — not a catch-all it returns for
+    ///     anything malformed.
+    ///   - `grant_type=refresh_token` with `client_id` in the body → also
+    ///     `invalid_client`, so this is not only the initial exchange. A
+    ///     secretless install could not refresh either.
+    ///
+    /// The trap is that `GET /oauth/authorize` **accepts** the PKCE challenge
+    /// and redirects to sign-in carrying `code_challenge` through untouched. So
+    /// nothing fails early. A teacher on a secretless install would get a real
+    /// Zoom consent screen, approve Anchor, and only *then* hit
+    /// "Invalid client_id or client_secret" — the worst possible place to
+    /// discover it, and the reason `canCompleteTokenExchange` gates the button
+    /// rather than the error message being improved.
+    ///
+    /// Kept `Optional` rather than made non-optional: `revoke` and
+    /// `basicAuthorization` still have to describe the secretless state, and
+    /// the type is what a *deployment* has, not what Zoom requires. What Zoom
+    /// requires is the rule below.
     var clientSecret: String?
+
+    /// Whether a registration can complete Zoom's token exchange at all.
+    ///
+    /// Pure and static so the rule can be tested without a Keychain, a
+    /// MainActor or a network — the same reason `CredentialSeed` is a value.
+    /// Both halves are trimmed-empty-checked because a secret provisioned with
+    /// a stray newline is not a secret, and `OAuthClientDefaults.value` already
+    /// folds `""` to `nil` on the shipped constants; a Keychain override does
+    /// not go through it.
+    static func canCompleteTokenExchange(clientID: String?, clientSecret: String?) -> Bool {
+        guard let clientID, !clientID.trimmed.isEmpty else { return false }
+        guard let clientSecret, !clientSecret.trimmed.isEmpty else { return false }
+        return true
+    }
     /// HTTPS rather than loopback, because Zoom will not honour an `http://`
     /// loopback redirect — see `OAuthRedirectTransport.hostedBounce`.
     ///
@@ -251,7 +302,25 @@ final class ZoomOAuthStore: ObservableObject {
     }
 
     /// Whether Connect can open a browser at all.
-    var hasClientCredentials: Bool { clientID != nil }
+    ///
+    /// This asks for the **secret too**, and that is a deliberate tightening
+    /// made on 2026-08-20. It used to be `clientID != nil`, and since
+    /// `OAuthClientDefaults.zoomClientID` ships non-empty, that made Connect
+    /// Zoom live and enabled on every fresh install — including the ones with
+    /// no secret, which is every install not provisioned through
+    /// `ANCHOR_ZOOM_OAUTH_CLIENT_SECRET`. Those installs cannot complete the
+    /// token exchange; see `ZoomOAuthConfig.clientSecret` for the probes that
+    /// prove it. The old rule therefore promised a working button, sent the
+    /// teacher through Zoom's real consent screen, and failed *after* they had
+    /// granted access.
+    ///
+    /// Refusing up front is worse-looking and better: an honest disabled
+    /// button with a reason costs a school's admin one environment variable,
+    /// where the old behaviour cost a teacher their trust at the first thing
+    /// Anchor ever asked them to do.
+    var hasClientCredentials: Bool {
+        ZoomOAuthConfig.canCompleteTokenExchange(clientID: clientID, clientSecret: clientSecret)
+    }
 
     init() {
         load()

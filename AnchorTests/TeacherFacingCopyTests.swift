@@ -36,8 +36,17 @@ final class TeacherFacingCopyTests: XCTestCase {
         "client id", "client secret", "account id", "sdk key", "api key",
         "marketplace", "cloud console", "google cloud", "apis & services",
         "oauth consent", "server-to-server", "oauth app", "redirect url",
-        "under advanced", "re-activate"
+        "under advanced", "→ advanced", "re-activate"
     ]
+
+    // `→ advanced` was added 2026-08-20 after this scan read straight past a
+    // live one. OnboardingView told a teacher to "Add one in Settings → Zoom
+    // connection → Advanced" — a `#if DEBUG` panel, absent from their build —
+    // and the scan missed it because the only term for that disclosure was
+    // `under advanced`, the phrasing the *other* three offenders happened to
+    // use. A vocabulary list built from the strings already found will only
+    // ever find those strings again; the arrow form is how a SwiftUI view
+    // actually writes a settings path.
 
     /// Regions the scan skips: anything inside an `#if DEBUG`.
     ///

@@ -290,8 +290,12 @@ struct ZoomConnectionPanel: View {
                 noticeRow(
                     symbol: "exclamationmark.triangle.fill",
                     tint: Theme.riskHigh,
-                    text: "This copy of Anchor is missing part of its Zoom setup, so sign-in "
-                        + "can't open. It isn't something you can fix from here."
+                    // "Sign-in can't open" was already the kinder half-truth — the
+                    // browser opens fine, and that is exactly the problem. Say what
+                    // actually happens instead.
+                    text: "Anchor's Zoom setup isn't finished on this Mac. Zoom would ask "
+                        + "you to approve Anchor and then refuse the connection, so the "
+                        + "button is off until whoever installed Anchor finishes setup."
                 )
             }
 

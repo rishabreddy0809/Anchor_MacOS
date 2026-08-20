@@ -340,7 +340,12 @@ struct SettingsView: View {
                 canConnect: oauth.hasClientCredentials,
                 unavailableReason: oauth.hasClientCredentials
                     ? nil
-                    : "This copy of Anchor is missing part of its Zoom setup. It isn't something you can fix from here.",
+                    // Deliberately says sign-in would fail *after* Zoom, because
+                    // that is the failure this button now prevents rather than a
+                    // generic "misconfigured" — see `hasClientCredentials`.
+                    : "Anchor's Zoom setup isn't finished on this Mac. Signing in would "
+                        + "get as far as Zoom's permission screen and then fail, so the "
+                        + "button is off until whoever installed Anchor finishes setup.",
                 connectedDetail: oauth.accountLabel,
                 onConnect: connectZoom,
                 onDisconnect: disconnectZoom

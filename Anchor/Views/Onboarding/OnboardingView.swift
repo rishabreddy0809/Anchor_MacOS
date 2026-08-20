@@ -438,8 +438,14 @@ private struct ZoomStep: View {
                 canConnect: oauth.hasClientCredentials,
                 unavailableReason: oauth.hasClientCredentials
                     ? nil
-                    : "This build has no Zoom app configured yet. Add one in "
-                        + "Settings → Zoom connection → Advanced.",
+                    // Was "Add one in Settings → Zoom connection → Advanced",
+                    // which is a `#if DEBUG` panel — so in the build a teacher
+                    // actually runs, that sentence pointed at a screen that is
+                    // not there. Same class of defect as the three strings the
+                    // Advanced disclosure left wrong in HANDOFF.md.
+                    : "Anchor's Zoom setup isn't finished on this Mac, so sign-in "
+                        + "would fail after you signed in. Whoever installed Anchor "
+                        + "can finish it in one step — you can skip this and connect later.",
                 connectedDetail: oauth.accountLabel.map { "Connected as \($0)" } ?? "Connected",
                 privacyNote: "Anchor opens Zoom in your browser to sign in — nothing is "
                     + "typed here, and Anchor never sees your password.",
@@ -505,8 +511,17 @@ private struct ClassroomStep: View {
                 canConnect: credentials.hasClientID,
                 unavailableReason: credentials.hasClientID
                     ? nil
-                    : "This build has no Google client configured yet. Add one in "
-                        + "Settings → Google Classroom → Advanced.",
+                    // Found by the scan on 2026-08-20, immediately after the term
+                    // that catches it was added for the Zoom twin above. Same
+                    // defect: ClassroomConnectionPanel's Advanced disclosure is
+                    // `#if DEBUG` (lines 163–237), so a teacher sent there finds
+                    // nothing. Unlike Zoom this is not expected to be reachable —
+                    // googleClientID ships non-empty and Google genuinely accepts
+                    // PKCE without a secret — but "unreachable" is what the Zoom
+                    // branch was assumed to be too.
+                    : "Anchor's Google setup isn't finished on this Mac. Classroom is "
+                        + "optional, so you can carry on without it — whoever installed "
+                        + "Anchor can finish setup later.",
                 connectedDetail: credentials.tokens?.accountEmail ?? "Connected",
                 privacyNote: "Anchor opens Google in your browser to sign in, and only "
                     + "ever reads Classroom — it never posts, grades or changes anything.",
