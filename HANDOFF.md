@@ -6,7 +6,7 @@ Branch: `ship/pilot-readiness`; **default is `main`** since 2026-08-19
 same commit and are pushed** — `git log --oneline -1` for which one, because a
 hash written here is stale the moment the commit writing it lands. Tests:
 `xcodebuild test -project Anchor.xcodeproj -scheme Anchor -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
-→ **299 passing**, 19 test files. Release config builds clean.
+→ **308 passing**, 21 test files. Release config builds clean.
 
 Deadline: term starts ~31 Aug 2026. Goal is 1–3 real pilot users.
 
@@ -16,8 +16,8 @@ database (under the *Anchor* page), and the Ship Readiness artifact
 **The artifact is the one that silently rots** — it was a full day stale on
 19 Aug while the other two were current. Its ticks are localStorage keyed on
 `anchor-readiness-ticks-vN`; **bump N whenever you mark things done**, or a
-returning browser keeps showing the old state forever. Currently `v18`
-(45 of 69 ticked). It went v10 → v18 across 20 Aug, once per batch of authored
+returning browser keeps showing the old state forever. Currently `v19`
+(46 of 70 ticked). It went v10 → v18 across 20 Aug, once per batch of authored
 done-items; the findings-only edits on 19 **and** 20 Aug did not bump it,
 correctly — the rule is the authored *done-state*, and rewriting a finding
 changes none of it. **v17 also carried a text edit to an existing `li`**, which
@@ -32,6 +32,17 @@ own success. That is the second class of rot on this page: not just going stale
 between sessions, but going stale *within one edit* because a number lives in
 two gates.
 
+**And a narrower hazard, hit twice in one evening: the Test-suite gate note is
+one long comma list, and every session appends to it.** Both times, a
+search-and-replace whose `old` string began mid-list swallowed the `and` or a
+comma and left the sentence ungrammatical — published, then caught on read-back.
+**After editing that note, print it as plain text and read it as a sentence**,
+not as HTML. One command:
+
+```sh
+python3 -c "import re,html,io;s=io.open('readiness.html').read();m=re.search(r'gate-state pass\">[0-9]+ passing</span>\s*<span class=\"gate-note\">(.*?)</span>',s,re.S);print(' '.join(html.unescape(re.sub(r'<[^>]+>','',m.group(1))).split()))"
+```
+
 **These numbers were themselves stale when re-counted on 19 Aug** — the line
 above used to read `v5` (29 of 56) while the artifact was live on `v9`, and
 the checklist counts were out by three, one and four. That is the same rot
@@ -44,9 +55,9 @@ grep -c '^- \[x\]' ship-checklist.md   # and '^- \[~\]', '^- \[ \]'
 python3 -c "import re,io;s=io.open('ship-checklist.md').read();print([len(re.findall(r'^- \['+c+r'\]',s,re.M)) for c in ('x','~',' ')])"
 ```
 
-Counts as of 2026-08-20 (evening), re-counted with the commands above:
-`ship-checklist.md` **41 done / 11 partial / 16 open** (top-level boxes only —
-sub-bullets carry no box). Notion gained nine Done rows on 20 Aug.
+Counts as of 2026-08-20 (late evening), re-counted with the commands above:
+`ship-checklist.md` **42 done / 11 partial / 16 open** (top-level boxes only —
+sub-bullets carry no box). Notion gained ten Done rows on 20 Aug.
 
 **Do not copy those numbers forward.** They were 33/9/20 two handoffs ago,
 35/11/18 when the next session re-counted, and 39/10/17 in the version of this
@@ -306,6 +317,45 @@ All four came from the same method and none was on any list. **Tests 264 → 299
 public-client fix were both correct, and both left code behind that still
 treated the old world as the normal one.** After a change that flips what is
 typical, grep for every site that branched on the thing that changed.
+
+## And five more, later the same evening — all teacher-facing copy
+
+Commits `7495f89`, `6ae3ed4`. Tests 299 → **308**. Every one is prose in a Model
+or a Service that reaches the screen, where **neither existing scan could see
+it**: `TeacherFacingCopyTests` reads `Anchor/Views`, `SupportContactTests`
+enumerates `ZoomError` and `ClassroomError`.
+
+- **Start here, because it is the whole lesson.** `SupportContactTests`' own
+  header quotes *"add the scope to your Server-to-Server OAuth app, then
+  re-activate it"* as the sentence it exists to prevent — **and a sentence of
+  exactly that shape was live in `ZoomEmailVerification.detail` the entire
+  time.** The guard was real. Its *reach* was smaller than its stated contract,
+  and the gap held the example it was written about. **A vocabulary scan is
+  worth its list × the surfaces it enumerates, and nobody re-checks the second
+  factor when a new type starts talking to teachers.**
+- **`ZoomError.invalidCredentials`, where the classification was the hole.** It
+  told teachers to "regenerate the Client Secret in the Zoom Marketplace" and to
+  check credentials in Settings — a panel that is `#if DEBUG`. It survived
+  because `isSetupProblem` said **false**, and the scan only reads setup
+  problems: the misclassification removed it from the guard *and* justified
+  giving it an instruction. **When a guard is gated on a predicate, the
+  predicate is part of the guard.**
+- **The Classroom scope message was wrong about the cause.** It sent teachers to
+  the Google Cloud console; Google presents the four Classroom permissions as
+  separate tick boxes, and one left unticked is the common way to get there.
+  Nothing in any console is missing. This is the most likely Google failure in a
+  real pilot.
+- **Two dual-audience sites**, now split: the Meeting SDK auth description (log)
+  was handed to `ZoomError.unsupported` (screen), and the refresh-token failure
+  named the Marketplace app type at a teacher. `describe` →
+  `diagnosticDescription`: **the rename is the guard** — the old name said
+  nothing about who reads it, which is how it came to be rendered.
+
+`TeacherFacingSourceScanTests` now scans all non-DEBUG source, skipping only
+audiences **declared in the code** (`technicalDetail`,
+`AnchorDiag.operatorMessage`, `diagnosticDescription`) — never by file, because
+`TeacherFacingCopyTests` records that its own first version carried a per-file
+exemption and that the exemption was the hole.
 
 ## Next, in order
 
