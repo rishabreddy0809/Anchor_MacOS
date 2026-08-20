@@ -16,8 +16,8 @@ database (under the *Anchor* page), and the Ship Readiness artifact
 **The artifact is the one that silently rots** — it was a full day stale on
 19 Aug while the other two were current. Its ticks are localStorage keyed on
 `anchor-readiness-ticks-vN`; **bump N whenever you mark things done**, or a
-returning browser keeps showing the old state forever. Currently `v19`
-(46 of 70 ticked). It went v10 → v18 across 20 Aug, once per batch of authored
+returning browser keeps showing the old state forever. Currently `v20`
+(47 of 71 ticked). It went v10 → v18 across 20 Aug, once per batch of authored
 done-items; the findings-only edits on 19 **and** 20 Aug did not bump it,
 correctly — the rule is the authored *done-state*, and rewriting a finding
 changes none of it. **v17 also carried a text edit to an existing `li`**, which
@@ -56,8 +56,8 @@ python3 -c "import re,io;s=io.open('ship-checklist.md').read();print([len(re.fin
 ```
 
 Counts as of 2026-08-20 (late evening), re-counted with the commands above:
-`ship-checklist.md` **42 done / 11 partial / 16 open** (top-level boxes only —
-sub-bullets carry no box). Notion gained ten Done rows on 20 Aug.
+`ship-checklist.md` **43 done / 11 partial / 16 open** (top-level boxes only —
+sub-bullets carry no box). Notion gained eleven Done rows on 20 Aug.
 
 **Do not copy those numbers forward.** They were 33/9/20 two handoffs ago,
 35/11/18 when the next session re-counted, and 39/10/17 in the version of this
