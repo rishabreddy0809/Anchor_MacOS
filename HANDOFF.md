@@ -6,7 +6,7 @@ Branch: `ship/pilot-readiness`; **default is `main`** since 2026-08-19
 same commit and are pushed** — `git log --oneline -1` for which one, because a
 hash written here is stale the moment the commit writing it lands. Tests:
 `xcodebuild test -project Anchor.xcodeproj -scheme Anchor -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
-→ **264 passing**, 16 test files. Release config builds clean.
+→ **299 passing**, 19 test files. Release config builds clean.
 
 Deadline: term starts ~31 Aug 2026. Goal is 1–3 real pilot users.
 
@@ -16,11 +16,21 @@ database (under the *Anchor* page), and the Ship Readiness artifact
 **The artifact is the one that silently rots** — it was a full day stale on
 19 Aug while the other two were current. Its ticks are localStorage keyed on
 `anchor-readiness-ticks-vN`; **bump N whenever you mark things done**, or a
-returning browser keeps showing the old state forever. Currently `v13`
-(40 of 64 ticked). It went v10 → v11 → v12 → v13 across 20 Aug, once per batch
-of authored done-items; the findings-only edits on 19 **and** 20 Aug did not
-bump it, correctly — the rule is the authored *done-state*, and rewriting a
-finding changes none of it.
+returning browser keeps showing the old state forever. Currently `v18`
+(45 of 69 ticked). It went v10 → v18 across 20 Aug, once per batch of authored
+done-items; the findings-only edits on 19 **and** 20 Aug did not bump it,
+correctly — the rule is the authored *done-state*, and rewriting a finding
+changes none of it. **v17 also carried a text edit to an existing `li`**, which
+needs a bump for a different reason: ticks are hashed on `textContent`, so an
+edited item silently renders unticked under the old key.
+
+**Read the published artifact back after every publish.** The v17 publish
+returned success while the *Manual QA* gate still quoted "All 264 tests" — only
+the *Test suite* gate had been updated — and a sentence I had edited myself was
+left ungrammatical. Both were caught by fetching the page, neither by the tool's
+own success. That is the second class of rot on this page: not just going stale
+between sessions, but going stale *within one edit* because a number lives in
+two gates.
 
 **These numbers were themselves stale when re-counted on 19 Aug** — the line
 above used to read `v5` (29 of 56) while the artifact was live on `v9`, and
@@ -34,14 +44,14 @@ grep -c '^- \[x\]' ship-checklist.md   # and '^- \[~\]', '^- \[ \]'
 python3 -c "import re,io;s=io.open('ship-checklist.md').read();print([len(re.findall(r'^- \['+c+r'\]',s,re.M)) for c in ('x','~',' ')])"
 ```
 
-Counts as of 2026-08-20, re-counted with the commands above:
-`ship-checklist.md` **39 done / 10 partial / 17 open** (top-level boxes only —
-sub-bullets carry no box). Notion gained five Done rows on 20 Aug.
+Counts as of 2026-08-20 (evening), re-counted with the commands above:
+`ship-checklist.md` **41 done / 11 partial / 16 open** (top-level boxes only —
+sub-bullets carry no box). Notion gained nine Done rows on 20 Aug.
 
-**Do not copy those numbers forward.** They were 33/9/20 in the previous
-handoff and were already 35/11/18 when this session re-counted them — stale
-within a day, in the paragraph warning about staleness, for the second handoff
-running.
+**Do not copy those numbers forward.** They were 33/9/20 two handoffs ago,
+35/11/18 when the next session re-counted, and 39/10/17 in the version of this
+paragraph written this morning — stale within a day, in the paragraph warning
+about staleness, for the third handoff running.
 
 The seed only runs when the key has *no* stored value — after that
 localStorage beats the markup, which is correct for hand ticks and is exactly
@@ -191,6 +201,18 @@ things nobody had asked about. Three habits did it:
     borrowed Mac meaningful — and a partner school with its own app has a
     working secretless path if they want it. **Per-teacher at large still needs
     Marketplace publication, exactly as before.**
+- **The three Zoom identifiers belong to ONE registration and Anchor must never
+  present halves of two.** `ZoomOAuthConfig.offeredPublicClientID`, added
+  2026-08-20 after the public-client fix introduced the hole. If a school
+  provisions `ANCHOR_ZOOM_OAUTH_CLIENT_ID` without its secret,
+  `effectiveClientID` used to fall through to the *shipped* public client and
+  authorize under **Anchor's** Marketplace app while the deployment had named
+  another — producing "You cannot authorize", the page ADMIN-SETUP.md calls the
+  most misleading in the flow. **The rule keys on the provisioned *id*, never on
+  the secret**: a provisioned secret with no provisioned id is legitimate, it
+  completes the *shipped* registration, and that is how Rishab's own Mac is set
+  up. A rule of "either half overridden" breaks the developer machine. Do not
+  "simplify" it into one.
 - **The published privacy policy matches the app.** Re-fetched 2026-08-20: 120
   days, one term, "Last updated August 17, 2026", and the dropped-email-scope
   paragraph. The `[~]` warning that said otherwise was two days stale.
@@ -243,15 +265,56 @@ Five commits, `7fdc61f` → `a95cdbb`. Tests 241 → **260**.
    retention sweep and `removeItem` on a file that is not Anchor's.
 5. **`ADMIN-SETUP.md` is pinned against the code that reads it** (`a95cdbb`).
 
-**Sixteen canaries across six rules.** Every rule added on 19–20 Aug was
-checked by planting the violation it exists to catch and watching it fail. Two
-of them failed *fewer* cases than expected on the first plant, which is how you
-find out a case was weaker than it read.
+**Thirty-six canaries across ten rules.** Every rule added on 19–20 Aug was
+checked by planting the violation it exists to catch and watching it fail.
+**Three of them failed *fewer* cases than expected on the first plant, and one
+failed none at all** — dropping the duplicate-id fold in `AcademicMatchTable`
+fired nothing, because a roster of `[A, A]` never becomes ambiguous (the loop
+compares ids) so the collected list was never read. That is how you find out a
+case is passing for an unrelated reason. **Plant the violation even when the
+test reads obviously correct; a plant that fires nothing is information.**
+
+## Also done on 2026-08-20 (evening) — four findings, none of them tracked
+
+All four came from the same method and none was on any list. **Tests 264 → 299,
+16 test files → 19.** Commits `5c70423` → `a10026d`.
+
+1. **A half-provisioned school would have signed its teachers into Anchor's own
+   Zoom app** (`5c70423`). Introduced by the morning's public-client fix. Found
+   by noticing that *every* case in `ZoomTokenExchangeTests` built its config
+   with the **shipped** client id — none modelled a school that provisioned its
+   own. The blind spot was in the test file. See *Do not redo* above.
+2. **The roster told teachers to fix a name collision by renaming the student in
+   Zoom** (`1cfba59`) — the name they are already using, which is why the match
+   failed. `AcademicMatchTable` refused ambiguous names correctly and *silently*,
+   so downstream "two students normalise alike" and "nobody is called that" were
+   the same `nil`. It had **no tests at all** before this.
+3. **The Meeting SDK JWT is pinned** (`e35643b`). Only a comment held it, and on
+   Basic/Pro the bot is the only live-signal source. `mn`/`role` are Web-SDK
+   claims that every online tutorial shows and that make `sdkAuth` reject the
+   token — reporting itself as a wrong Key or Secret.
+4. **The Classroom panel told every teacher their whole class was unmatchable**
+   (`2aa7b82`). `unmatchableStudentCount` was `matchKey == nil`, which after the
+   17 Aug scope drop is the entire roster; the note also claimed their coursework
+   would not affect any score. Both false, on the first screen after connecting
+   Classroom. Same pass fixed a snapshot lookup by `matchKey` that had emptied
+   `CourseStudentHistoryView` on every install, and renamed a
+   `let matchKey = student.rosterKey` binding that is how the next reader makes
+   the same mistake.
+
+**The generalisable lesson from all four: the 17 Aug scope drop and the 20 Aug
+public-client fix were both correct, and both left code behind that still
+treated the old world as the normal one.** After a change that flips what is
+typical, grep for every site that branched on the thing that changed.
 
 ## Next, in order
 
 Everything Claude-owned and unblocked is done, and that sentence has now
-survived a session that found four more things to do after writing it. **The
+survived **two** sessions that each found four more things to do after writing
+it. **Treat it as false on sight.** The evening session of 20 Aug wrote it,
+went looking anyway, and found four defects — two of them teacher-facing
+sentences that were simply untrue, on screens a pilot teacher meets in their
+first ten minutes. **The
 way they were found is the only reliable method this project has: pick a claim
 that is load-bearing for a pilot teacher, and check the artifact rather than
 the sentence about the artifact.** All four came from that — the token
