@@ -99,9 +99,12 @@ const FAQS: { q: string; a: ReactNode }[] = [
     q: "What do I need to run it?",
     a: (
       <p>
-        A Mac running {MIN_MACOS} or later, and a Zoom account you're allowed to connect. The
-        lesson-assistant features additionally need Apple Intelligence enabled; without it the rest
-        of the app still works.
+        A Mac running {MIN_MACOS} or later, and a Zoom account you're allowed to connect. For the
+        pilot that also means about an hour with whoever administers your school's Zoom account —
+        Anchor runs as an app created there, which is what makes every teacher at your school an
+        internal user rather than an outside one. It is done once for the school, not per teacher,
+        and we do it with you. The lesson-assistant features additionally need Apple Intelligence
+        enabled; without it the rest of the app still works.
       </p>
     ),
   },

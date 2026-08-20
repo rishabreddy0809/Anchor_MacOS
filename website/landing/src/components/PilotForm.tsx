@@ -201,7 +201,14 @@ export function PilotForm() {
           <GateField
             name="hasZoom"
             form={form}
-            label="I teach live on Zoom and can connect my account"
+            // Was "I teach live on Zoom and can connect my account". The second
+            // half is not something a teacher can truthfully assert: whether
+            // they can connect depends on their school's Zoom administrator
+            // creating a Marketplace app, which is the setup call rather than
+            // anything they control. A gate nobody can honestly tick is either
+            // ticked untruthfully or abandons the form.
+            label="I teach live on Zoom"
+            description="Connecting needs about an hour with your school's Zoom administrator, once for the whole school. We do it with you."
           />
           <GateField
             name="usesClassroom"

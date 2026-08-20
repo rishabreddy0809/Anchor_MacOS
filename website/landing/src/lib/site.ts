@@ -47,6 +47,28 @@ export const REQUIREMENTS: { need: string; detail: string }[] = [
     need: "A Zoom account you're allowed to connect",
     detail: "You approve it once. Your students don't install anything.",
   },
+  // Added 2026-08-20. This list says of itself that it holds the hard gates,
+  // "shown next to the application form so nobody fills it in and finds out
+  // afterwards" — and it was missing the largest one, which is also the exact
+  // ask both outreach drafts are built around.
+  //
+  // For the pilot, Anchor runs as an app created under the school's own Zoom
+  // account, because that makes every teacher there an internal user and skips
+  // Zoom's Marketplace review entirely. Without it a teacher on any other
+  // account is stopped at Zoom's own consent page. Saying so here costs one
+  // line; not saying it costs a setup call that ends in "we can't, then".
+  {
+    need: "Someone at your school who can set up a Zoom app, once",
+    detail:
+      "About an hour with your Zoom administrator, done once for the whole school rather " +
+      "than per teacher. We do it with you on a call.",
+  },
+  {
+    need: "Ideally a Business or Education Zoom plan",
+    detail:
+      "Not a hard requirement, but it is what lets Anchor see who is in the room directly. " +
+      "Basic also ends meetings at 40 minutes, which is shorter than most classes.",
+  },
   {
     need: "Permission to use it in your classroom",
     detail: "Whatever your school or district requires you to get.",
