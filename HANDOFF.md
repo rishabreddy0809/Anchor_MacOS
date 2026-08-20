@@ -357,6 +357,24 @@ audiences **declared in the code** (`technicalDetail`,
 `TeacherFacingCopyTests` records that its own first version carried a per-file
 exemption and that the exemption was the hole.
 
+## And one on the site, which is the only thing here a prospect reads
+
+**The pilot form's "hard gates" were missing the largest one** (`78f0720`,
+deployed and verified live). `REQUIREMENTS` says of itself that it exists so
+"nobody fills it in and finds out afterwards", and `PilotForm` says a teacher
+who cannot tick the boxes cannot take part — and neither mentioned that the
+pilot needs **an hour with the school's Zoom administrator**, which is the exact
+ask both `OUTREACH.md` drafts are built around. An applicant arriving from one
+of those emails would have read requirements omitting what the email asked them.
+
+The checkbox was the sharper half: *"I teach live on Zoom and can connect my
+account"* is not something a teacher can truthfully assert, because connecting
+depends on their administrator. **A gate nobody can honestly tick is either
+ticked untruthfully or abandons the form.**
+
+**The facts are right; the emphasis is Rishab's call** — it adds friction to the
+form, deliberately, and softening it is a legitimate product decision.
+
 ## Next, in order
 
 Everything Claude-owned and unblocked is done, and that sentence has now
@@ -417,6 +435,13 @@ endpoint, the live privacy page, the deployed bounce page, the setup document.
 
 ## Gotchas that cost real time
 
+- **`grep` treats the site's HTML as binary, and silently reports no match.**
+  `curl -s https://anchorteach.vercel.app/apply > f.html; file f.html` says
+  `data` — there are bytes in the payload that make grep switch to binary mode,
+  where a plain `grep -c` prints **nothing at all** rather than `0`. A live check
+  written the obvious way therefore reports "not deployed" for a page that
+  deployed fine. **Always `grep -a`.** This defeats the one habit this project
+  relies on most, and it fails in the direction that wastes a redeploy.
 - **Vercel: check the production alias, never the deployment URL.**
   `anchor-landing-<hash>.vercel.app` returns ~478 KB of Vercel SSO login page,
   not the site. It reads exactly like a broken deploy.
