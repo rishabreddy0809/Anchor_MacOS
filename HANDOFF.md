@@ -6,7 +6,7 @@ Branch: `ship/pilot-readiness`; **default is `main`** since 2026-08-19
 same commit and are pushed** — `git log --oneline -1` for which one, because a
 hash written here is stale the moment the commit writing it lands. Tests:
 `xcodebuild test -project Anchor.xcodeproj -scheme Anchor -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
-→ **229 passing**, 13 test files. Release config builds clean.
+→ **241 passing**, 14 test files. Release config builds clean.
 
 Deadline: term starts ~31 Aug 2026. Goal is 1–3 real pilot users.
 
@@ -17,7 +17,8 @@ database (under the *Anchor* page), and the Ship Readiness artifact
 19 Aug while the other two were current. Its ticks are localStorage keyed on
 `anchor-readiness-ticks-vN`; **bump N whenever you mark things done**, or a
 returning browser keeps showing the old state forever. Currently `v10`
-(36 of 60 ticked).
+(36 of 60 ticked) — the 19 Aug findings edits did **not** bump it, correctly:
+the rule is the authored *done-state*, and adding findings changed none of it.
 
 **These numbers were themselves stale when re-counted on 19 Aug** — the line
 above used to read `v5` (29 of 56) while the artifact was live on `v9`, and
@@ -115,6 +116,19 @@ things nobody had asked about. Three habits did it:
   mailbox's own owner and three earlier test applications already sit in it, so a
   stranger does not inherit that history — only the domain and its DKIM reputation,
   which is what actually decides the filter.
+- **The Meeting SDK secret cannot ship, and that decides more of the Zoom
+  account model than §3 says** (read in the code, 2026-08-19).
+  `MeetingSDKTokenProvider.token()` signs the SDK JWT **HS256 locally** and
+  there is no server-side signing path in the repo, so the secret is a
+  *signing key*, not a public identifier like the three that do ship —
+  extract it from a binary and you can mint Meeting SDK tokens as Anchor.
+  `MeetingSDKCredentialStore.resolved()` needs **both** halves, so on any
+  install not provisioned through the environment the bot cannot start at all.
+  Per-school is fine (admin provisions in one Terminal launch). Per-teacher has
+  nobody to do it, and `scripts/provision-zoom-sdk-secret.sh` cannot stand in —
+  it targets `DerivedData/.../Build/Products/**Debug**`, so it does not work
+  against an installed `.dmg`. **Per-teacher therefore means no bot, and with
+  the participant scopes already unreachable, no live signal at all.**
 - SourceKit reports phantom "cannot find type in scope" errors. Trust xcodebuild.
 
 ---
@@ -163,10 +177,21 @@ accounts, his hardware, his decisions, or a partner who does not exist yet.
    there is no edit to make before sending.
 3. **Apple Developer enrollment** — still the longest lead, and it gates the
    certificate → notarization → anyone installing at all → QA Pass A.
-4. **Decide the Zoom account model.** The per-teacher branch is now *priced*:
-   Basic means no participant scopes and a 40-minute cap. Per-school is no
-   longer just a review-queue dodge, it is what makes a full-length lesson and
-   REST participant data possible at all.
+4. **Decide the Zoom account model.** The per-teacher branch is now *priced*
+   three ways, not two: no participant scopes, a 40-minute cap, **and no bot**
+   (see *Do not redo* above). Per-school is no longer a review-queue dodge —
+   it is the only branch where Anchor has a live signal at all.
+5. **Settle whether Zoom accepts a PKCE-only token exchange.** Found 2026-08-19
+   and not resolved on purpose. `OAuthClientDefaults` says Zoom *"requires this
+   on the token exchange even for a native app"*; `ZoomOAuthHandler.post` has a
+   PKCE-only branch that assumes it does not. Both cannot be right, the shipped
+   secret is empty so the PKCE-only branch is what runs on a teacher's Mac, and
+   it has **never run**. `hasClientCredentials` is only `clientID != nil`, so
+   Connect Zoom is *live* on a fresh install. If the comment is the true one,
+   every pilot teacher clears Zoom's consent screen and then fails at the token
+   exchange. **Do not settle it by reading docs** — that is the mistake this
+   project keeps making. It wants the one click, or a throwaway manual exchange
+   against the Development app.
 
 ## Blocked on the human
 
