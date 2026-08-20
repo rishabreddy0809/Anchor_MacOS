@@ -6,7 +6,7 @@ Branch: `ship/pilot-readiness`; **default is `main`** since 2026-08-19
 same commit and are pushed** — `git log --oneline -1` for which one, because a
 hash written here is stale the moment the commit writing it lands. Tests:
 `xcodebuild test -project Anchor.xcodeproj -scheme Anchor -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
-→ **260 passing**, 16 test files. Release config builds clean.
+→ **264 passing**, 16 test files. Release config builds clean.
 
 Deadline: term starts ~31 Aug 2026. Goal is 1–3 real pilot users.
 
@@ -136,29 +136,40 @@ things nobody had asked about. Three habits did it:
   it targets `DerivedData/.../Build/Products/**Debug**`, so it does not work
   against an installed `.dmg`. **Per-teacher therefore means no bot, and with
   the participant scopes already unreachable, no live signal at all.**
-- **Zoom does NOT accept a PKCE-only token exchange. Measured against
-  `zoom.us` on 2026-08-20 — do not re-litigate it, and do not "fix" the gate
-  back.** `OAuthClientDefaults`'s comment was the true one; the PKCE-only
-  branch in `ZoomOAuthHandler.post` was false and **had never run**, because a
-  developer's Keychain always holds a secret while the shipped
-  `zoomClientSecret` is empty. Five probes: a real `client_id` in the body with
-  no `Authorization`, **no client identification at all**, and
-  `client_id=THIS_ID_DOES_NOT_EXIST` all return **byte-identical**
-  `400 invalid_client` — Zoom never reads `client_id` from the body. The
-  control that makes those mean something: `grant_type=not_a_real_grant`
-  returns `unsupported_grant_type`, so Zoom validates the grant *first* and
-  `invalid_client` on a supported grant is a genuine client-auth failure, not a
-  catch-all. `refresh_token` fails identically.
-  **The trap was that nothing failed early** — `/oauth/authorize` *accepts* the
-  PKCE challenge and redirects to sign-in carrying it through, and
-  `hasClientCredentials` was `clientID != nil` while `zoomClientID` ships
-  non-empty. So Connect Zoom was live on exactly the installs that cannot use
-  it, and a pilot teacher would have cleared Zoom's real consent screen,
-  approved Anchor, and only then hit "Invalid client_id or client_secret" — at
-  the first thing Anchor ever asked of them. `hasClientCredentials` now
-  requires the secret (`ZoomOAuthConfig.canCompleteTokenExchange`).
-  **Google is unaffected and its same-shaped branch is correct** — Google
-  documents `client_secret` as optional for installed apps.
+- **Zoom DOES accept a PKCE-only token exchange — with the app's *Public
+  Client ID*, which is not the id Anchor used to ship.** Settled 2026-08-20,
+  after getting it wrong once the same day. **Read this before touching
+  anything Zoom-OAuth-shaped.**
+  - The *Anchor* Marketplace app has **Use Public Client OAuth** switched on,
+    and that mints a **second identifier**: Public Client ID
+    `kzU8QEfESJKsvxA3EzCe9A`, distinct from the confidential
+    `SMDINiavSZKmyIoF4XmM_A`. Only the public one is redeemable with PKCE and
+    no secret.
+  - Measured: confidential id + PKCE + no secret → `400 invalid_client`;
+    **public id, same request → `400 invalid_grant "Invalid authorization
+    code"`**; public id + refresh grant → `invalid_grant` too. `invalid_grant`
+    means the client authenticated and the deliberately bogus code was
+    rejected, which is as far as a probe gets without a real one.
+  - **How it was got wrong first, because the mistake is repeatable.** The
+    original probe used the confidential id, saw `invalid_client` identical to
+    sending garbage or nothing, confirmed with a control that Zoom really does
+    reach client authentication, and concluded Zoom refuses PKCE-only. Every
+    step was sound except the subject. **An error naming a credential can mean
+    the credential is *wrong* rather than *missing*** — nothing in the response
+    distinguishes those, and only the console did.
+  - **Do not turn the toggle off**, and do not copy the console's own generated
+    *OAuth URL*: it is built with the **confidential** id, so it is the wrong
+    one for a PKCE flow.
+  - `ZoomOAuthConfig.effectiveClientID` is the single accessor both the
+    authorize call and the token exchange read. **They must never differ** — a
+    code is issued to a client, so obtaining it under one id and redeeming it
+    under the other fails *after* the teacher approves Anchor.
+  - Console state read 2026-08-20: redirect URL
+    `https://anchor-oauth-bounce.vercel.app/oauth/zoom` registered and matching
+    `bounceURL`; Strict Mode off; Subdomain Check off; **the OAuth Allow List
+    field looked empty** — not changed, and worth a glance.
+  - **Google is unaffected** and its same-shaped branch is correct: Google
+    documents `client_secret` as optional for installed apps.
 - **The published privacy policy matches the app.** Re-fetched 2026-08-20: 120
   days, one term, "Last updated August 17, 2026", and the dropped-email-scope
   paragraph. The `[~]` warning that said otherwise was two days stale.
@@ -191,9 +202,11 @@ things nobody had asked about. Three habits did it:
 
 Five commits, `7fdc61f` → `a95cdbb`. Tests 241 → **260**.
 
-1. **The PKCE question is settled, and it was a live defect** (`7fdc61f`). See
-   *Do not redo* — this is the one thing on this page most worth reading before
-   touching Zoom.
+1. **The PKCE question is settled — twice, and the second answer reverses the
+   first** (`7fdc61f`, then `4fd94eb`). Zoom *does* accept PKCE-only; Anchor
+   was sending the wrong client id. See *Do not redo* — the most important
+   entry on this page, and the only one where the reasoning matters more than
+   the conclusion.
 2. **The findings were carried into the artifact, and two cards there were
    stale** (`81edacb`). The privacy-policy card was still a red Blocker for a
    contradiction fixed on 18 Aug; the onboarding card said "Zoom is probably
@@ -234,20 +247,21 @@ endpoint, the live privacy page, the deployed bounce page, the setup document.
    and 20:00 US ET**, and Excelsior Classes' Calendly.
 2. **Apple Developer enrollment** — still the longest lead, gating certificate
    → notarization → anyone installing at all → QA Pass A.
-3. **Decide the Zoom account model.** *This is no longer a balanced choice.*
-   Per-teacher has lost the participant scopes, gained a 40-minute cap, lost
-   the bot, and — as of 20 Aug — **lost browser sign-in too**. There is nothing
-   left on that side. Still `[ ]` because recording the price is not making the
-   call.
-4. **One console click, and it is a real question.** `ZOOM_INTEGRATION.md` §2a
-   says **Use Public Client OAuth** was enabled on the Development app and
-   calls it harmless. The endpoint disagrees. Either it was turned back off, or
-   **a Zoom setting named "PKCE, no secret" does not mean it** — worth knowing
-   before anyone relies on it for the Production registration. Nothing
-   downstream moves either way.
-5. **The fresh-install click now has a predicted outcome**, which is new.
-   Connect Zoom should be **disabled**, with a sentence naming who finishes
-   setup. If it is live on that Mac, the fix did not reach the build.
+3. **Decide the Zoom account model.** Per-teacher is **thin but no longer
+   empty** — it has browser sign-in back (see *Do not redo*), so Anchor can
+   list meetings and identify the teacher. It still has no participant scopes,
+   a 40-minute cap on Basic, and no bot, so **no live engagement signal**.
+   Per-school is the branch that buys the signal. Still `[ ]`: this is the call
+   to make and record.
+4. **The fresh-install click has a predicted outcome now.** Connect Zoom should
+   be **enabled** and should complete — the public client ships, so no
+   provisioning is needed for sign-in. If it fails *after* the consent screen,
+   the public client id did not reach the build. (Note this expectation flipped
+   twice on 20 Aug; the build to trust is `4fd94eb` or later.)
+5. **Glance at the OAuth Allow List** on the *Anchor* app while you are in the
+   console — it appeared empty. The redirect URL itself is registered and
+   correct, so sign-in should work regardless; `ZOOM_INTEGRATION.md` §2a is the
+   context. One minute, low stakes.
 
 ## Blocked on the human
 
