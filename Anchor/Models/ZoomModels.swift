@@ -204,11 +204,39 @@ nonisolated enum ZoomEmailVerification: Equatable, Sendable {
             + "accounts. The Meeting SDK the bot uses can't supply addresses at all, "
             + "so on this plan every student is matched by display name only — and "
             + "two students sharing a name are matched to neither."
-        case .unavailable(.insufficientScope(let scope)):
-            "Add \(scope ?? "the Dashboard scope") to the bot's Server-to-Server "
-            + "OAuth app in the Zoom Marketplace, then re-activate the app."
+        case .unavailable(.insufficientScope):
+            // Was: "Add <scope> to the bot's Server-to-Server OAuth app in the
+            // Zoom Marketplace, then re-activate the app." Three problems, and
+            // SupportContactTests is written against the first two.
+            //
+            // It handed a teacher an instruction only a Zoom account admin can
+            // carry out, in vocabulary the whole file forbids — the header of
+            // SupportContactTests quotes a sentence of exactly this shape as
+            // its motivating example, and this one was live the entire time
+            // because the scan enumerated ZoomError and ClassroomError and
+            // never reached this enum.
+            //
+            // Third, it named the wrong app. The bot authenticates with the
+            // teacher's own grant now; the Server-to-Server registration is
+            // optional and only used by a school that wants a dedicated robot
+            // account. So even the admin reading over the teacher's shoulder
+            // was being sent to the wrong place.
+            //
+            // What replaces it says what happened, what it costs, and who can
+            // act — the pattern the Connect-button copy already uses.
+            "Zoom hasn't granted Anchor permission to read participant addresses "
+            + "on this account, so students are matched by display name instead. "
+            + "That works, but two students whose names match are matched to "
+            + "neither. Whoever set Anchor up for your school can change this."
         case .unavailable(let error):
-            error.recoverySuggestion
+            // The name-matching consequence holds for *every* degraded state,
+            // including a transient one — while Anchor cannot read addresses,
+            // matching is by name, and that is the only part of this a teacher
+            // actually observes. Appended rather than substituted so a network
+            // failure keeps its own recovery advice.
+            [error.recoverySuggestion, "Until this clears, students are matched by display name."]
+                .compactMap { $0 }
+                .joined(separator: " ")
         }
     }
 
@@ -223,8 +251,10 @@ nonisolated enum ZoomEmailVerification: Equatable, Sendable {
         case .unavailable(.planRequired):
             "Zoom's Dashboard API, the only place Anchor can read addresses from, "
             + "needs a Business or higher plan."
-        case .unavailable(.insufficientScope(let scope)):
-            "the bot's Zoom app is missing the \(scope ?? "Dashboard") scope."
+        case .unavailable(.insufficientScope):
+            // Named a scope and an app at a teacher. Says the same thing in
+            // terms of what they can see instead.
+            "Zoom hasn't granted Anchor permission to read addresses on this account."
         case .unavailable(let error):
             error.errorDescription
         }

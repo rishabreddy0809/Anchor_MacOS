@@ -135,6 +135,79 @@ final class SupportContactTests: XCTestCase {
         XCTAssertTrue(ZoomError.insufficientScope("dashboard:read:list_meeting_participants:admin").isSetupProblem)
     }
 
+    // MARK: - The third teacher-facing enum, which the scan did not reach
+
+    // `ZoomEmailVerification` is shown in Settings — `ConnectionStatusView`
+    // renders its `headline` and `detail` whenever `isDegraded` — and in the
+    // per-student panel via `studentClause`. It is teacher-facing by every
+    // definition this file uses, and until 2026-08-20 nothing scanned it,
+    // because the scan enumerates `ZoomError` and `ClassroomError` and this is
+    // neither.
+    //
+    // **The header of this file quotes "add the scope to your Server-to-Server
+    // OAuth app, then re-activate it" as the motivating example.** A sentence
+    // of that shape was live in `ZoomEmailVerification.detail` the whole time,
+    // carrying three terms from the list below. The guard was real; its reach
+    // was smaller than its stated contract, and the gap held the exact string
+    // it was written about.
+    //
+    // The lesson generalises past this enum: a vocabulary scan is only worth
+    // its list *times* the surfaces it enumerates, and the second factor is the
+    // one nobody re-checks when a new type starts talking to teachers.
+
+    private let emailVerifications: [ZoomEmailVerification] = [
+        .notAttempted,
+        .verified(filled: 3, of: 5),
+        .unreported(participants: 4),
+        .unavailable(.planRequired("Business or above")),
+        .unavailable(.insufficientScope("dashboard:read:list_meeting_participants:admin")),
+        .unavailable(.network("offline"))
+    ]
+
+    func testEmailVerificationCopyDoesNotUseDeveloperVocabularyAtTheTeacher() {
+        for state in emailVerifications {
+            assertNoDeveloperVocabulary(state.headline, label: "\(state) headline")
+            assertNoDeveloperVocabulary(state.detail, label: "\(state) detail")
+            assertNoDeveloperVocabulary(state.studentClause, label: "\(state) studentClause")
+        }
+    }
+
+    func testADegradedEmailVerificationStillExplainsWhatItCosts() {
+        // The copy must not be flattened into "unavailable" while removing the
+        // instruction. A teacher seeing this needs to know that matching has
+        // fallen back to display names, because that is what makes an odd-looking
+        // roster explicable rather than broken.
+        for state in emailVerifications where state.isDegraded {
+            let detail = state.detail ?? ""
+            XCTAssertFalse(detail.isEmpty, "\(state) is degraded and explains nothing")
+            XCTAssertTrue(
+                detail.lowercased().contains("name"),
+                "\(state) does not tell the teacher matching fell back to display names, "
+                + "which is the only part of this they will actually observe."
+            )
+        }
+    }
+
+    func testTheEmailVerificationFixtureCoversEveryCase() {
+        // Vacuity guard. Every assertion above is a for-loop over this array, so
+        // a case added later and not listed here is silently unscanned — which
+        // is precisely how the whole enum went unscanned in the first place.
+        // Swift cannot enumerate an enum with associated values, so this counts
+        // the cases the type actually has by exhausting a switch: adding a case
+        // stops this compiling, which is the alarm.
+        for state in emailVerifications {
+            switch state {
+            case .notAttempted, .verified, .unreported, .unavailable:
+                continue
+            }
+        }
+        XCTAssertEqual(
+            emailVerifications.count, 6,
+            "The fixture list changed. Every case of ZoomEmailVerification must appear, "
+            + "including one .unavailable per error shape whose copy differs."
+        )
+    }
+
     // MARK: - The mail itself
 
     /// The address in the app and the address on the marketing site are two
