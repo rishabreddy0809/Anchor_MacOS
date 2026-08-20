@@ -191,10 +191,28 @@ underlying reason than Zoom's).
 >
 > Note: **Use Public Client OAuth** was enabled on the Development app while
 > diagnosing this. It is not required by the above and did not change the
-> outcome, but it is harmless and arguably correct for a desktop client, since
-> `ZoomOAuthHandler` already sends PKCE and omits the Basic header when no
-> secret is present. Turn it back off if you would rather keep the app a
-> confidential client.
+> outcome.
+>
+> **The rest of this note used to say it was "harmless and arguably correct for
+> a desktop client, since `ZoomOAuthHandler` already sends PKCE and omits the
+> Basic header when no secret is present." That reasoning is wrong, measured
+> 2026-08-20.** Zoom's token endpoint refuses a PKCE-only exchange outright: a
+> real `client_id` in the body, a garbage one, and none at all all return
+> byte-identical `400 invalid_client`, while `grant_type=not_a_real_grant`
+> returns `unsupported_grant_type` — the control proving Zoom really does reach
+> client authentication and fail it rather than returning a catch-all. So
+> omitting the Basic header does not make Anchor a working public client; it
+> makes the request unauthenticated. `hasClientCredentials` now requires the
+> secret (see `ZoomOAuthConfig.canCompleteTokenExchange`).
+>
+> **This leaves one thing genuinely unresolved, and it is a console click
+> rather than a code question.** If the toggle above is still on, then a Zoom
+> setting named *Use Public Client OAuth (PKCE, no secret)* does not remove the
+> secret requirement on the token endpoint — worth knowing before anyone relies
+> on it for the Production registration. If it was turned back off at some
+> point, the probe simply measured a confidential client behaving correctly.
+> Nothing downstream changes either way: per-school provisions the secret in
+> step 3 regardless.
 
 ---
 
