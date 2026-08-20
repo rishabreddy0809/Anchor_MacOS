@@ -16,8 +16,8 @@ database (under the *Anchor* page), and the Ship Readiness artifact
 **The artifact is the one that silently rots** — it was a full day stale on
 19 Aug while the other two were current. Its ticks are localStorage keyed on
 `anchor-readiness-ticks-vN`; **bump N whenever you mark things done**, or a
-returning browser keeps showing the old state forever. Currently `v20`
-(47 of 71 ticked). It went v10 → v18 across 20 Aug, once per batch of authored
+returning browser keeps showing the old state forever. Currently `v21`
+(46 of 71 ticked). It went v10 → v18 across 20 Aug, once per batch of authored
 done-items; the findings-only edits on 19 **and** 20 Aug did not bump it,
 correctly — the rule is the authored *done-state*, and rewriting a finding
 changes none of it. **v17 also carried a text edit to an existing `li`**, which
@@ -56,7 +56,7 @@ python3 -c "import re,io;s=io.open('ship-checklist.md').read();print([len(re.fin
 ```
 
 Counts as of 2026-08-20 (late evening), re-counted with the commands above:
-`ship-checklist.md` **43 done / 11 partial / 16 open** (top-level boxes only —
+`ship-checklist.md` **42 done / 11 partial / 17 open** (top-level boxes only —
 sub-bullets carry no box). Notion gained eleven Done rows on 20 Aug.
 
 **Do not copy those numbers forward.** They were 33/9/20 two handoffs ago,
@@ -357,23 +357,40 @@ audiences **declared in the code** (`technicalDetail`,
 `TeacherFacingCopyTests` records that its own first version carried a per-file
 exemption and that the exemption was the hole.
 
-## And one on the site, which is the only thing here a prospect reads
+## And one on the site — made, then reverted, and the reason is the lesson
 
-**The pilot form's "hard gates" were missing the largest one** (`78f0720`,
-deployed and verified live). `REQUIREMENTS` says of itself that it exists so
-"nobody fills it in and finds out afterwards", and `PilotForm` says a teacher
-who cannot tick the boxes cannot take part — and neither mentioned that the
-pilot needs **an hour with the school's Zoom administrator**, which is the exact
-ask both `OUTREACH.md` drafts are built around. An applicant arriving from one
-of those emails would have read requirements omitting what the email asked them.
+**The pilot form's requirements were changed to name the Zoom-admin step, and
+Rishab reverted it the same evening** (`78f0720`, reverted by `da6d699`; the
+live `/apply` is verified back to what it was). **Do not redo it without asking.**
 
-The checkbox was the sharper half: *"I teach live on Zoom and can connect my
-account"* is not something a teacher can truthfully assert, because connecting
-depends on their administrator. **A gate nobody can honestly tick is either
-ticked untruthfully or abandons the form.**
+The *observation* stands and is recorded as an open `[ ]` in the checklist:
+`REQUIREMENTS` describes itself as the hard gates, "shown next to the
+application form so nobody fills it in and finds out afterwards", and neither it
+nor the checkbox mentions the hour with the school's Zoom administrator — while
+both `OUTREACH.md` drafts are built around exactly that ask. The site and the
+emails disagree about what matters.
 
-**The facts are right; the emphasis is Rishab's call** — it adds friction to the
-form, deliberately, and softening it is a legitimate product decision.
+**What was wrong was the response, not the finding.** Adding it to the form is
+*friction on the top of the funnel*, which is a conversion decision rather than
+a factual correction. With fourteen prospects and a target of one to three
+yeses, the emails already ask both qualifying questions at the point in the
+conversation where Rishab can handle the answer himself. **Inbound form and
+outbound email are different funnels.** The checkbox reasoning was over-literal
+too: "I teach live on Zoom and can connect my account" reads to a teacher as "I
+am not blocked from using Zoom integrations", which they can answer fine.
+
+**The general rule this earned, and it is the most useful thing on this page for
+an agent working unsupervised:** *"complete everything that does not require me
+personally"* does **not** extend to copy on the conversion path. A finding that
+resolves into a judgement about positioning, pricing, funnel or tone gets
+**written down and handed back**, never shipped — however well-evidenced the
+finding is. Ask whether the fix has a single correct form. If two reasonable
+people would pick differently, it is not yours.
+
+**And separate the two authorisations.** Pushing was pre-authorised; deciding
+funnel copy was not. But `anchor-landing` tracks `main`, so **any push that
+touches `website/landing` is an outward-facing deploy** even when the commit
+feels routine. Treat that path as needing its own consent.
 
 ## Next, in order
 
