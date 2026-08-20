@@ -516,9 +516,47 @@ struct AcademicSection: View {
             )
         }
 
-        // Past here, neither route found anyone: no roster address matches, and
-        // the display name matched no one either (or matched two people, which
-        // the table refuses on purpose).
+        // Past here, neither route found anyone. Two very different reasons land
+        // in the same place — nobody on the roster answers to this name, or
+        // *more than one* does and the table refuses to guess — and until
+        // 2026-08-20 both produced the "nobody" message below.
+        //
+        // That was wrong in a way worth naming, because it is the shape of
+        // mistake this file exists to catch: the message did not merely omit
+        // the real reason, it told the teacher to fix it by having the student
+        // "rename themselves in Zoom to the name their school uses". In the
+        // collision case that is the name they are already using, and it is
+        // precisely why the match failed. Following the advice cannot work, and
+        // the control that does work — Link to student…, in this same view —
+        // went unmentioned.
+        //
+        // Not a rare branch. Google stopped returning roster addresses on
+        // 2026-08-17, so `matchKey` is nil on every entry and name matching is
+        // the ordinary path rather than the fallback. A class with two Emmas is
+        // the single most likely way a pilot roster looks broken.
+        let twins = classroom.rosterTwins(forIdentity: student.identityKey, name: student.name)
+        if twins.count > 1 {
+            // Named rather than counted. "Two students share this name" leaves
+            // the teacher hunting a roster; "Emma Clarke and Emma Clark" is
+            // instantly actionable, and seeing the two spellings side by side
+            // is often itself the explanation.
+            let names = twins
+                .map { $0.name.isEmpty ? "an unnamed student" : $0.name }
+                .sorted()
+            return Reason(
+                symbol: "person.2.badge.gearshape",
+                title: "More than one student answers to this name",
+                detail: "\(listed(names)) all normalise to the same name on the "
+                    + "\(courseLabel) roster, and Zoom gave no address to tell them "
+                    + "apart — so Anchor won't guess which one this is. Showing one "
+                    + "student's grades under another's name is worse than showing none. "
+                    + "Use Link to student… above to pick the right one; the link is kept "
+                    + "for future classes unless someone else in the meeting answers to "
+                    + "this name too.",
+                showsSettingsLink: false
+            )
+        }
+
         guard let email = zoomEmail else {
             let rosterSize = classroom.monitoredRosterCount
             return Reason(
@@ -581,6 +619,16 @@ struct AcademicSection: View {
                 + "outweigh it. Ask them to join Zoom from their school account.",
             showsSettingsLink: false
         )
+    }
+
+    // MARK: Copy helpers
+
+    /// "A and B", "A, B and C" — an Oxford-comma-free list, because this lands
+    /// mid-sentence in a teacher-facing string rather than in a table.
+    private func listed(_ names: [String]) -> String {
+        guard let last = names.last else { return "" }
+        guard names.count > 1 else { return last }
+        return names.dropLast().joined(separator: ", ") + " and " + last
     }
 
     // MARK: Tints

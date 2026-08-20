@@ -66,6 +66,24 @@ nonisolated struct AcademicMatchTable: Sendable {
 
     private var byEmail: [String: ClassroomStudent] = [:]
     private var byName: [String: ClassroomStudent] = [:]
+
+    /// The roster entries a name key was refused for, kept rather than
+    /// discarded.
+    ///
+    /// The refusal itself is right and is not changing: a wrong match shows one
+    /// student's grades under another's name. But it used to be *silent*, and
+    /// silence is what made it dangerous. Downstream, "two students normalise
+    /// alike" was indistinguishable from "nobody on this roster is called
+    /// that", so the teacher was told the display name matched no one and asked
+    /// to have the student rename themselves in Zoom — advice that cannot
+    /// possibly work, because the name they were told to use is the one that
+    /// collided.
+    ///
+    /// Since Google stopped returning roster addresses this is not an edge
+    /// case: `matchKey` is nil on every entry, so name matching is the ordinary
+    /// path and a class with two Emmas is the ordinary shape of a broken-looking
+    /// roster.
+    private var nameCollisions: [String: [ClassroomStudent]] = [:]
     private var overrides: [String: ClassroomStudent] = [:]
     private var snapshotsByRosterKey: [String: AcademicSnapshot] = [:]
 
@@ -98,6 +116,7 @@ nonisolated struct AcademicMatchTable: Sendable {
         // student's grades under another's name, which is worse than showing no
         // grades at all — so a collision loses both entries, not one.
         var ambiguous: Set<String> = []
+        var seen: [String: [ClassroomStudent]] = [:]
         for student in roster {
             guard let key = student.nameMatchKey else { continue }
             if let existing = byName[key], existing.id != student.id {
@@ -105,8 +124,18 @@ nonisolated struct AcademicMatchTable: Sendable {
             } else {
                 byName[key] = student
             }
+            // Every entry under the key, including the one `byName` kept, so a
+            // collision can be *described* and not merely detected. Duplicate
+            // ids are folded out: the same student appearing twice on a roster
+            // is not two people and must not be reported as a name clash.
+            if !seen[key, default: []].contains(where: { $0.id == student.id }) {
+                seen[key, default: []].append(student)
+            }
         }
-        for key in ambiguous { byName.removeValue(forKey: key) }
+        for key in ambiguous {
+            byName.removeValue(forKey: key)
+            nameCollisions[key] = seen[key]
+        }
     }
 
     /// The roster entry for a Zoom identity key, and how it was found.
@@ -186,6 +215,23 @@ nonisolated struct AcademicMatchTable: Sendable {
             return nil
         }
         return snapshotsByRosterKey[key]
+    }
+
+    /// The roster entries this participant's display name was refused for,
+    /// because more than one student normalises to it.
+    ///
+    /// Empty in every other case, including a name nobody answers to — so a
+    /// non-empty result is specifically "Anchor found too many, not none", which
+    /// is the distinction the teacher-facing copy turns on. Returns the students
+    /// rather than a flag so the message can name them: a teacher who reads
+    /// "Emma Clarke and Emma Clark" knows instantly which two people to pick
+    /// between, where "the name is ambiguous" leaves them hunting.
+    ///
+    /// Nothing here is consulted when a match succeeded; a manual link and an
+    /// email match both outrank the collision, and `match` is asked first.
+    func rosterTwins(forIdentity identityKey: String, name: String? = nil) -> [ClassroomStudent] {
+        guard let key = nameKey(forIdentity: identityKey, name: name) else { return [] }
+        return nameCollisions[key] ?? []
     }
 
     var isEmpty: Bool { byEmail.isEmpty && byName.isEmpty && overrides.isEmpty }

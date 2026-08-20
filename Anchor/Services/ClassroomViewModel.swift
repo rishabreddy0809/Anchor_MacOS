@@ -1042,6 +1042,15 @@ final class ClassroomViewModel: ObservableObject {
         rosterMatch(forIdentity: identityKey, name: name)?.student
     }
 
+    /// The roster entries whose names collide with this participant's, which is
+    /// why `rosterMatch` refused them. Empty unless that is the actual reason.
+    ///
+    /// Only meaningful after `rosterMatch` has returned nil — see
+    /// `AcademicMatchTable.rosterTwins`.
+    func rosterTwins(forIdentity identityKey: String, name: String? = nil) -> [ClassroomStudent] {
+        activeMatchTable.rosterTwins(forIdentity: identityKey, name: name)
+    }
+
     /// How many students Anchor holds across the monitored classes. Zero means
     /// no roster has loaded — which is not the same as an empty class.
     var monitoredRosterCount: Int { monitoredRoster.count }
