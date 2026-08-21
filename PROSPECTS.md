@@ -249,6 +249,88 @@ itself, exactly as that file says.
 
 ---
 
+## Added 2026-08-20 — five more, and one named person on an existing entry
+
+Same standard as above: quoted from the organisation's own site or from the
+person's own LinkedIn profile, and marked where it is neither.
+
+### The best single lead found: Aim Academy already has a named founder
+
+**Debra Bell — "Aim Academy Online, executive director, founder"**, Greater
+Harrisburg Area, from her own LinkedIn headline. Her profile states Aim Academy
+*"offers 150 live, introductory and college prep online classes."*
+
+Aim Academy is already **#8 on the list above**, where the contact was a role
+address. This converts it into the shortest chain there is: founder and
+executive director are the same person, so there is nobody to forward it to.
+**Send email 1 to her by name rather than to the role address.**
+
+### 15. Well-Trained Mind Academy — `wtmacademy.com`
+
+- **Confirmed from their own site:** live online classes for middle and high
+  school, *"led by live teachers who guide students through real time
+  instruction and discussion."* Contact published: **844-986-9862**, a contact
+  form via their Zendesk help centre, and a postal address in Charles City, VA.
+- **Not confirmed:** the video platform. Their live-classes page does not name
+  Zoom or anything else, so **question 2 covers it and do not assume**.
+- **Why it belongs here:** it sits in exactly the same bracket as Wilson Hill and
+  Excelsior, which are already on the list, and it is well known in the
+  classical-education world. Send **email 1**.
+
+### 16. Schoolhouse.world — `schoolhouse.world`
+
+- **Confirmed:** *"All programs take place on Zoom"* and all programs are free.
+  Founded by Sal Khan. Peer-led tutoring at scale.
+- **Why it is interesting and also awkward:** the Zoom question is answered
+  before the email, which no other prospect manages. But the tutors are
+  volunteers rather than staff, so "an hour of your Zoom admin's time" needs
+  rewording, and a free nonprofit has different reasons to say yes than a school
+  does. **Worth a different, shorter email** than either draft.
+
+### 17. Premier Prep Online Academy — Chandler, Arizona
+
+- **Source: LinkedIn only.** Sarah Williams lists herself as **Director of
+  Education at Premier Prep Online Academy**. Nothing was verified from an
+  organisation website. **Check the site before sending.**
+
+### 18. Feynman Academy — Oklahoma City metro
+
+- **Source: LinkedIn only.** Yulie Jennings lists herself as **Managing
+  Director, Feynman Academy**, focusing on *"Science, Math, and Technology"*,
+  with a homeschool managing-director role since 2012. Not verified elsewhere.
+  **Check the site before sending.**
+
+### 19. Score Academy Online — `score-academy.online`
+
+- **Confirmed from their own material:** accredited online private school,
+  *"the smallest classes of any accredited online private school, averaging 4
+  students with a maximum of 6."*
+- **Read that number before sending.** Anchor's whole pitch is the student who
+  is easy to miss in a grid of thirty. In a class of four the teacher can see
+  everyone, so the value is genuinely lower and the email should not pretend
+  otherwise. Listed because they are a real school with a real admin, not
+  because the fit is obvious.
+
+### Outschool: the open question in the section below is now answered, and it
+raised a better one
+
+`Where to find more` records Outschool as *"unverified, and it decides whether
+their teachers are prospects at all."*
+
+**It is verified: Outschool runs live classes on Zoom.** From Outschool's own
+support documentation, *"Outschool integrates with the video conferencing tool,
+Zoom for live meetings"*, each section has its own Zoom link, and teachers get
+standard Zoom features including live captioning.
+
+**But the same page raises the thing that probably rules them out.** It also
+says that for Zoom classes teachers *"don't need to worry about logging in, it's
+handled automatically"*, and that each section has its own generated link. That
+reads as Outschool provisioning the meeting from Outschool's account rather than
+the teacher's. If so, a teacher's own Zoom grant would not find that meeting at
+all, because Anchor's REST path looks for meetings on the account that signed
+in. **That is a technical question, not a sales one, and it should be settled
+before any Outschool teacher is contacted.** It was not settled here.
+
 ## Where to find more, when these run out
 
 - **`homeschool-life.com`** hosts hundreds of individual co-op sites on
