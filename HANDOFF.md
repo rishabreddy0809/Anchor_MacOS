@@ -553,12 +553,42 @@ agencies**, and **individual tutors "if they can sign in and use the app"**.
 Put to Rishab with the deploy question; he delegated the call back, so it was
 made rather than left open. **The "Available in the EU" switch stays on and
 publication is not being pursued for this pilot.** Full reasoning in
-`zoom-submission-remaining.md`; the short form is that **publication cannot help
-the 31 Aug pilot under any branch**, for three independent reasons: Apple
-Developer enrollment sits upstream so nobody can install Anchor at all,
-published or not; review takes weeks and Education/K-12 draws the stricter
-queue; and per-teacher still has **no bot, no participant scopes and a 40-minute
-cap** *after* publication, which was the reason to want it.
+`zoom-submission-remaining.md`.
+
+**Revised later the same day, when Rishab said he had started Apple Developer
+enrollment and asked why publication was parked.** One of the three stated
+reasons was *"nobody can install Anchor at all"*, and he is removing it. **The
+decision survives, because that reason was never the load-bearing one** — but
+the honest version of the load-bearing one is much stronger than what was
+written, and it was found by reading `ZoomCapabilities` instead of re-reading
+the summary.
+
+- **`ZoomService.probeCapabilities` hard-codes `muteState`, `videoState`,
+  `handRaised`, `audioLevel` and `chat` to `false`** — *"REST cannot see them at
+  all"* — while `MeetingBot.capabilities()` returns **all seven true**. So the
+  bot is not the richer of two live-signal sources. **It is the only source for
+  every signal Anchor scores on except who is in the room.**
+- **Read the outreach draft against that.** Email 1 promises *"speaking time,
+  hand raises, chat, and whether someone has gone quiet"*. Speaking time and
+  gone-quiet need `audioLevel`, hand raises need `handRaised`, chat needs
+  `chat`. **All bot-only.** The bot needs the Meeting SDK secret, which is
+  HS256 signed locally and cannot ship. **So a published Anchor installed by an
+  arbitrary teacher cannot do what the email says it does.**
+- **The obvious lever does not rescue it, and that is worth knowing before
+  anyone spends a week on it.** The participant scopes are ungrantable because
+  the *owning* account is Basic; upgrading Rishab's own Zoom plan would
+  plausibly make them addable — **unverified**. But `liveParticipants` is
+  presence. Even granted, on a teacher who is themselves Business or Education,
+  it buys who joined and left and **still no speaking time, hand raises or
+  chat**. The best possible REST outcome is short of the pitch, so the scope
+  question is not on this decision's critical path whatever its answer.
+- **The generalisable bit: this is two gates in series again**, the failure mode
+  this page already warns about. Apple Developer is the gate on **installing**,
+  and it gates the whole per-school pilot, so working on it is right. Marketplace
+  publication is the gate on **per-teacher reach**, which is a growth question
+  for after the pilot and is separately blocked by the bot. **Clearing the first
+  does not move the second**, and the phrasing of reason 1 invited exactly that
+  reading.
 
 **So the switch was not flipped, even though flipping it is one click and would
 drop the requirement from eighteen fields to nine.** A setting changed on a live

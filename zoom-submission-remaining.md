@@ -125,20 +125,51 @@ that flipping it is motion rather than progress.**
 page is on the critical path.** Three independent reasons, each sufficient on
 its own:
 
-1. **Apple Developer enrollment sits upstream of everything.** The app is
-   ad-hoc signed with no team identifier, so *nobody can install Anchor at all*,
-   published Zoom app or not. Publication would deliver a Marketplace listing
-   for software no teacher can run.
+1. ~~**Apple Developer enrollment sits upstream of everything.**~~ **Being
+   removed — Rishab started enrollment on 2026-08-21, the same day this was
+   written.** It said: the app is ad-hoc signed with no team identifier, so
+   nobody can install Anchor at all, published or not. **Struck through rather
+   than deleted because it was never the load-bearing reason**, and the next
+   reader needs to see that losing it changes nothing. It is also the one that
+   sounded most like the whole answer.
 2. **Review takes weeks and this app draws the stricter queue** — Education
    plus K-12, per Zoom's own warning quoted below. There are ten days.
-3. **Per-teacher has no live signal even after publication**, which is the
-   reason to want it in the first place. The Meeting SDK secret cannot ship
-   (HS256, signed locally), so an unprovisioned install has no bot; the
-   participant scopes are ungrantable on Basic; and Basic caps a meeting at 40
-   minutes. Publication removes the distribution limit and leaves all three.
+3. **Per-teacher gets presence and nothing else, published or not — and this is
+   the reason that actually carries the decision.** Restated 2026-08-21 after
+   reading `ZoomCapabilities` rather than recalling the summary, because the
+   earlier wording ("no live signal on Basic") was true but far too weak.
+
+   `ZoomService.probeCapabilities` hard-codes **`muteState`, `videoState`,
+   `handRaised`, `audioLevel` and `chat` to `false`**, with the comment *"Chat,
+   mute, camera, hand-raise and audio levels are all in-meeting client state;
+   REST cannot see them at all."* `MeetingBot.capabilities()` returns **all
+   seven true**. So the bot is not the richer of two sources. **It is the only
+   source for every signal Anchor scores on except who is in the room.**
+
+   Now read the outreach draft against that. Email 1 promises *"speaking time,
+   hand raises, chat, and whether someone has gone quiet"*. **Speaking time and
+   gone-quiet need `audioLevel`, hand raises need `handRaised`, chat needs
+   `chat`. All three are bot-only.** The bot needs the Meeting SDK secret, which
+   is an HS256 key signed locally and therefore cannot ship. **A published
+   Anchor installed by an arbitrary teacher cannot do the thing the email says
+   it does.** Publication removes the distribution limit and leaves that
+   untouched.
+
+   **The obvious lever does not rescue it either, and it is worth writing down
+   so nobody spends a week on it.** The two participant scopes are ungrantable
+   because the *owning* account is Basic; upgrading Rishab's own Zoom plan would
+   plausibly make them addable to the app registration — **unverified, never
+   tested.** But `liveParticipants` is presence. Even granted, on a teacher who
+   is themselves Business or Education, it buys **who joined and left** and
+   still no speaking time, no hand raises and no chat. **The best possible REST
+   outcome is not enough for the pitch**, so the scope question is not on the
+   critical path for this decision, whatever its answer.
 
 **So the honest position is not "publication is nine fields away once the switch
-is off". It is that publication may never be the right route at all**, and a
+is off", and it is not "publication is waiting on Apple" either.** It is that
+publication ships per-teacher reach to a product that, per-teacher, reports
+presence and nothing else. **Fix the bot distribution problem first or do not
+publish** — and a
 setting changed on a live listing for a path nobody has chosen is a setting
 nobody remembers changing. The evidence that the switch gates the nine is
 already recorded above and does not decay; re-deriving it costs one page load,
