@@ -105,8 +105,10 @@ exists for this information.
 
 ## The list
 
-Fourteen organisations. Sorted by how short the decision chain looks, because
-that is what decides whether a reply turns into a call before term starts.
+Fourteen organisations **in this section**; entries 15 to 25 were added later
+and live in the two dated sections below, so the file holds **twenty-five** in
+total. Sorted by how short the decision chain looks, because that is what
+decides whether a reply turns into a call before term starts.
 
 Each entry says what was **confirmed**, what was **not**, and which draft to
 send. "Draft" means the academy version or the co-op version from
@@ -330,6 +332,138 @@ the teacher's. If so, a teacher's own Zoom grant would not find that meeting at
 all, because Anchor's REST path looks for meetings on the account that signed
 in. **That is a technical question, not a sales one, and it should be settled
 before any Outschool teacher is contacted.** It was not settled here.
+
+## Added 2026-08-21 — two new segments asked for, and one of them does not exist yet
+
+Rishab asked to open outreach to **smaller K-12 online academies**, **tutoring
+agencies**, and **individual tutors "if they can sign in and use the app"**.
+That last one is a conditional, and the condition was checked rather than
+assumed. **It fails.** The verdict is below, before the names, because it
+decides whether a third of this request has any prospects at all.
+
+### Individual tutors are not a segment yet, on three gates in series
+
+Checked in the code and the build on 2026-08-21, not recalled. Keep the three
+questions apart, exactly as the per-teacher entry in `HANDOFF.md` insists.
+
+1. **Nobody can install Anchor, tutors included.** `codesign -dv` on the Release
+   build reads `Signature=adhoc` and `TeamIdentifier=not set`, and
+   `security find-identity -v -p codesigning` returns **one** identity, a free
+   *Apple Development* certificate. There is no Developer ID Application cert,
+   so there is nothing to notarize and Gatekeeper stops the app on any Mac that
+   is not this one. **This gate is shared by every segment on this page** and is
+   the reason Apple Developer enrollment is upstream of all outreach, not just
+   of tutors.
+2. **An outside tutor cannot sign in to Zoom even if they had the app.** The
+   *Anchor* Marketplace app is Draft / "Active for internal users", so a tutor
+   on their own Zoom account fails at `/oauth/authorize` with "You cannot
+   authorize". Removing that gate means Marketplace publication, which was
+   **parked on 2026-08-21** for reasons that have not changed: eighteen missing
+   required fields, nine of them EU trader disclosures needing a registered
+   company.
+3. **Past both gates they would still get half a product.**
+   `OAuthClientDefaults.meetingSDKSecret` ships as `""`, so an unprovisioned
+   install has no bot; participant scopes are ungrantable on Basic and Pro. A
+   solo tutor would get the coursework half and **no live lesson signal at
+   all**, which is the half the outreach is about.
+
+**And the tempting workaround is the one thing that must not be done.** A solo
+tutor is their own Zoom admin, so unlike a school teacher they *could* self
+provision through `ANCHOR_ZOOM_SDK_KEY` / `_SECRET` the way `ADMIN-SETUP.md`
+step 2 describes. That means handing **Anchor's own Meeting SDK signing secret**
+to individuals found by cold email. It is an HS256 key signed locally, so
+whoever holds it can mint Meeting SDK tokens as Anchor. With a partner school
+that is a controlled relationship with a name attached. With arbitrary tutors it
+is publishing the key. **So the mechanism that would technically unblock the
+per-tutor segment is the mechanism that makes it unsafe at any scale.**
+
+**What to do:** nothing, and specifically do not write a tutor draft yet.
+Revisit only if Marketplace publication is un-parked, and even then the bot
+question above has to be answered first. **A tutoring agency is a different
+matter entirely, because an agency can be a school in every way that counts.**
+
+### The qualifying test for a tutoring agency, and it is not size
+
+An agency is a prospect when it looks like a school to Zoom, and that turns on
+**one** question: are the tutors **employees on a company Zoom account**, or
+**independent contractors on their own**?
+
+- **Employees on a company account** means there is a Zoom admin who can install
+  the Server-to-Server app once, exactly like an academy. This is a per-school
+  deployment wearing different words, and everything in Email 1 applies.
+- **Independent contractors** means there is no company Zoom account and no
+  admin, so landing them lands the **per-teacher** branch. That is finding 3 on
+  this page, and it is why Kepler is not a school. **Wyzant and Varsity Tutors
+  are contractor marketplaces and belong in the same bucket as Kepler**, not
+  with the agencies below.
+
+**The distinction is often stated on their own site in as many words**, which
+makes it a one-minute check like the LMS footer check in finding 4. Revolution
+Prep says it outright, quoted below.
+
+**One more filter, and it is about the product rather than the deployment.**
+Anchor's value scales with the number of faces a teacher is watching. **For 1:1
+tutoring it is close to worthless** and the email should not be sent, because
+the tutor already sees everything Anchor would surface. Send only where the
+agency runs **group classes**, and say group classes in the first line so the
+1:1 half of their business self selects out.
+
+> **A positioning question, written down rather than answered, per the funnel
+> rule.** There is an obvious second pitch to an agency: not "your tutor may
+> miss a student" but "you, the owner, have no visibility into sessions your
+> tutors run". That reframes Anchor from a teacher's instrument to a
+> **supervision** tool, which is a different product, a different buyer, and a
+> privacy story that would have to be rewritten from the first paragraph.
+> **Two reasonable people would pick differently, so it is not Claude's call.**
+> Email 3 below is written on the existing teacher-facing positioning. Decide
+> the other one deliberately or not at all.
+
+### New prospects — smaller academies
+
+Same standard as the rest of this file: quoted from the organisation's own site,
+or marked as not confirmed.
+
+| # | Organisation | Confirmed from their own site | Not confirmed | Contact |
+| --- | --- | --- | --- | --- |
+| 20 | **Apologia Live Classes** `apologia.com` | *"interactive, instructor-led online classes tailored for homeschool students in grades 6–12"*; uses **the Canvas student portal**; *"class sizes may be limited"* | **Video platform is never named.** Zoom is not stated anywhere on the live-classes page | `liveclasses@apologia.com`, 765-608-3280 |
+| 21 | **Veritas Press / Veritas Scholars Academy** `veritaspress.com` | K-12; *"200+ credentialed teachers"*; *"Classes meet twice a week... in the virtual classroom"* | **"Virtual classroom" is never identified as Zoom.** Employment model not stated | `info@veritaspress.com`, (717) 519-1974 |
+| 22 | **Brilliant Microschools / Brilliant Grades** `brilliantmicroschools.org` | Accredited K-12, all 50 states; *"Strictly 4–6 students per group"* (SpEd) and *"Strictly 8–10 students per group"* (GenEd); daily live instruction | Video platform not named. **No LMS named** — the site lists IXL, Khan, Nearpod, CommonLit and others instead | `admissions@BrilliantMicroschools.org`, +1 904-822-1604 |
+| 23 | **Learn Beyond The Book** `learnbeyondthebook.com` | Search result describes *live, virtual homeschool classes* and **custom Zoom classes for microschools, pods, or homeschool groups** | **Nothing confirmed from the site itself: it returned HTTP 403 to an automated fetch.** Everything here is third party and must be re-checked in a browser before sending | Not retrieved. Site must be opened by hand |
+
+**Class size is the reason 22 is the most interesting name here** and 20 and 21
+are the safest. Brilliant runs 8-10 per group with a certified teacher, which is
+small enough that a teacher plausibly already knows who is struggling. Apologia
+and Veritas are large enough for the grid problem to be real.
+
+### New prospects — tutoring agencies
+
+| # | Organisation | Confirmed from their own site | Not confirmed | Contact |
+| --- | --- | --- | --- | --- |
+| 24 | **Revolution Prep** `revolutionprep.com` | **The qualifying quote, verbatim: tutors** *"are employees – not contractors – and receive continuous training in the latest techniques and research."* Group format is *"Expert tutor, up to 10 students"* with a *"Set schedule"*, grades 9-12; private tutoring K-12 | **Zoom is not named anywhere on the page.** No named leadership on the homepage. Large enough that the chain may be long | `answers@revolutionprep.com`, (877) 738-7737 |
+| 25 | **Bay Area Tutoring Association** `bayareatutor.org` | *"501(c)3 non-profit, charitable organization"*; trains its own tutors, who *"work in class rooms during the school day, after school programs, online, and for strategic partners"* | **Online delivery platform not named.** Group classes not mentioned at all, so the group-class filter above is unverified for them. Grade levels not stated | `info@bayareatutor.org`, (408) 945-8003 |
+
+**Neither is confirmed on Zoom, and for this segment that is question 2's
+job.** Note what is different from the academy list: for an academy, "which LMS"
+is the load-bearing question. For an agency, **"employees or contractors" is**,
+and it is worth asking before the LMS question because it decides whether they
+are a per-school deployment at all.
+
+### Finding 1 gets worse, not better, and a new possibility appears
+
+The hope behind widening to smaller organisations was finding 1's own
+suggestion: that Google Classroom *"most likely lives in the tail this method
+cannot see"*. **The tail did not produce it.** Apologia is Canvas, which takes
+the tally to **seven organisations with a discoverable LMS and still zero on
+Google Classroom** — now four Canvas, one Moodle, one Blackbaud, one Caravel.
+
+**And a third possibility turned up that neither Canvas nor Classroom covers.**
+Brilliant Microschools names no LMS at all and lists a dozen adaptive-practice
+tools instead. If that is what small operations actually look like, then for
+them Anchor's academic half has **no source to connect to**, rather than a
+different one. That is a worse answer than "they use Canvas", because a
+connector cannot fix it. **Do not act on one data point** — but question 1 in
+the emails should be read as three-way from now on: Classroom, another LMS, or
+nothing that has an API.
 
 ## Where to find more, when these run out
 

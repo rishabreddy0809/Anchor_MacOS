@@ -6,11 +6,13 @@ preparation for what comes after, so this file exists to make the sending
 mechanical: two ready emails, and the reasons behind each line so they survive
 being edited.
 
-**Who to send them to is now `PROSPECTS.md`** — fourteen organisations with
-contact routes, built 2026-08-19. Read its findings section before sending, not
+**Who to send them to is now `PROSPECTS.md`** — **twenty-five** organisations
+with contact routes: fourteen built 2026-08-19, five added 20 Aug, six added
+21 Aug with the two new segments. Read its findings section before sending, not
 after: two of them change how these drafts should be targeted, and one of them
 requires cutting a sentence from a specific email. Both are noted in place
-below.
+below. **The 21 Aug section also records why individual tutors are not on the
+list**, which is a conditional Rishab asked about and it fails.
 
 **These are drafts to send, not templates to fill in.** Both are deliberately
 short. The instinct to add a paragraph explaining the model should be resisted —
@@ -227,6 +229,104 @@ so consent scrutiny is higher and more personal, not lower.
 - **The pain is stated as a teacher's experience**, not a metric. A co-op
   organiser has watched a child go quiet in a Zoom grid; an academy director has
   read a retention report.
+
+---
+
+## Email 3 — tutoring agencies that run group classes
+
+**Who this is for:** the owner or director of a tutoring agency **whose tutors
+are employees on a company Zoom account**. Read the qualifying test in
+`PROSPECTS.md` before sending this to anyone: an agency of independent
+contractors has no company Zoom account and no admin, so it is the per-teacher
+branch and this email promises it something that cannot be set up. Revolution
+Prep states the employee model on its own site; most marketplaces state the
+opposite just as plainly.
+
+**Do not send this to an agency that only does 1:1.** Anchor's value scales with
+the number of faces a tutor is watching, and in a one-to-one session the tutor
+already sees everything it would surface. The first line says "group classes"
+so that half of their business rules itself out before they reply.
+
+**Two differences from Email 1, both deliberate.** The reader is usually the
+founder and often still teaches, so there is no forwarding chain to survive and
+the email can be shorter and more direct. And **question 2 is replaced**: for an
+agency the question that decides the deployment is not the Zoom plan first, it
+is whether there is a company Zoom account at all.
+
+**Subject:** `Engagement signals for your group sessions, no video, runs on the tutor's Mac`
+
+> Hello [name],
+>
+> I've built a tool for tutors running **group** sessions on Zoom, and I want to
+> lead with how it handles student data, because with minors that is usually the
+> first question. Anchor runs on the tutor's own Mac. There is no server of mine
+> for student data to reach, and none of it is transmitted to me. **No video is
+> analysed and no facial recognition is used.** Camera state is read as an
+> on/off flag and no frame is ever read. Chat is measured as a character count,
+> not message text. Live captions stay in memory, are dropped when the session
+> ends, and are never written to disk.
+>
+> It joins the call as a **visible participant named "Anchor (engagement
+> assistant)"**. It does not join silently, and everyone in the room can see it
+> is there.
+>
+> What it does: it reads participation during a live session, including speaking
+> time, hand raises, chat, and whether someone has gone quiet, and points the
+> tutor at a student who may be struggling and easy to miss when they are
+> watching eight or ten at once. It's an estimate worth a human look, not a
+> finding about a child. **I don't publish an accuracy figure, because I haven't
+> established one on a held-out test set.** Measuring that honestly is what the
+> pilot is for.
+>
+> I'm being specific about group sessions because in a one-to-one session this
+> is worth very little. You already see everything it would tell you.
+>
+> The pilot is free: six weeks, two group sessions a week, one 30-minute call at
+> the end. Setup needs about an hour of whoever administers your Zoom account,
+> once.
+>
+> Two questions that decide whether it fits, before you spend any more time on
+> this:
+>
+> 1. **Do your tutors run sessions on a company Zoom account, or on their own?**
+>    (This is the one that decides whether setup is an hour or is not possible
+>    yet, so it's worth answering first.)
+> 2. **Do you use an LMS for coursework, and which one?** (Anchor can pair live
+>    participation with Google Classroom coursework today. If you use something
+>    else, or nothing, it runs on the live signals alone and I'd like to know
+>    which.)
+>
+> The privacy policy is written to be handed to whoever has to assess it:
+> [link]. Happy to answer anything before you take it further.
+>
+> Rishab
+
+### Why this one is different
+
+- **"Group" is in the subject line, the first sentence and its own paragraph.**
+  Three times is not repetition here. The single most likely way this email
+  wastes everyone's time is an agency owner reading it as a pitch for their 1:1
+  business, trying it there, and concluding the product does nothing. Saying it
+  is worth very little in 1:1 costs one sentence and buys the reply's accuracy.
+- **Question 1 changed from the Zoom plan to Zoom account ownership**, and it is
+  the most important edit on this page. For an academy there is always a Zoom
+  admin and the only question is the plan tier. For an agency the admin may not
+  exist at all, and if the tutors are contractors on their own accounts then
+  nothing in this email can be delivered to them yet. Ask the disqualifying
+  question first.
+- **The plan tier question is deliberately not asked.** It matters, but asking
+  two account questions in one email reads as an audit, and question 1 already
+  filters out the case that cannot proceed. The plan tier can be settled on the
+  call, where "what does Business give me that Pro doesn't" is a normal thing to
+  discuss and a normal thing not to know.
+- **"Eight or ten at once" rather than "a grid of thirty faces."** Email 1's
+  phrase is honest for an academy class and would be an obvious exaggeration to
+  someone who caps groups at eight. The claim has to match the reader's room.
+- **No mention of the tutor being watched.** There is a second pitch here about
+  giving an owner visibility into sessions their staff run. It is left out on
+  purpose. That is a positioning decision Rishab has not made, it is recorded in
+  `PROSPECTS.md` rather than acted on, and shipping it inside a draft would be
+  making the call by writing it.
 
 ---
 

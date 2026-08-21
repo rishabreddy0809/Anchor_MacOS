@@ -63,8 +63,8 @@ grep -c '^- \[x\]' ship-checklist.md   # and '^- \[~\]', '^- \[ \]'
 python3 -c "import re,io;s=io.open('ship-checklist.md').read();print([len(re.findall(r'^- \['+c+r'\]',s,re.M)) for c in ('x','~',' ')])"
 ```
 
-Counts as of 2026-08-21 (after the second commit of the day), re-counted with
-the commands above: `ship-checklist.md` **43 done / 11 partial / 18 open**
+Counts as of 2026-08-21 (after the outreach commit), re-counted with
+the commands above: `ship-checklist.md` **43 done / 12 partial / 18 open**
 (top-level boxes only — sub-bullets carry no box). Notion gained eleven Done
 rows on 20 Aug and none on 21 Aug. **The open count went up rather than down**,
 because 21 Aug added one `[ ]` to §3 for the Zoom publication finding; that is
@@ -506,6 +506,47 @@ artifact.** Not on any list, and it is the one with a deadline attached.
   **guarded file with an unguarded section**, because that test reads the file
   for retention day-counts only. *"The file has a test"* answers neither factor
   of list × surfaces.
+
+## Also on 2026-08-21: two outreach segments opened, one refused
+
+Rishab asked to start outreach to **smaller K-12 online academies**, **tutoring
+agencies**, and **individual tutors "if they can sign in and use the app"**.
+**Nothing was sent** — that is his, and the drafts have to be read first.
+
+- **Six new prospects, 20 to 25, taking `PROSPECTS.md` to twenty-five**, and a
+  new **Email 3 for tutoring agencies** in `OUTREACH.md`. Em dash rule checked
+  on the send text specifically, not on the file: 45 quoted lines, zero em or
+  en dashes.
+- **Individual tutors were refused, and the condition in the question is why.**
+  "If personal tutors can sign in and use this app" is a conditional and it
+  fails on three gates in series, checked in the build: the Release app is
+  `Signature=adhoc` / `TeamIdentifier=not set` with only a free Apple
+  Development cert, so **nobody can install it**; the Marketplace app is
+  Draft/internal-only so an outside tutor cannot authorize; and
+  `meetingSDKSecret` ships empty, so past both gates they get the coursework
+  half and **no live signal**. **This confirmed the handoff's own claim rather
+  than trusting it** — `DEVELOPMENT_TEAM = SYLM5655ZW` is set in the pbxproj,
+  which reads like a real team until you check the artifact and find the
+  signature is ad-hoc anyway.
+- **The workaround is the argument against, and it is the part worth keeping.**
+  A solo tutor *is* their own Zoom admin, so they could self-provision through
+  `ANCHOR_ZOOM_SDK_KEY`/`_SECRET` where a school teacher could not. That means
+  handing **Anchor's own Meeting SDK signing secret** to people found by cold
+  email; it is HS256 signed locally, so whoever holds it can mint tokens as
+  Anchor. **The mechanism that unblocks the segment is what makes it unsafe at
+  scale.**
+- **A tutoring agency is a school or it is Kepler, and one question separates
+  them:** employees on a company Zoom account, or contractors on their own.
+  Email 3 asks account ownership as question 1 and **drops the plan-tier
+  question**, because ownership is the disqualifying one and two account
+  questions in one email read as an audit.
+- **Widening made finding 1 worse, which was the opposite of the hope.**
+  Apologia is Canvas, so it is now **seven organisations with a discoverable
+  LMS and still zero Google Classroom**. And Brilliant Microschools names **no
+  LMS at all**, which is a third case no connector fixes.
+- **One positioning question handed back unshipped:** selling an agency owner
+  *supervision of their tutors* rather than *a tutor's instrument*. Different
+  buyer, different privacy story. Recorded, not written into the draft.
 
 ## Decided on 2026-08-21: the Zoom publication path is parked
 
