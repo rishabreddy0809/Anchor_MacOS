@@ -92,6 +92,67 @@ is rewritten each time.
 > docs quote for sharing an authorization URL; that figure covers the review,
 > not assembling the evidence.
 >
+> ### Correction, 2026-08-20: Beta Test is the HARDER path, and publication is not gated on a plan
+>
+> The paragraph above is accurate about Beta and wrong by implication. It reads
+> as though Beta is the route out and publication is the distant, expensive one.
+> **It is the other way round**, and the source is Zoom's own developer forum
+> post *"A Clear Path for Every Developer: Beta URLs and Marketplace Publishing
+> For Independent Developers (Sole Proprietors)"*, plus Zoom's distribution docs.
+>
+> **Zoom's words, verbatim: *"participation in Beta is optional. Your app can
+> still qualify for publication in our Marketplace without supporting
+> evidence."***
+>
+> **What Beta actually costs an independent developer.** Mandatory: evidence of
+> a Secure Software Development Lifecycle, SAST and/or DAST scan results, and a
+> Privacy Policy. **Plus three of**: penetration test summary, security policy,
+> incident management policy, vulnerability management procedures, or
+> infrastructure and dependency management policy. Plus TLS 1.2 or higher.
+>
+> **And Beta expires before a pilot does.** Authorization URLs are shared for a
+> *"standard duration of 4 weeks"*, extendable twice by 4 weeks, **12 weeks
+> maximum**. A school term is longer than that, so a term-long pilot on a Beta
+> URL stops working partway through. Beta also carries a publicity ban: once
+> approved you are *"strictly prohibited from"* making app information public,
+> using Zoom brands to represent the app, or publicising it as a Zoom
+> integration.
+>
+> **What publication requires instead.** Accurate metadata, the Technical Design
+> section covering architecture and security controls, security information, and
+> compliance with branding guidelines. Zoom performs the security testing
+> themselves against the OWASP Top 10; **a third-party penetration test is not
+> mandated for publication**. No review timeline is published; Zoom says it
+> varies with app quality, scope clarity and listing copy.
+>
+> **No Zoom plan tier is named anywhere in the publication requirements.** What
+> is required is **Account Owner or Admin privileges**, which the developer has
+> on their own account whatever the plan. Basic is not a stated barrier to
+> publishing. This was checked because the assumption was that Business would be
+> required; it is not stated to be.
+>
+> **Two things publication does not fix, stated so they are not rediscovered as
+> a surprise:**
+>
+> 1. **It does not grant teachers the participant scopes.** Those are gated on
+>    the *installing user's* account plan (Business/Education/Enterprise), not on
+>    the app's published state. A teacher on Basic still cannot grant them after
+>    publication, so the REST participant path stays closed for them and the bot
+>    remains the only live-signal source.
+> 2. **It does not ship the Meeting SDK secret.** That is an HS256 signing key
+>    (`MeetingSDKTokenProvider.token()` signs locally), so an unprovisioned
+>    install still has no bot. Closing that for individual teachers needs a
+>    server-side signing endpoint, which is the standard Meeting SDK
+>    architecture and is not built.
+>
+> **Sole proprietors.** Zoom accepts *"a copy of a government-issued
+> identification document, such as your passport"* in place of business
+> registration. Note that publishing means entering the Marketplace Developer
+> Agreement, which is a contract, and identity is checked at exactly this step:
+> if the developer is under 18, the account and the submission should sit with a
+> parent or guardian. That costs nothing if it is arranged before submitting and
+> wastes a review cycle if it is not.
+>
 > **Renamed 2026-08-17 — done.** The consent screen shows the app's name
 > verbatim, and it used to read *"General app 392 would like permission to…"*,
 > which is not what a teacher should be asked to approve. It now reads *"Anchor

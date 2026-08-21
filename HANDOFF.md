@@ -224,6 +224,30 @@ things nobody had asked about. Three habits did it:
   completes the *shipped* registration, and that is how Rishab's own Mac is set
   up. A rule of "either half overridden" breaks the developer machine. Do not
   "simplify" it into one.
+- **Anchor is per-teacher by architecture. The per-school route is a Zoom
+  distribution workaround, not a product design.** Checked in code 2026-08-20
+  after the claim "individual teachers cannot use Anchor" was made in a session
+  and challenged by Rishab, correctly. `ZoomViewModel.makeLiveService()` returns
+  `ZoomService(userTokens: .shared)` whenever a teacher is signed in and only
+  falls back to Server-to-Server otherwise, and `hasAnyZoomCredential` is
+  satisfied by a teacher sign-in alone. The bot joins as the teacher on their own
+  ZAK; Classroom is per-teacher; scoring is local. **Nothing in the app is
+  school-shaped.** Keep the three questions apart, because collapsing them is
+  what produced the wrong claim: (1) can it work per-teacher — yes; (2) can an
+  outside teacher sign in *today* — no, the app is unpublished; (3) what would
+  they get — the Classroom half, no live signal until there is a bot.
+- **Publishing to the Marketplace is not gated on a Zoom plan, and Beta Test is
+  the harder path, not the easier one.** Settled 2026-08-20 against Zoom's own
+  docs and their forum post for independent developers. Zoom: *"participation in
+  Beta is optional. Your app can still qualify for publication in our
+  Marketplace without supporting evidence."* Beta demands SSDLC evidence,
+  SAST/DAST results and a Privacy Policy, **plus three of** five security
+  policies including a penetration test summary, and it **expires after 12 weeks
+  maximum** — shorter than a school term. Publication needs metadata, Technical
+  Design and security information, with Zoom doing the OWASP testing themselves
+  and **no third-party pen test mandated**. Requirement is **Account Owner or
+  Admin**, not a plan tier. Full detail and the two things publication does
+  *not* fix are in `ZOOM_INTEGRATION.md` §2a.
 - **The published privacy policy matches the app.** Re-fetched 2026-08-20: 120
   days, one term, "Last updated August 17, 2026", and the dropped-email-scope
   paragraph. The `[~]` warning that said otherwise was two days stale.
