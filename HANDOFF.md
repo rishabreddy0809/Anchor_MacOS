@@ -55,14 +55,17 @@ grep -c '^- \[x\]' ship-checklist.md   # and '^- \[~\]', '^- \[ \]'
 python3 -c "import re,io;s=io.open('ship-checklist.md').read();print([len(re.findall(r'^- \['+c+r'\]',s,re.M)) for c in ('x','~',' ')])"
 ```
 
-Counts as of 2026-08-20 (late evening), re-counted with the commands above:
-`ship-checklist.md` **42 done / 11 partial / 17 open** (top-level boxes only —
-sub-bullets carry no box). Notion gained eleven Done rows on 20 Aug.
+Counts as of 2026-08-21, re-counted with the commands above:
+`ship-checklist.md` **42 done / 11 partial / 18 open** (top-level boxes only —
+sub-bullets carry no box). Notion gained eleven Done rows on 20 Aug and none on
+21 Aug. **The open count went up rather than down**, because 21 Aug added one
+`[ ]` to §3 for the Zoom publication finding; that is the honest direction when
+a session's work is discovering that a task is bigger than recorded.
 
 **Do not copy those numbers forward.** They were 33/9/20 two handoffs ago,
-35/11/18 when the next session re-counted, and 39/10/17 in the version of this
-paragraph written this morning — stale within a day, in the paragraph warning
-about staleness, for the third handoff running.
+35/11/18 when the next session re-counted, 39/10/17 the morning after that, and
+42/11/17 on the evening of 20 Aug — stale within a day, in the paragraph warning
+about staleness, for the fourth handoff running.
 
 The seed only runs when the key has *no* stored value — after that
 localStorage beats the markup, which is correct for hand ticks and is exactly
@@ -416,6 +419,51 @@ funnel copy was not. But `anchor-landing` tracks `main`, so **any push that
 touches `website/landing` is an outward-facing deploy** even when the commit
 feels routine. Treat that path as needing its own consent.
 
+## Done on 2026-08-21
+
+**One thing, and it was the item the previous session flagged as the single
+unverified question: why the Zoom Publish page says "Not ready".** It is now
+answered, and the answer is worse than the file it corrects assumed.
+
+- **Publish lists eighteen missing required fields, not one architecture
+  diagram.** App Listing → App Information 4, Links & Support 4, EU &
+  Discoverability 9, Technical Design 1. Full detail, with the field-by-field
+  reading, in `zoom-submission-remaining.md`; a new `[ ]` in §3 of the
+  checklist.
+- **Nine of them are EU Digital Services Act trader disclosures** — business
+  bank account digits, a DUNS or equivalent, bank name, and an uploaded
+  identification document of the trader. **Four of those nine cannot be produced
+  by an individual with no registered company.** They hang off an *"Available in
+  the EU"* switch that is currently **on**; turning it off should drop all nine.
+  **Not flipped** — it changes which markets a live listing is offered in, which
+  is Rishab's call under the same rule as the pilot-form copy.
+- **Two entries in that file's own *Done* table were wrong**, and both are struck
+  through in place rather than deleted. "App Listing — Complete" (Long
+  Description is empty, the App Icon is still Zoom's placeholder) and "Link &
+  Support — Privacy, Terms, and Support URLs" (**only** Support is entered).
+  Checked in Development as well as Production and identical in both, so this
+  was never a case of reading the wrong tab — those two URLs were never typed,
+  while both pages have been live on the site for days.
+- **The method note.** Nothing here needed a new idea: it is *check the artifact,
+  not the sentence about the artifact*, applied to a console page instead of a
+  deployed HTML page. The file said "everything is filled in except one file
+  upload"; the page said eighteen.
+- **A new instance of an old trap.** For a checkbox, `input.value` is the string
+  `"on"` whether or not it is ticked, so the first probe reported every checkbox
+  set — including the EU switch and the data-subject-rights attestation. Read
+  `.checked`. Same family as the allow list that "looked empty": **the Zoom
+  console cannot be read off its own rendering, and now also not off its own
+  DOM defaults.**
+- **Also read on the way past:** Zoom warns that the *Education* market vertical
+  *"has additional review requirements"*. Anchor has Education and K-12
+  selected, correctly — so publication draws the stricter review. One more
+  argument for the per-school route.
+- **Session note:** the Marketplace console had lapsed to signed-out and its
+  Sign In button is a JS handler that did not respond to a synthetic click.
+  `zoom.us/profile` loaded signed in, and re-visiting the console URL after that
+  completed the handshake with no password. Worth trying before asking for a
+  human click next time.
+
 ## Next, in order
 
 Everything Claude-owned and unblocked is done, and that sentence has now
@@ -457,6 +505,13 @@ endpoint, the live privacy page, the deployed bounce page, the setup document.
    both tabs, and the "looked empty" reading was a misread of Zoom's grey
    styling.** Nothing to do. The Production finding above came out of the same
    pass and is the part worth carrying forward.
+6. ~~Find out why Publish says "Not ready".~~ **Done 2026-08-21 — see *Done on
+   2026-08-21* above.** What replaces it is a decision rather than a task: the
+   *"Available in the EU"* switch. Turn it off and publication needs nine fewer
+   fields, none of the remaining nine needing a company; leave it on and
+   publication needs a registered business. **Decide that before spending any
+   time on the App Listing copy**, because the copy is four minutes and the
+   trader block is the whole question.
 
 ## Blocked on the human
 

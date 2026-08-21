@@ -44,20 +44,107 @@ Request to Share.**
 | Sidebar → Beta Test | "Local only" |
 | Sidebar → Publish | **"Not ready"** |
 
-**Unverified, and it is the one thing worth checking next:** *why* Publish says
-"Not ready". The browser extension disconnected before that page could be
-opened, so nothing here should be taken as a claim about what publication is
-still missing beyond the diagram. Open
-`/develop/applications/UcNDw-l5QkWaeKEOvXfXhA/publish?mode=prod` and read it.
+### Answered 2026-08-21: why Publish says "Not ready"
 
-**Also note a small inconsistency, unresolved:** the right panel says "Ready for
-beta test" and **Request to Share** appears present, while Overview is 4/5 and
-the 13 Aug note below says the button only becomes clickable after the upload.
-One of those is stale. Read the page rather than either sentence.
+The page opened this time (the Marketplace session had lapsed; `zoom.us/profile`
+loaded fine, and re-visiting the console URL after that completed the handshake
+without a password). **Publish lists eighteen missing required fields, not one
+diagram.** Verbatim, under *"The following fields are required to submit your
+app"*:
+
+| Section | Missing |
+|---|---|
+| App Listing - App Information | **4** |
+| App Listing - Links & Support | **4** |
+| App Listing - EU & Discoverability | **9** |
+| Technical Design | **1** |
+
+**Field values below were read out of `input.value` / `input.checked`, not off a
+screenshot** — the same reason the "allow list looked empty" misread happened.
+Note the trap that cost a wrong reading here first: for a checkbox `e.value` is
+the literal string `"on"` whether or not it is ticked, so a probe that prints
+`value` reports every checkbox as set. Read `.checked`.
+
+**Technical Design (1) is the diagram, exactly as this file says.** Overview
+4/5, Security 3/3, re-read 2026-08-21. That part of the file was right.
+
+**The other seventeen are new information, and two of them contradict the *Done*
+table at the bottom of this file.** See the correction under it.
+
+- **Links & Support (4)** — Privacy Policy URL **empty**, Terms of Use URL
+  **empty**, Documentation URL **empty**, and the attestation checkbox *"This
+  page includes language informing users of their data subject rights and how to
+  exercise them"* **unticked**. Only Support URL is filled
+  (`https://anchorteach.vercel.app/support`). **Checked on the Development tab
+  too, and it is identical there** — so this is not a "recorded the wrong tab"
+  error, the two URLs were never entered in either mode. Both pages exist and
+  are live, so this is four minutes of typing, not a blocker.
+- **App Information (4)** — Long Description **0/2000**, and the App Icon still
+  renders Zoom's default placeholder. Cover Image and App Gallery are also
+  empty; App Name, Company Name, Short Description (97/150), category and
+  industry are filled. That is the likely four.
+- **EU & Discoverability (9) is the one that changes the plan.** See below.
+
+### The EU trader block, and why it is not a typing job
+
+The nine are Digital Services Act trader disclosures, gated behind an
+**"Available in the EU" switch that is ON** (read as a MUI `Mui-checked`
+switch, not inferred from styling):
+
+1. Business name
+2. Business address
+3. Business email address
+4. Business telephone number
+5. Last 4 digits of **business bank account number**
+6. **Trade Register Number (DUNS or similar)**
+7. Bank name
+8. **Identification document of the trader** — *"10K form, articles of
+   incorporation, or similar registration"*, uploaded
+9. A declaration that the trader offers only union-law-compliant products
+
+**Five through eight cannot be produced by an individual with no registered
+company.** Company Name on the listing is currently `Rishab Reddy Paili`, which
+is the honest answer and also the one with no DUNS number and no business bank
+account behind it. So on the current reading, publication as it stands demands
+either a registered entity or that switch turned off.
+
+**The switch is the decision, and it is not Claude's to make.** Turning
+"Available in the EU" off very probably drops all nine — the fields are rendered
+underneath it and the count matches exactly — which would take Publish from
+eighteen missing to nine. For a US homeschool-co-op pilot starting 31 Aug, EU
+availability is worth nothing this term. But it is a change to what markets the
+listing is offered in, made on a live console, and it is reversible only in the
+sense that flipping it back is easy — the submission it feeds is not. **Rishab's
+call. Not flipped.** If the answer is yes, flip it and re-read the Publish page:
+the count is the check, and it should fall to nine.
+
+**One more thing read on the way past, unprompted and worth knowing before this
+route is chosen.** The App Listing page carries Zoom's own warning next to the
+industry picker: *"The 'Education' Market Vertical has additional review
+requirements, and should only be selected for apps which are used in K-12 &
+Higher Education environments."* Anchor has Education **and** K-12 selected.
+That is accurate for what Anchor is, so it should stay — but it means the
+publication review is the stricter one, which is an argument for the per-school
+route rather than against the selection.
+
+**The small inconsistency is still there and still unresolved:** the right panel
+said "Ready for beta test" again on 2026-08-21, on every page of the console,
+while Overview is 4/5 and the 13 Aug note below says **Request to Share** only
+becomes clickable after the upload. It sits beside the sidebar's *Publish: Not
+ready*, so the two panels are answering different questions — beta readiness and
+publication readiness — and the right panel is the beta one. That resolves the
+contradiction rather than the staleness; whether **Request to Share** is
+genuinely clickable at 4/5 was not tested, because clicking it spends a review
+cycle and this file already argues against aiming there at all.
 
 ---
 
-**Everything is filled in except one file upload.** Drag
+**"Everything is filled in except one file upload" was true of Beta Test, and is
+false of publication** — see the 2026-08-21 correction above, which found
+seventeen more required fields. The upload below is still needed and still has
+to be done by hand; it is just no longer the last thing.
+
+Drag
 `zoom-architecture-diagram.png` (repo root) onto the Architecture Diagram
 **Upload** box here:
 
@@ -78,8 +165,8 @@ rather than the file. Both formats are in the repo root; either will do.
 | Section | State |
 |---|---|
 | App name | **Anchor** |
-| App Listing | Complete — company, descriptions, category (Learning & Development), industry (Education) |
-| Link & Support | Privacy, Terms, and Support (`/support`) URLs |
+| App Listing | ~~Complete~~ — **wrong, corrected 2026-08-21.** Company, Short Description, category (Learning & Development) and industry (Education) are filled; **Long Description, App Icon, Cover Image and App Gallery are empty** |
+| Link & Support | ~~Privacy, Terms, and Support URLs~~ — **wrong, corrected 2026-08-21. Only the Support URL (`/support`) is entered.** Privacy Policy, Terms of Use and Documentation URLs are empty in *both* Development and Production |
 | Basic Information | Contact name + email, production OAuth Redirect URL + allow list |
 | Scopes | Scope description written |
 | Technical Design → Security | **3/3** |
