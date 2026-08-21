@@ -108,15 +108,47 @@ is the honest answer and also the one with no DUNS number and no business bank
 account behind it. So on the current reading, publication as it stands demands
 either a registered entity or that switch turned off.
 
-**The switch is the decision, and it is not Claude's to make.** Turning
-"Available in the EU" off very probably drops all nine — the fields are rendered
-underneath it and the count matches exactly — which would take Publish from
-eighteen missing to nine. For a US homeschool-co-op pilot starting 31 Aug, EU
-availability is worth nothing this term. But it is a change to what markets the
-listing is offered in, made on a live console, and it is reversible only in the
-sense that flipping it back is easy — the submission it feeds is not. **Rishab's
-call. Not flipped.** If the answer is yes, flip it and re-read the Publish page:
-the count is the check, and it should fall to nine.
+**The switch is the decision.** Turning "Available in the EU" off very probably
+drops all nine — the fields are rendered underneath it and the count matches
+exactly — which would take Publish from eighteen missing to nine. For a US
+homeschool-co-op pilot starting 31 Aug, EU availability is worth nothing this
+term. But it is a change to what markets the listing is offered in, made on a
+live console, and it is reversible only in the sense that flipping it back is
+easy — the submission it feeds is not.
+
+### Decided 2026-08-21: leave it on, and park the publication path
+
+Put to Rishab, who delegated the call back. **Not flipped, and the reason is
+that flipping it is motion rather than progress.**
+
+**Publication cannot help the 31 Aug pilot under any branch, so nothing on this
+page is on the critical path.** Three independent reasons, each sufficient on
+its own:
+
+1. **Apple Developer enrollment sits upstream of everything.** The app is
+   ad-hoc signed with no team identifier, so *nobody can install Anchor at all*,
+   published Zoom app or not. Publication would deliver a Marketplace listing
+   for software no teacher can run.
+2. **Review takes weeks and this app draws the stricter queue** — Education
+   plus K-12, per Zoom's own warning quoted below. There are ten days.
+3. **Per-teacher has no live signal even after publication**, which is the
+   reason to want it in the first place. The Meeting SDK secret cannot ship
+   (HS256, signed locally), so an unprovisioned install has no bot; the
+   participant scopes are ungrantable on Basic; and Basic caps a meeting at 40
+   minutes. Publication removes the distribution limit and leaves all three.
+
+**So the honest position is not "publication is nine fields away once the switch
+is off". It is that publication may never be the right route at all**, and a
+setting changed on a live listing for a path nobody has chosen is a setting
+nobody remembers changing. The evidence that the switch gates the nine is
+already recorded above and does not decay; re-deriving it costs one page load,
+which is cheaper than carrying an unexplained console change.
+
+**If publication is ever pursued, this is step one and it is one click.** Flip
+"Available in the EU" off and re-read the Publish page — **the count is the
+check, and it should fall from eighteen to nine.** Do that *before* writing any
+App Listing copy, because the copy is four minutes and the trader block is a
+company registration.
 
 **One more thing read on the way past, unprompted and worth knowing before this
 route is chosen.** The App Listing page carries Zoom's own warning next to the

@@ -6,7 +6,7 @@ Branch: `ship/pilot-readiness`; **default is `main`** since 2026-08-19
 same commit and are pushed** — `git log --oneline -1` for which one, because a
 hash written here is stale the moment the commit writing it lands. Tests:
 `xcodebuild test -project Anchor.xcodeproj -scheme Anchor -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
-→ **308 passing**, 20 test files. Release config builds clean.
+→ **311 passing**, 21 test files. Release config builds clean.
 
 Deadline: term starts ~31 Aug 2026. Goal is 1–3 real pilot users.
 
@@ -55,12 +55,13 @@ grep -c '^- \[x\]' ship-checklist.md   # and '^- \[~\]', '^- \[ \]'
 python3 -c "import re,io;s=io.open('ship-checklist.md').read();print([len(re.findall(r'^- \['+c+r'\]',s,re.M)) for c in ('x','~',' ')])"
 ```
 
-Counts as of 2026-08-21, re-counted with the commands above:
-`ship-checklist.md` **42 done / 11 partial / 18 open** (top-level boxes only —
-sub-bullets carry no box). Notion gained eleven Done rows on 20 Aug and none on
-21 Aug. **The open count went up rather than down**, because 21 Aug added one
-`[ ]` to §3 for the Zoom publication finding; that is the honest direction when
-a session's work is discovering that a task is bigger than recorded.
+Counts as of 2026-08-21 (after the second commit of the day), re-counted with
+the commands above: `ship-checklist.md` **43 done / 11 partial / 18 open**
+(top-level boxes only — sub-bullets carry no box). Notion gained eleven Done
+rows on 20 Aug and none on 21 Aug. **The open count went up rather than down**,
+because 21 Aug added one `[ ]` to §3 for the Zoom publication finding; that is
+the honest direction when a session's work is discovering that a task is bigger
+than recorded. The `[x]` is the privacy-policy fix in §1.
 
 **Do not copy those numbers forward.** They were 33/9/20 two handoffs ago,
 35/11/18 when the next session re-counted, 39/10/17 the morning after that, and
@@ -458,6 +459,65 @@ answered, and the answer is worse than the file it corrects assumed.
   *"has additional review requirements"*. Anchor has Education and K-12
   selected, correctly — so publication draws the stricter review. One more
   argument for the per-school route.
+**And then a second finding, from the same method pointed at a different
+artifact.** Not on any list, and it is the one with a deadline attached.
+
+- **The published privacy policy disclosed the Google Keychain entry and not the
+  Zoom one** (`8b55127`). §5 *"Where the data lives"* named exactly one Keychain
+  entry, *"Your Google refresh token"*, while `ZoomOAuthStore` has been writing
+  the teacher's whole Zoom grant — refresh token, access token, expiry, scopes,
+  account label — under `com.anchor.zoom.oauth`. §10 had the matching hole:
+  how to disconnect and revoke **Google**, nothing about Zoom. **Fixed,
+  deployed, and read back on the live page** — both bullets render and
+  `LEGAL_LAST_UPDATED` shows August 21.
+- **It mattered this week because of the other finding.** The Marketplace
+  submission answered **Yes** to *"stores Zoom OAuth tokens?"* and the listing's
+  Privacy Policy URL field is **empty** — so the page got corrected *before*
+  that field is filled, rather than after a reviewer read the two side by side
+  and found them disagreeing.
+- **Zoom got its own bullet rather than joining Google's, and that is the part
+  worth copying.** Google's bullet says the access token *"is held in memory
+  only and never written to disk"* — true of Google, **false of Zoom**, which
+  persists it deliberately so a mid-lesson relaunch does not bounce the teacher
+  through Zoom's sign-in page. **Folding the two would have replaced an omission
+  with a false statement.** Check that before merging any two items in a list.
+- **The guard's first version was vacuous, and planting proved it.** It asserted
+  the section contained *"Zoom"*. Deleting the Zoom bullet outright **left it
+  passing**, because the session-history bullet in the same section says
+  *"engagement scores and Zoom signals"*. It now demands the provider and
+  `Keychain` in the **same `<li>`**. Four canaries, all confirmed firing.
+  **Four more canaries on three new rules, taking the running total to 47
+  across 15** — but that total is *carried forward* from the 43/12 the last
+  handoff recorded, not re-derived, and the first draft of this line said
+  *thirty-nine*, which is **below** the number it was adding to. **Treat the
+  cumulative canary figure as the one number on this page nobody has ever
+  actually re-counted**, unlike the checklist boxes, which have two commands.
+  Tests 308 → **311**, 20 test files → **21**.
+- **A new shape for the guard-gap collection: `RetentionPolicyTests` already
+  reads `privacy.tsx`.** This was never an unguarded artifact — it was a
+  **guarded file with an unguarded section**, because that test reads the file
+  for retention day-counts only. *"The file has a test"* answers neither factor
+  of list × surfaces.
+
+## Decided on 2026-08-21: the Zoom publication path is parked
+
+Put to Rishab with the deploy question; he delegated the call back, so it was
+made rather than left open. **The "Available in the EU" switch stays on and
+publication is not being pursued for this pilot.** Full reasoning in
+`zoom-submission-remaining.md`; the short form is that **publication cannot help
+the 31 Aug pilot under any branch**, for three independent reasons: Apple
+Developer enrollment sits upstream so nobody can install Anchor at all,
+published or not; review takes weeks and Education/K-12 draws the stricter
+queue; and per-teacher still has **no bot, no participant scopes and a 40-minute
+cap** *after* publication, which was the reason to want it.
+
+**So the switch was not flipped, even though flipping it is one click and would
+drop the requirement from eighteen fields to nine.** A setting changed on a live
+listing for a path nobody has chosen is a setting nobody remembers changing, and
+the evidence that it gates the nine is recorded and does not decay. **If
+publication is ever pursued, flipping it is step one and the count is the
+check** — eighteen should fall to nine, before any App Listing copy is written.
+
 - **Session note:** the Marketplace console had lapsed to signed-out and its
   Sign In button is a JS handler that did not respond to a synthetic click.
   `zoom.us/profile` loaded signed in, and re-visiting the console URL after that
