@@ -196,6 +196,13 @@ function Privacy() {
             token is held in memory only and never written to disk.
           </li>
           <li>
+            <strong>Your Zoom sign-in</strong> — the macOS Keychain, if you connect Zoom. Anchor
+            keeps the refresh token, the current access token and its expiry, the permissions Zoom
+            granted, and the account name shown in Settings. Unlike the Google token above, the
+            Zoom access token is stored rather than held in memory, so that reopening Anchor does
+            not send you back through Zoom's sign-in page mid-lesson.
+          </li>
+          <li>
             <strong>Settings and onboarding state</strong> — standard macOS preferences.
           </li>
           <li>
@@ -331,6 +338,16 @@ function Privacy() {
               myaccount.google.com/permissions
             </a>
             . Revoking at Google invalidates the stored refresh token immediately.
+          </li>
+          <li>
+            <strong>Zoom connection</strong> — disconnect in the app. Anchor asks Zoom to revoke
+            the grant and then deletes it from the Keychain, and it deletes its own copy even when
+            that request cannot reach Zoom, so Disconnect never leaves you still connected. You can
+            also remove Anchor yourself at{" "}
+            <a href="https://marketplace.zoom.us/user/installed" target="_blank" rel="noreferrer">
+              marketplace.zoom.us/user/installed
+            </a>
+            .
           </li>
           <li>
             <strong>Everything</strong> — deleting the app and its Application Support directory
