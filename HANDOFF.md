@@ -16,15 +16,23 @@ database (under the *Anchor* page), and the Ship Readiness artifact
 **The artifact is the one that silently rots** — it was a full day stale on
 19 Aug while the other two were current. Its ticks are localStorage keyed on
 `anchor-readiness-ticks-vN`; **bump N whenever you mark things done**, or a
-returning browser keeps showing the old state forever. Currently `v21`
-(46 of 71 ticked). It went v10 → v18 across 20 Aug, once per batch of authored
+returning browser keeps showing the old state forever. Currently `v22`
+(47 of 72 ticked), bumped on 21 Aug for the privacy-policy done-item. It went v10 → v18 across 20 Aug, once per batch of authored
 done-items; the findings-only edits on 19 **and** 20 Aug did not bump it,
 correctly — the rule is the authored *done-state*, and rewriting a finding
 changes none of it. **v17 also carried a text edit to an existing `li`**, which
 needs a bump for a different reason: ticks are hashed on `textContent`, so an
 edited item silently renders unticked under the old key.
 
-**Read the published artifact back after every publish.** The v17 publish
+**Read the published artifact back after every publish.** It earned its keep
+again on 21 Aug: the v22 publish returned success with the *standfirst* still
+reading *"only if you cut **three** things"* while the section heading directly
+below it had become *"Cut these **four** first"* — the publication card was
+added and one of the two numbers describing it was not. **Exactly the v17
+failure, in a new pair of places**, and caught by fetching the page rather than
+by the tool. The lesson is not "check the gates"; it is that **adding an item to
+a counted set means grepping for every place that states the count**, which on
+this page is never only one. The v17 publish
 returned success while the *Manual QA* gate still quoted "All 264 tests" — only
 the *Test suite* gate had been updated — and a sentence I had edited myself was
 left ungrammatical. Both were caught by fetching the page, neither by the tool's
