@@ -39,6 +39,40 @@ teacher mid-term is silently never offered the fix you shipped for them.
 
 ---
 
+## Run the preflight first
+
+```sh
+scripts/preflight-release.sh          # or pass the path to an exported .app
+```
+
+**Added 2026-08-21, and it exists because the first notarization attempt would
+have failed three times over.** Every check in it is something Apple rejects
+for and that is testable locally in seconds. Step 4 below says "budget for it
+failing the first time"; the point of the preflight is to have already had
+those failures, cheaply, before the upload.
+
+Run it now, before enrollment finishes. With no Developer ID certificate it
+fails at check 1 and tells you that is the only thing in the way, which is a
+useful answer rather than a broken script. **Two checks are expected to fail
+until enrollment completes** and both clear by themselves once you sign with a
+Developer ID rather than an Apple Development certificate:
+
+- no `Developer ID Application` certificate in the keychain
+- `get-task-allow` present in the entitlements
+
+**What it already caught and what is now fixed in the build** (see `82e5bcf`):
+the Copy ZoomSDK build phase was ad-hoc re-signing 22 Zoom binaries and
+stripping their hardened-runtime flag; 38 vendored frameworks carried stray
+`.bak` files that count as unsealed contents; and `aomhost.app` shipped a 58 MB
+copy of itself in its own bundle root. All three are invisible when you run the
+app and fatal at Apple's end. The app now passes
+`codesign --verify --deep --strict`.
+
+**One of those three is verified statically and not at runtime.** Removing the
+duplicate `aomhost.app` leaves Zoom's signature and runtime flag intact, so the
+signature never sealed it, but nothing proves the SDK does not launch the inner
+copy. **Confirm the bot still joins in QA Pass B.**
+
 ## The release itself
 
 Run from a clean tree on the release branch.
