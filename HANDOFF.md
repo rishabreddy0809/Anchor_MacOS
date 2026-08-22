@@ -63,8 +63,8 @@ grep -c '^- \[x\]' ship-checklist.md   # and '^- \[~\]', '^- \[ \]'
 python3 -c "import re,io;s=io.open('ship-checklist.md').read();print([len(re.findall(r'^- \['+c+r'\]',s,re.M)) for c in ('x','~',' ')])"
 ```
 
-Counts as of 2026-08-21 (after the outreach commit), re-counted with
-the commands above: `ship-checklist.md` **43 done / 12 partial / 18 open**
+Counts as of 2026-08-22, re-counted with
+the commands above: `ship-checklist.md` **47 done / 15 partial / 19 open**
 (top-level boxes only — sub-bullets carry no box). Notion gained eleven Done
 rows on 20 Aug and none on 21 Aug. **The open count went up rather than down**,
 because 21 Aug added one `[ ]` to §3 for the Zoom publication finding; that is
@@ -277,6 +277,7 @@ things nobody had asked about. Three habits did it:
 - **"Google verification is not needed" is confirmed in Google's own words, and *branding* verification is a different thing that has failed.** Read in the console 2026-08-21. Verification Center, verbatim: *"Verification is not required since your app is not requesting any sensitive or restricted scopes."* Data Access bears it out: **all five scopes sit under "Your non-sensitive scopes"**, and sensitive and restricted both read **"No rows to display."** The 100-user cap on the Audience page binds only on unapproved sensitive/restricted scopes, so it does not bind here.
   - **But branding verification was submitted at some point and rejected**, and the Verification Center says *"Your branding is not being shown to users."* **Do not read that as the consent screen being anonymous** — I checked the live screen rather than inferring it, and it reads *"Sign in with Google — Choose an account — to continue to **Anchor**"* with *"you can review Anchor's Privacy Policy and Terms of Service."* **Name and both legal links are shown.** What the failure costs is the **logo** and the verified-publisher treatment. It is not the Google twin of "General app 392".
   - Three rejection issues: the home page URL *"is not registered to you"* (needs the real domain, Search Console cannot verify a `vercel.app` subdomain); the home page *"does not explain the purpose of your app"*; and the configured name *"does not match the app name on your home page"* — where the evidence is that `<title>` and `og:site_name` both say **Anchor** while the **`<h1>` is "See what your students aren't saying." and never says it.** **The last two are homepage copy and therefore Rishab's**, by the same rule as the pilot form.
+- **A plant that does not compile is indistinguishable from a plant that does not fire, and this page's own advice made that trap worse.** Hit 2026-08-21 while canary-testing the log guard. Two plants reported firing nothing, which this project treats as *information* — and they were not information: both referenced properties that do not exist (`user` in a scope without one, and `.email` on `ClassroomStudent`, which stopped existing when the email scope was dropped on 17 Aug). **Compilation failed, no test ran, and a grep for a failing test counted zero** — identical to a guard that does not fire. **Check the build succeeded before believing a silent canary.** Re-run with compile-safe plants and both fired.
 - SourceKit reports phantom "cannot find type in scope" errors. Trust xcodebuild.
 
 ---
