@@ -188,8 +188,8 @@ function Privacy() {
             directory. It records engagement scores and Zoom signals.{" "}
             <strong>It never contains a line of speech.</strong> Anchor deletes each session's
             record <strong>120 days after the class ends</strong>, and removes its own leftover
-            copies of the file on the same schedule. You can change the window, or turn the
-            deletion off, in Settings → Data &amp; Privacy.
+            copies of the file on the same schedule. You can change the window, or turn the deletion
+            off, in Settings → Data &amp; Privacy.
           </li>
           <li>
             <strong>Your Google refresh token</strong> — the macOS Keychain. The short-lived access
@@ -198,9 +198,9 @@ function Privacy() {
           <li>
             <strong>Your Zoom sign-in</strong> — the macOS Keychain, if you connect Zoom. Anchor
             keeps the refresh token, the current access token and its expiry, the permissions Zoom
-            granted, and the account name shown in Settings. Unlike the Google token above, the
-            Zoom access token is stored rather than held in memory, so that reopening Anchor does
-            not send you back through Zoom's sign-in page mid-lesson.
+            granted, and the account name shown in Settings. Unlike the Google token above, the Zoom
+            access token is stored rather than held in memory, so that reopening Anchor does not
+            send you back through Zoom's sign-in page mid-lesson.
           </li>
           <li>
             <strong>Settings and onboarding state</strong> — standard macOS preferences.
@@ -326,8 +326,8 @@ function Privacy() {
             <strong>Live transcripts</strong> — discarded automatically when the meeting ends.
           </li>
           <li>
-            <strong>Session history</strong> — deleted automatically 120 days after each class
-            ends. You can shorten that to nothing, extend it to a school year, or switch automatic
+            <strong>Session history</strong> — deleted automatically 120 days after each class ends.
+            You can shorten that to nothing, extend it to a school year, or switch automatic
             deletion off entirely in Settings → Data &amp; Privacy. You can also delete any session
             or class immediately in the app, or delete the whole file yourself.
           </li>
@@ -340,10 +340,10 @@ function Privacy() {
             . Revoking at Google invalidates the stored refresh token immediately.
           </li>
           <li>
-            <strong>Zoom connection</strong> — disconnect in the app. Anchor asks Zoom to revoke
-            the grant and then deletes it from the Keychain, and it deletes its own copy even when
-            that request cannot reach Zoom, so Disconnect never leaves you still connected. You can
-            also remove Anchor yourself at{" "}
+            <strong>Zoom connection</strong> — disconnect in the app. Anchor asks Zoom to revoke the
+            grant and then deletes it from the Keychain, and it deletes its own copy even when that
+            request cannot reach Zoom, so Disconnect never leaves you still connected. You can also
+            remove Anchor yourself at{" "}
             <a href="https://marketplace.zoom.us/user/installed" target="_blank" rel="noreferrer">
               marketplace.zoom.us/user/installed
             </a>

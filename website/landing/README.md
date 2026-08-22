@@ -4,6 +4,7 @@ I want you to make a landing page, that is super, PROJECT: Anchor Landing Page -
 
 ABOUT ANCHOR:
 Anchor is a macOS app that helps teachers identify struggling students in real-time during Zoom classes. It uses:
+
 - Real-time behavioral signals (who's muted, speaking, camera status)
 - Google Classroom integration (assignment data, grades)
 - Core ML machine learning model (97% accuracy)
@@ -12,6 +13,7 @@ Anchor is a macOS app that helps teachers identify struggling students in real-t
 TARGET: Online teachers who teach via Zoom. Free pilots program.
 
 DESIGN AESTHETIC:
+
 - Apple-like (clean, minimal, lots of whitespace)
 - DJI-like (smooth animations, premium feel)
 - Dark hero section with light text, then white sections below
@@ -26,7 +28,7 @@ REQUIREMENTS:
    - Subheadline: "Anchor detects struggling students in real-time during Zoom classes."
    - CTA Button: "Join Pilot Program" (bright accent color - suggest blue or teal)
    - Below text: WebGL animated visualization of student engagement
-   
+
    WebGL Visualization:
    - Particle system showing ~100 particles
    - Red particles = struggling students (clustered, slow movement)
@@ -56,9 +58,9 @@ REQUIREMENTS:
    - Headline: "Real-time struggle detection"
    - Subtext: "Anchor monitors behavioral signals to identify at-risk students instantly"
    - 3 signal cards:
-     * "Speaking Time" [icon] "Who's engaging?"
-     * "Camera Status" [icon] "Who's present?"
-     * "Assignment Data" [icon] "Who's falling behind?"
+     - "Speaking Time" [icon] "Who's engaging?"
+     - "Camera Status" [icon] "Who's present?"
+     - "Assignment Data" [icon] "Who's falling behind?"
    - Large screenshot: Dashboard showing multiple students ranked by struggle score
    - Parallax scroll effect (image moves slower than text)
 
@@ -66,13 +68,13 @@ REQUIREMENTS:
    Background: Light gray (#F9F9F9)
    - Headline: "Teachers love it"
    - Testimonial card (animated on scroll):
-     * Quote: "I caught Sarah's struggle 2 weeks before her grades dropped."
-     * Author: "Ms. Johnson, Online School Teacher"
-     * Star rating (5 stars)
+     - Quote: "I caught Sarah's struggle 2 weeks before her grades dropped."
+     - Author: "Ms. Johnson, Online School Teacher"
+     - Star rating (5 stars)
    - Stats (counters animate on scroll):
-     * "87% of teachers identify at-risk students earlier"
-     * "2-week average early warning"
-     * "100% recommended by pilots"
+     - "87% of teachers identify at-risk students earlier"
+     - "2-week average early warning"
+     - "100% recommended by pilots"
 
 6. SECTION 4: HOW IT WORKS
    Background: White
@@ -86,13 +88,13 @@ REQUIREMENTS:
    Background: White
    - Headline: "Built for teachers"
    - 3 feature cards (grid layout, hover effects):
-     * Feature 1: "Real-time Detection"
+     - Feature 1: "Real-time Detection"
        Description: "See struggle indicators as class happens"
        Screenshot: Dashboard view
-     * Feature 2: "Classroom Integration"
+     - Feature 2: "Classroom Integration"
        Description: "Combine Zoom signals with assignment data"
        Screenshot: Settings/integration view
-     * Feature 3: "AI Recommendations"
+     - Feature 3: "AI Recommendations"
        Description: "Actionable next steps powered by AI"
        Screenshot: Student detail with recommendations
 
@@ -100,20 +102,20 @@ REQUIREMENTS:
    Background: Light gray
    - Headline: "Privacy first"
    - 3 trust cards:
-     * "No facial recognition" [Icon]
-     * "On-device ML processing" [Icon]
-     * "Your data stays yours" [Icon]
+     - "No facial recognition" [Icon]
+     - "On-device ML processing" [Icon]
+     - "Your data stays yours" [Icon]
    - Text: "Built with teacher privacy in mind. No surveillance. No data selling."
 
 9. SECTION 7: PRICING / PILOTS
    Background: White
    - Headline: "Currently accepting pilots"
-   - Card: 
-     * "Free pilot access"
-     * "Full feature set"
-     * "Direct teacher support"
-     * "Shape the product"
-     * [CTA Button: "Join Now"]
+   - Card:
+     - "Free pilot access"
+     - "Full feature set"
+     - "Direct teacher support"
+     - "Shape the product"
+     - [CTA Button: "Join Now"]
 
 10. SECTION 8: CTA
     Background: Dark (matching hero)
@@ -130,6 +132,7 @@ REQUIREMENTS:
     - Copyright
 
 ANIMATIONS:
+
 - All scroll-triggered (use Intersection Observer)
 - Fade-in effects (opacity 0 → 1)
 - Slide-in from sides (translateX)
@@ -139,6 +142,7 @@ ANIMATIONS:
 - Smooth scroll behavior (not instant jumps)
 
 COLORS:
+
 - Primary Background: White (#FFFFFF)
 - Dark sections: #1A1A1A or #0A0A0A
 - Accent color: Teal (#00D9FF) or Blue (#0066FF) - pick one
@@ -147,29 +151,34 @@ COLORS:
 - Borders: Light gray (#EEEEEE)
 
 TYPOGRAPHY:
+
 - Headlines: Bold, 48-64px, Inter or Poppins
 - Body: Regular, 16-18px, Inter or system font
 - Line height: 1.6
 - Letter spacing: Normal to slightly loose
 
 IMAGES/MEDIA:
+
 - Hero: WebGL particle animation (see section 1)
 - Screenshots: Real Anchor app screenshots (I'll provide or you describe)
 - Icons: Simple, minimal, SVG
 - Video: Optional 30-60 second loop of dashboard (muted)
 
 RESPONSIVE:
+
 - Desktop (1200px+): Full animations, side-by-side layouts
 - Tablet (768-1199px): Stack layouts, simplified animations
 - Mobile (under 768px): Full-width, minimal animations, touch-friendly buttons (44px+)
 
 PERFORMANCE:
+
 - Fast load time (Lighthouse 90+)
 - Optimize images (WebP)
 - Lazy load below-fold content
 - Smooth 60fps scrolling
 
 BUILD COMPLETELY:
+
 1. Hero with WebGL particle system
 2. All sections (8 total)
 3. Smooth scroll animations
@@ -181,6 +190,7 @@ BUILD COMPLETELY:
 9. Production ready
 
 DEPLOY TO:
+
 - GitHub Pages or Vercel (free)
 - Use custom domain if available
 
