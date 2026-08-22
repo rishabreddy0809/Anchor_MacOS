@@ -36,6 +36,31 @@ final class ReleaseHygieneTests: XCTestCase {
     /// Source files allowed to make those calls directly.
     private let exemptFiles = ["AnchorDiag.swift"]
 
+    /// Terms that mean the value being logged describes a person in the class.
+    ///
+    /// **Why `Logger` and `os_log` are deliberately absent from the list above,
+    /// which looked like a hole on 2026-08-21 and is not one.** Seven files
+    /// hold a `Logger`, six of them outside the exemption, including
+    /// `ZoomMeetingSDKBridge` — the very file this test was written for. They
+    /// write to the same unified log. The difference is redaction: **OSLog
+    /// renders dynamic strings and objects as `<private>` by default**, while
+    /// `print` writes whatever it is handed, verbatim. A student's name is a
+    /// `String`, so `Logger` hides it and `print` does not. That is the whole
+    /// reason one is banned and the other is the sanctioned route, and it was
+    /// nowhere written down until an audit went looking for the hole.
+    ///
+    /// **Numbers are the exception: OSLog leaves them public by default.** That
+    /// is right for the counts and result codes these files log, which say
+    /// nothing about a person.
+    ///
+    /// So the only way a name reaches a Release log through `Logger` is if
+    /// someone asks for it with `privacy: .public`. That is the escape hatch,
+    /// and `testNoStudentIdentityIsPublishedToTheLog` is what watches it.
+    private let studentIdentifyingTerms = [
+        "student", "email", "userName", "displayName",
+        "participant", "rosterKey", "matchKey", "attendee"
+    ]
+
     // MARK: - The rule
 
     func testNoSourceFileLogsToTheConsoleOutsideDebug() throws {
@@ -60,6 +85,68 @@ final class ReleaseHygieneTests: XCTestCase {
         )
     }
 
+    /// Nothing describing a person in the class may be forced past OSLog's
+    /// default redaction.
+    ///
+    /// Deliberately narrow. It does **not** flag every `privacy: .public`,
+    /// because there are thirty of them and all but two are result codes,
+    /// counts, HTTP paths, error descriptions and Anchor's own filenames —
+    /// exactly what a diagnostic is for. A guard that made someone justify
+    /// `\(http.statusCode, privacy: .public)` would teach them the list is
+    /// noise, and that is how the real one gets waved through. The same
+    /// mistake was made and corrected on 2026-08-21 in
+    /// `PrivacyDisclosureTests`, whose first scan matched every
+    /// `com.anchor.*` literal and dragged in the diagnostics subsystem.
+    ///
+    /// **The two that are neither a code nor a count are `course.name`**
+    /// (`ClassroomViewModel`, twice). A course name is school data rather than
+    /// a child's, so it does not trip this rule — but it is a real name in a
+    /// Release log and it is recorded in `ship-checklist.md` as Rishab's call
+    /// rather than silently allowed here.
+    func testNoStudentIdentityIsPublishedToTheLog() throws {
+        var offences: [String] = []
+
+        for url in try swiftSources() where !exemptFiles.contains(url.lastPathComponent) {
+            let source = try String(contentsOf: url, encoding: .utf8)
+            for (line, text) in source.components(separatedBy: .newlines).enumerated() {
+                for expression in publishedExpressions(in: text) {
+                    // An aggregate over people is not a person. `students.count`
+                    // is the number in the room and says nothing about any of
+                    // them, so it must not be flagged.
+                    //
+                    // The first version of this scanned the whole line instead
+                    // of the interpolated expression and failed on exactly that
+                    // — matching "student" inside "students.count" — which is
+                    // the over-broad-guard mistake this file's own comment
+                    // warns about two paragraphs up. Written down because
+                    // making it while warning against it is the point.
+                    let aggregates = [".count", ".isEmpty", ".indices", ".first", ".last"]
+                    guard !aggregates.contains(where: { expression.hasSuffix($0) }) else { continue }
+
+                    let lowered = expression.lowercased()
+                    guard studentIdentifyingTerms.contains(where: { lowered.contains($0.lowercased()) })
+                    else { continue }
+
+                    offences.append(
+                        "\(url.lastPathComponent):\(line + 1): \(expression)"
+                    )
+                }
+            }
+        }
+
+        XCTAssertTrue(
+            offences.isEmpty,
+            """
+            These force a value describing someone in the class past OSLog's \
+            default redaction, so it lands verbatim in the unified log where \
+            Console.app can read it. Drop the `privacy: .public` and let OSLog \
+            redact it, or log a count instead of the person:
+
+            \(offences.joined(separator: "\n"))
+            """
+        )
+    }
+
     /// The scan is only worth anything if it can actually see the source. A
     /// wrong path would make the test above pass silently forever.
     func testTheScanFoundTheSourceTree() throws {
@@ -72,6 +159,42 @@ final class ReleaseHygieneTests: XCTestCase {
     }
 
     // MARK: - Scanning
+
+    /// The expressions a line forces past OSLog's redaction.
+    ///
+    /// Returns what is inside `\(` … `, privacy: .public)`, so the rule reads
+    /// the value being published rather than the sentence around it. A line
+    /// like `"Synced \(course.name, privacy: .public): \(n, privacy: .public)"`
+    /// yields two expressions and each is judged on its own.
+    private func publishedExpressions(in line: String) -> [String] {
+        guard line.contains("privacy: .public") else { return [] }
+        var found: [String] = []
+        var rest = Substring(line)
+
+        while let marker = rest.range(of: ", privacy: .public") {
+            let before = rest[rest.startIndex..<marker.lowerBound]
+            // Walk back to the `\(` that opened this interpolation, counting
+            // nested parens so a call like `f(a, b)` inside it stays intact.
+            var depth = 0
+            var start: String.Index?
+            var i = before.endIndex
+            while i > before.startIndex {
+                i = before.index(before: i)
+                let c = before[i]
+                if c == ")" { depth += 1 }
+                else if c == "(" {
+                    if depth == 0 {
+                        if i > before.startIndex, before[before.index(before: i)] == "\\" { start = before.index(after: i) }
+                        break
+                    }
+                    depth -= 1
+                }
+            }
+            if let start { found.append(String(before[start...]).trimmingCharacters(in: .whitespaces)) }
+            rest = rest[marker.upperBound...]
+        }
+        return found
+    }
 
     /// Every Swift file in the app target, located relative to this test file
     /// so the scan follows the repository rather than a build directory.
