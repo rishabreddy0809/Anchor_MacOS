@@ -145,6 +145,10 @@ is rewritten each time.
 >    server-side signing endpoint, which is the standard Meeting SDK
 >    architecture and is not built.
 >
+>    **BUILT 2026-08-25.** `POST /api/zoom/sdk-token` on the landing site
+>    (`website/landing/src/lib/zoom-sdk-token.ts`, routed from `src/server.ts`).
+>    The secret moves to Vercel's environment and never ships. See §2d below.
+>
 > **Sole proprietors.** Zoom accepts *"a copy of a government-issued
 > identification document, such as your passport"* in place of business
 > registration. Note that publishing means entering the Marketplace Developer
@@ -463,6 +467,55 @@ debug action. A rotation that isn't written to the Keychain fails with
 `invalid_client` against the stale stored copy.
 
 ---
+
+### 2d. The Meeting SDK signing endpoint (per-teacher)
+
+`POST /api/zoom/sdk-token` on the landing site. Added 2026-08-25 to make the
+bot reachable for installs no admin provisioned — that is, individual teachers.
+
+**Why it had to exist.** The bot is the only live-signal source a teacher
+outside a Business/Education account can have: the participant REST scopes are
+gated on the *installing user's* plan, and a lone teacher has neither the plan
+nor the admin rights. The bot needs a Meeting SDK JWT, which needs the SDK
+secret — and shipping that secret is forbidden, correctly, because it is an
+HS256 signing key rather than an identifier.
+
+**What it does.** Verifies the caller's Zoom access token against
+`GET /v2/users/me`, then signs the same claim set `MeetingSDKTokenProvider`
+signs locally: `appKey`, `iat`, `exp`, `tokenExp`, and deliberately no `mn`,
+`role` or `sdkKey`. It receives no meeting number, no roster, no student data —
+the native SDK token authenticates the *app*, so there is nothing else to send.
+
+**Authorisation.** The teacher's Zoom token, not an Anchor account. Anyone
+entitled to run the bot has necessarily authorised Anchor's Zoom app, so a live
+Zoom grant proves exactly the right thing, and it keeps the bot independent of
+account setup. Layering an Anchor account check on top later is additive.
+
+**Local signing still wins.** A school that provisioned its own Meeting SDK app
+keeps authenticating as *their* app; `MeetingSDKTokenProvider.resolvedToken()`
+only falls through to the endpoint when there is no local secret. Pinned by
+`MeetingSDKRemoteSignerTests.testLocalSecretWinsOverRemote`, which also asserts
+the network is never touched in that case — a silent substitution would still
+work, which is what would make it dangerous.
+
+**Two environment variables on Vercel, production:**
+
+```
+ZOOM_MEETING_SDK_KEY      # the Meeting SDK app's Client ID
+ZOOM_MEETING_SDK_SECRET   # its Client Secret
+```
+
+**It fails closed.** With either missing the endpoint returns 503 and logs
+once; it never mints a token. A deployment that forgot them must not look like
+a working one.
+
+`ANCHOR_SDK_TOKEN_URL` overrides the endpoint in the app, so a preview
+deployment can be tested without a rebuild.
+
+**Still requires Marketplace publication to be useful.** The endpoint solves
+signing; it does nothing about an outside teacher being refused at
+`/oauth/authorize` while the app is Draft/internal-only. Both are needed, and
+they are independent.
 
 ## 4. What Zoom actually exposes
 

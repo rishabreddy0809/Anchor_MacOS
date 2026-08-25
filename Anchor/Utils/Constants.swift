@@ -15,6 +15,25 @@ nonisolated enum ZoomConfig {
     static let tokenURL = URL(string: "https://zoom.us/oauth/token")!
     static let apiBaseURL = URL(string: "https://api.zoom.us/v2")!
 
+    /// Anchor's own Meeting SDK signing endpoint.
+    ///
+    /// Only used by installs with no local SDK secret — see
+    /// `MeetingSDKRemoteSigner`. Not a credential and not secret: it is a URL
+    /// that refuses everyone who cannot present a live Zoom grant.
+    ///
+    /// `ANCHOR_SDK_TOKEN_URL` overrides it, so a preview deployment can be
+    /// tested without a rebuild. Read once, at first use.
+    static let meetingSDKTokenURL: URL = {
+        let fallback = URL(string: "https://anchorteach.vercel.app/api/zoom/sdk-token")!
+        guard let raw = ProcessInfo.processInfo.environment["ANCHOR_SDK_TOKEN_URL"]?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+              !raw.isEmpty,
+              let override = URL(string: raw) else {
+            return fallback
+        }
+        return override
+    }()
+
     // MARK: - Polling
 
     /// The dashboard's default refresh cadence.

@@ -282,10 +282,24 @@ final class ZoomViewModel: ObservableObject {
         meetingNumber: String,
         passcode: String?
     ) async -> Result<BotSession, ZoomError> {
-        guard let sdk = MeetingSDKCredentialStore.resolved() else {
-            let error = ZoomError.missingSDKCredentials
-            botStatus = error.errorDescription
-            return .failure(error)
+        // A locally provisioned secret if this is a per-school deployment;
+        // otherwise Anchor's signing endpoint, which is what makes the bot
+        // reachable at all for an individual teacher. No longer a hard failure:
+        // before this, an install with no secret could not run the bot, and the
+        // bot is the only live-signal source a teacher outside a Business or
+        // Education account can ever have.
+        let tokenProvider: MeetingSDKTokenProvider
+        if let sdk = MeetingSDKCredentialStore.resolved() {
+            tokenProvider = MeetingSDKTokenProvider(sdkKey: sdk.key, sdkSecret: sdk.secret)
+        } else {
+            tokenProvider = MeetingSDKTokenProvider(
+                sdkKey: "",
+                sdkSecret: "",
+                remote: MeetingSDKRemoteSigner(
+                    endpoint: ZoomConfig.meetingSDKTokenURL,
+                    zoomAccessToken: { try await ZoomUserTokenProvider.shared.accessToken() }
+                )
+            )
         }
 
         // Some Zoom identity has to exist, or there is no ZAK and no way to
@@ -298,7 +312,7 @@ final class ZoomViewModel: ObservableObject {
         }
 
         bot = ZoomMeetingSDKBot(
-            tokenProvider: MeetingSDKTokenProvider(sdkKey: sdk.key, sdkSecret: sdk.secret),
+            tokenProvider: tokenProvider,
             accountService: Self.makeLiveService()
         )
         await joinBot(meetingNumber: meetingNumber, passcode: passcode)

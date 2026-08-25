@@ -98,10 +98,74 @@ protocol MeetingBotProviding: Sendable {
 /// HS256 token signed locally with the SDK Key/Secret. These are a *different*
 /// credential pair from the Server-to-Server OAuth Client ID/Secret: create a
 /// "Meeting SDK" app in the Marketplace to get them.
+/// Fetches a Meeting SDK token from Anchor's signing endpoint.
+///
+/// Used when this install has no local SDK secret — which is every install an
+/// admin did not provision by hand, i.e. every individual teacher.
+///
+/// The secret stays on the server, and `ship-checklist.md:136` is why: the SDK
+/// secret is an HS256 *signing key*, so anyone who extracts it from a shipped
+/// binary can mint Meeting SDK tokens as Anchor. That ruled out shipping it,
+/// which ruled out the bot for per-teacher installs, which — since the
+/// participant REST scopes are gated on the teacher's own account being
+/// Business or Education — meant no live signal at all for them. A signing
+/// endpoint is the third option that framing was missing, and the one Zoom
+/// documents as standard.
+///
+/// Authorised with the teacher's own Zoom access token: anyone entitled to run
+/// the bot has necessarily authorised Anchor's Zoom app, so a live Zoom grant
+/// is exactly the right thing to prove. The server verifies it with Zoom before
+/// signing anything.
+nonisolated struct MeetingSDKRemoteSigner: Sendable {
+
+    var endpoint: URL
+    /// Supplies a current Zoom access token, refreshing it if needed.
+    var zoomAccessToken: @Sendable () async throws -> String
+
+    private struct TokenResponse: Decodable { var token: String }
+    private struct FailureBody: Decodable { var error: String? }
+
+    func token(session: URLSession = .shared) async throws -> String {
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(try await zoomAccessToken())", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            throw ZoomError.unsupported(
+                "Anchor could not reach its meeting service. Check your connection and try again."
+            )
+        }
+
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard (200..<300).contains(status) else {
+            // The server's message is already written for a teacher: 503 means
+            // this build is unconfigured, 401 means reconnect Zoom. Passing it
+            // through beats inventing a second vocabulary for the same states.
+            let detail = (try? JSONDecoder().decode(FailureBody.self, from: data))?.error
+            throw ZoomError.unsupported(detail ?? "Anchor's meeting service returned an error.")
+        }
+
+        guard let decoded = try? JSONDecoder().decode(TokenResponse.self, from: data),
+              !decoded.token.isEmpty else {
+            throw ZoomError.unsupported("Anchor's meeting service returned no token.")
+        }
+        return decoded.token
+    }
+}
+
 nonisolated struct MeetingSDKTokenProvider: Sendable {
 
     var sdkKey: String
     var sdkSecret: String
+
+    /// Set when there is no local secret to sign with. Nil means local-only,
+    /// which is the per-school case where an admin provisioned the secret.
+    var remote: MeetingSDKRemoteSigner?
 
     /// Signs the SDK authentication token. Zoom requires `exp` between 30
     /// minutes and 48 hours out, and `tokenExp` >= `exp`.
@@ -141,6 +205,26 @@ nonisolated struct MeetingSDKTokenProvider: Sendable {
         )
 
         return "\(signingInput).\(Self.base64URLEncode(Data(signature)))"
+    }
+
+    /// The token to actually authenticate with: signed here when a local secret
+    /// exists, fetched from the signing endpoint otherwise.
+    ///
+    /// Local wins deliberately. A school that provisioned its own Meeting SDK
+    /// app must keep using it — falling through to Anchor's endpoint would
+    /// quietly authenticate their bot as Anchor's app instead of theirs, which
+    /// is the same class of substitution the school-id canary caught once
+    /// already.
+    func resolvedToken(
+        lifetime: TimeInterval = 2 * 60 * 60,
+        issuedAt: Date = Date(),
+        session: URLSession = .shared
+    ) async throws -> String {
+        if !sdkKey.isEmpty, !sdkSecret.isEmpty {
+            return try token(lifetime: lifetime, issuedAt: issuedAt)
+        }
+        guard let remote else { throw ZoomError.missingSDKCredentials }
+        return try await remote.token(session: session)
     }
 
     private static func base64URLEncodedJSON(_ object: [String: Any]) throws -> String {
@@ -251,7 +335,7 @@ actor ZoomMeetingSDKBot: MeetingBotProviding {
         //    independent HMAC implementation). It authenticates the app, not
         //    this meeting: the meeting number travels separately, in
         //    ZoomSDKJoinMeetingElements.
-        let sdkToken = try tokenProvider.token()
+        let sdkToken = try await tokenProvider.resolvedToken()
 
         // 3. Mint a ZAK so the SDK joins as the bot's Zoom user rather than an
         //    anonymous guest. Non-fatal: a guest join is still a valid outcome

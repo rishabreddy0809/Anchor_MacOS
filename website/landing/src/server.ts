@@ -2,6 +2,22 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { handleSdkTokenRequest } from "./lib/zoom-sdk-token";
+
+/**
+ * Endpoints answered here rather than by the router.
+ *
+ * TanStack Start at the version pinned here exposes `createServerFn` — an RPC
+ * transport for the site's own client — and no file-based server-route API.
+ * The Anchor macOS app is not that client: it needs a plain HTTP endpoint it
+ * can POST to with an `Authorization` header. This file is already the fetch
+ * entry point for every request, which makes it the one place such a route can
+ * live without fighting the framework, and it inherits the security headers
+ * below for free.
+ */
+const API_ROUTES: Record<string, (request: Request) => Promise<Response>> = {
+  "/api/zoom/sdk-token": handleSdkTokenRequest,
+};
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -105,6 +121,14 @@ function withSecurityHeaders(response: Response): Response {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      // Checked before the SSR handler: the router would answer an unknown
+      // path with the site's 404 page, so an API route reaching it at all
+      // would surface as HTML where the app expects JSON.
+      const apiRoute = API_ROUTES[new URL(request.url).pathname];
+      if (apiRoute) {
+        return withSecurityHeaders(await apiRoute(request));
+      }
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return withSecurityHeaders(await normalizeCatastrophicSsrResponse(response));
