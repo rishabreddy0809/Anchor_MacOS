@@ -141,12 +141,32 @@ nonisolated enum OAuthClientDefaults {
     /// That is the manual credential entry ship-checklist §4 exists to remove.
     static let googleClientID = "150467027663-9e666lfgaq69bif315c05avvvti1gblk.apps.googleusercontent.com"
 
-    /// Left empty in source, like every other secret. Google issues one for a
-    /// Desktop client and it is not a real secret — the flow's proof is PKCE,
-    /// not this — but it still does not belong in a public repository.
-    /// Provision through the environment; it lives in the Keychain from then
-    /// on. Settings → Advanced also accepts it, but only in a DEBUG build.
-    static let googleClientSecret = ""
+    /// Google's client secret for the Desktop client above.
+    ///
+    /// **Not optional, and this was measured rather than assumed.** Probed
+    /// against Google's token endpoint on 2026-08-24 with a valid client id, a
+    /// PKCE verifier and no secret:
+    ///
+    ///     {"error":"invalid_request","error_description":"client_secret is missing."}
+    ///
+    /// So a Desktop-type client cannot complete the exchange on PKCE alone,
+    /// however public the browser flow looks. Before this was provisioned, every
+    /// teacher consented in Google's UI and *then* failed — after the consent
+    /// screen, which is the worst place to meet an error. `ZoomOAuthConfig`
+    /// solved the same problem differently, with a genuine public client id;
+    /// Google offers no such thing for this client type.
+    ///
+    /// Read from the app bundle, not written here, because this repository is
+    /// public: see `Config/Secrets.example.xcconfig`. Empty means "not
+    /// configured" and the Classroom connect button says so *before* opening a
+    /// browser.
+    ///
+    /// A Keychain override still wins over this, as it does for every value in
+    /// this file — that is what a school provisioning its own client uses.
+    static var googleClientSecret: String {
+        let fromBundle = Bundle.main.object(forInfoDictionaryKey: "ANGoogleOAuthClientSecret") as? String
+        return fromBundle ?? ""
+    }
 
     // MARK: - Helpers
 

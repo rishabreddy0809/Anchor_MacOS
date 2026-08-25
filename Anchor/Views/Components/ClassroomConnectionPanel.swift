@@ -62,18 +62,33 @@ struct ClassroomConnectionPanel: View {
 
             // Credential entry is Debug-only. §4 of the ship checklist exists to
             // get this out of a teacher's Settings entirely: both client IDs
-            // ship in OAuthClientDefaults, and neither integration needs a
-            // secret to sign a teacher in — Zoom runs as a public client, and
-            // Google documents client_secret as *optional* for installed apps,
-            // with PKCE standing in for it. So a shipped build has nothing to
-            // ask for, and a field asking anyway invites a teacher to believe
+            // ship in OAuthClientDefaults, so a shipped build has nothing to ask
+            // a teacher for, and a field asking anyway invites them to believe
             // something is missing.
+            //
+            // CORRECTED 2026-08-24. This comment used to claim "neither
+            // integration needs a secret — Zoom runs as a public client, and
+            // Google documents client_secret as *optional* for installed apps,
+            // with PKCE standing in for it". Half right, and the wrong half was
+            // load-bearing. Both halves were probed directly:
+            //
+            //   Zoom, public client, no secret  -> invalid_grant  (client OK)
+            //   Google, Desktop client, no secret
+            //       -> {"error":"invalid_request",
+            //           "error_description":"client_secret is missing."}
+            //
+            // Google requires it. PKCE does not stand in for it. The secret now
+            // arrives at build time from Config/Secrets.xcconfig, and the
+            // Connect gates read `canCompleteSignIn` so an unprovisioned build
+            // refuses before opening a browser rather than after consent.
+            //
+            // Note also that the ANCHOR_* environment variables mentioned below
+            // are all Zoom — there has never been one for Google, which is why
+            // a Release build had no route to receive this secret at all.
             //
             // Deliberately #if DEBUG rather than deleted. It is still the
             // fastest way to point a development build at a different
-            // registration, and a managed deployment provisions through the
-            // ANCHOR_* environment variables on first launch (see AppDelegate),
-            // which is a path this never touched.
+            // registration.
 #if DEBUG
             advancedDisclosure
 #endif
@@ -220,10 +235,13 @@ struct ClassroomConnectionPanel: View {
 
                 Text("Google Cloud console → APIs & Services → Credentials → "
                      + "Create OAuth client ID → Desktop app. Enable the Google "
-                     + "Classroom API on the same project. The secret is optional: "
-                     + "Google lists client_secret as optional for installed apps "
-                     + "and takes the PKCE code_verifier instead, so leaving it "
-                     + "empty is a supported configuration rather than a gap. "
+                     + "Classroom API on the same project. The secret is REQUIRED: "
+                     + "probed 2026-08-24, Google's token endpoint answers "
+                     + "\"client_secret is missing.\" for a Desktop client even with "
+                     + "a valid PKCE verifier, so an empty secret is a gap rather "
+                     + "than a supported configuration — sign-in fails after the "
+                     + "teacher has already consented. Shipped builds get it from "
+                     + "Config/Secrets.xcconfig at build time. "
                      + "Google refuses custom URL schemes for this client type — "
                      + "the redirect is a loopback port Anchor opens for the sign-in.")
                     .font(.system(size: 9.5))
@@ -269,7 +287,7 @@ struct ClassroomConnectionPanel: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
-                .disabled(!credentials.hasClientID || isConnecting)
+                .disabled(!credentials.canCompleteSignIn || isConnecting)
             }
 
             // Only for a sync the teacher pressed the button for. The scheduled

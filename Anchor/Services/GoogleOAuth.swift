@@ -184,6 +184,20 @@ final class GoogleCredentialsStore: ObservableObject {
     }
 
     var hasClientID: Bool { clientID != nil }
+
+    /// True when a sign-in can actually be *completed*, not merely started.
+    ///
+    /// `hasClientID` is enough to build an authorization URL and open a
+    /// browser. It is not enough to redeem the code that comes back: Google
+    /// requires `client_secret` for a Desktop client, proven by probe on
+    /// 2026-08-24 (see `OAuthClientDefaults.googleClientSecret`). Gating the
+    /// Connect button on the weaker of the two conditions is what produced the
+    /// worst failure shape this app had — consent granted in the browser, then
+    /// an error, with the teacher having already handed over access.
+    ///
+    /// So every gate that decides whether to *offer* Connect reads this, and
+    /// `hasClientID` is left to the places that only describe configuration.
+    var canCompleteSignIn: Bool { clientID != nil && clientSecret != nil }
     var hasClientSecret: Bool { clientSecret != nil }
     /// True when Connect works with nothing typed in.
     var isUsingBundledClient: Bool { clientIDOverride == nil && hasClientID }

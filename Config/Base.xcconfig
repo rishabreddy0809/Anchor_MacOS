@@ -1,0 +1,23 @@
+//
+//  Base.xcconfig
+//  Anchor
+//
+//  Build settings that must not live in the (public) project file.
+//
+//  This file IS committed. It declares safe defaults and then optionally pulls
+//  in Secrets.xcconfig, which is not committed.
+//
+//  `#include?` — note the question mark — is Xcode's *optional* include: if
+//  Secrets.xcconfig is absent it is silently skipped. A plain `#include` would
+//  fail the build on any fresh clone with "unable to open base configuration
+//  reference file", which reads like a broken project rather than a missing
+//  credential. Anyone can clone and build; only a build meant for real teachers
+//  needs the secret.
+//
+
+// Default: empty. An empty value is "not configured" rather than a credential,
+// exactly as OAuthClientDefaults.value() treats it, and the app degrades to
+// saying setup is unfinished instead of failing after a teacher consents.
+GOOGLE_OAUTH_CLIENT_SECRET =
+
+#include? "Secrets.xcconfig"

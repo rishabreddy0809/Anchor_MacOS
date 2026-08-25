@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		FB0000000000000000000003 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = FB0000000000000000000002 /* FirebaseAuth */; };
 		052817FDF4E84AED9F3C4630 /* libcares.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 03350F52BD904CD3A282594B /* libcares.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		09CCCAACCE7B49E58838D643 /* zUnifyWebViewApp.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 0A87DBD0D1534F7ABD44E088 /* zUnifyWebViewApp.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		101E60C29D4843BCA53DDF14 /* util.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = E3E2716FF95F41B9ADF40CED /* util.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -147,6 +148,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		FB0000000000000000000010 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Base.xcconfig; path = Config/Base.xcconfig; sourceTree = "<group>"; };
 		00BB67165A2A420FA2EDD822 /* curl64.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = curl64.framework; sourceTree = "<group>"; };
 		03350F52BD904CD3A282594B /* libcares.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libcares.dylib; sourceTree = "<group>"; };
 		0A87DBD0D1534F7ABD44E088 /* zUnifyWebViewApp.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = zUnifyWebViewApp.framework; sourceTree = "<group>"; };
@@ -214,6 +216,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FB0000000000000000000003 /* FirebaseAuth in Frameworks */,
 				DEB8C2D2171243B49F3BDCFE /* ZoomSDK.framework in Frameworks */,
 				59B75603EB4C4950B3D522CD /* ZoomSettingEx.framework in Frameworks */,
 				A537415209DA4C7383066D3E /* zVideoUIEx.framework in Frameworks */,
@@ -367,6 +370,7 @@
 			);
 			name = Anchor;
 			packageProductDependencies = (
+				FB0000000000000000000002 /* FirebaseAuth */,
 			);
 			productName = Anchor;
 			productReference = AB1DB2BB301D13CF00900A4E /* Anchor.app */;
@@ -397,6 +401,9 @@
 			mainGroup = AB1DB2B2301D13CF00900A4E;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
+			packageReferences = (
+				FB0000000000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			productRefGroup = AB1DB2BC301D13CF00900A4E /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -633,6 +640,7 @@
 		};
 		AB1DB2C7301D13D000900A4E /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = FB0000000000000000000010 /* Base.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -678,6 +686,7 @@
 		};
 		AB1DB2C8301D13D000900A4E /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = FB0000000000000000000010 /* Base.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -752,6 +761,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		FB0000000000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		FB0000000000000000000002 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FB0000000000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = AB1DB2B3301D13CF00900A4E /* Project object */;
 }

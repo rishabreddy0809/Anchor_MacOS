@@ -209,6 +209,10 @@ final class ClassroomViewModel: ObservableObject {
     var isConnected: Bool { credentials.isConnected }
     var hasClientID: Bool { credentials.hasClientID }
 
+    /// See `GoogleCredentialsStore.canCompleteSignIn` — this is what a Connect
+    /// button should gate on, not `hasClientID`.
+    var canCompleteSignIn: Bool { credentials.canCompleteSignIn }
+
     // MARK: - Monitored courses
 
     /// Monitored courses in the order Google listed them, so the UI never

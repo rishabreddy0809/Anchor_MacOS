@@ -24,6 +24,24 @@
 	  new build once before testing a redirect, or macOS will still route
 	  anchor:// to the previous copy.
 	-->
+	<!--
+	  The Google OAuth client secret, substituted at build time from
+	  GOOGLE_OAUTH_CLIENT_SECRET (Config/Base.xcconfig, optionally overridden by
+	  the gitignored Config/Secrets.xcconfig).
+
+	  It is here rather than in OAuthClientDefaults.swift because this
+	  repository is public and a committed secret stays recoverable from every
+	  clone. Substituted into the built app, it is exactly as reachable as a
+	  string constant would have been — which is fine: Google treats an
+	  installed-app secret as non-secret, and PKCE is what actually proves the
+	  request is Anchor's.
+
+	  Empty when unset, which OAuthClientDefaults.value() reads as "not
+	  configured" rather than as a credential.
+	-->
+	<key>ANGoogleOAuthClientSecret</key>
+	<string>$(GOOGLE_OAUTH_CLIENT_SECRET)</string>
+
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

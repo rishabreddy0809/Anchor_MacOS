@@ -9,6 +9,9 @@ BotCredentials.swift
 BotCredentials.local.swift
 *.credentials.json
 *.secrets.json
+# The Google OAuth client secret, injected at build time. The .example twin IS
+# committed as the template; this one never is. See Config/Secrets.example.xcconfig.
+Config/Secrets.xcconfig
 .env
 .env.local
 .env.*.local
@@ -41,6 +44,13 @@ DerivedData/
 .build/
 .swiftpm/
 Package.resolved
+# ...except the app's own resolved versions. Anchor is an application, not a
+# library: the exact dependency versions are part of what gets notarized and
+# shipped, so a fresh clone must resolve to the same Firebase build rather than
+# to whatever 11.x is newest that day. The blanket ignore above came from a
+# stock Swift template and was a no-op until 2026-08-24, when the project took
+# its first package.
+!Anchor.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
 
 # --- macOS ---
 .DS_Store
