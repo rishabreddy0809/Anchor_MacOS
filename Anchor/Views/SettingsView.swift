@@ -26,6 +26,7 @@ struct SettingsView: View {
     @ObservedObject private var googleCredentials = GoogleCredentialsStore.shared
     @ObservedObject private var classroom = ClassroomViewModel.shared
     @ObservedObject private var accounts = AccountStore.shared
+    @ObservedObject private var calendarService = CalendarService.shared
 
     /// Optional because a macOS sidebar `List` selection binding is —
     /// mirrors LiveSessionView's own `SidebarSelection?`. Nil is treated as
@@ -472,6 +473,8 @@ struct SettingsView: View {
                 ClassroomConnectionPanel()
             }
 
+            calendarSection
+
             if let classroomConnectError {
                 errorLine(classroomConnectError)
             }
@@ -528,6 +531,84 @@ struct SettingsView: View {
 
     private func disconnectClassroom() {
         classroom.disconnect()
+    }
+
+    /// Calendar, beside Zoom and Classroom because it is the same kind of
+    /// thing: an account the teacher connects and can disconnect.
+    ///
+    /// Read through EventKit rather than the Google Calendar API. On a Mac
+    /// signed into Google this usually returns the same events, and it avoids a
+    /// *sensitive* Google scope that would re-impose verification and force
+    /// every teacher to re-consent to Classroom. See CalendarService.
+    private var calendarSection: some View {
+        settingsCard(
+            title: "Calendar",
+            subtitle: "Shows what you're teaching next on the dashboard. Read-only, and nothing leaves this Mac."
+        ) {
+            VStack(alignment: .leading, spacing: 10) {
+                switch calendarService.access {
+                case .notDetermined:
+                    Button("Connect calendar") {
+                        Task { await calendarService.requestAccess() }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+
+                case .denied:
+                    // Anchor cannot re-prompt once macOS has recorded a refusal,
+                    // so "try again" would be a button that does nothing.
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Calendar access is turned off for Anchor.")
+                            .font(.system(size: 12, weight: .medium))
+                        Text("System Settings → Privacy & Security → Calendars, then reopen Anchor.")
+                            .font(.system(size: 10.5))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                case .granted:
+                    if calendarService.availableCalendars.isEmpty {
+                        Text("No calendars found on this Mac.")
+                            .font(.system(size: 11.5))
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("Which calendars should Anchor show?")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+
+                        // Nothing is selected by default. A teaching dashboard
+                        // that silently lists someone's private appointments is
+                        // worse than one that lists nothing.
+                        ForEach(calendarService.availableCalendars, id: \.id) { entry in
+                            Toggle(isOn: calendarBinding(for: entry.id)) {
+                                Text(entry.title)
+                                    .font(.system(size: 12))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .toggleStyle(.switch)
+                            .controlSize(.mini)
+                        }
+                    }
+                }
+            }
+        }
+        .task {
+            // Picks up a grant made in System Settings while Anchor was open.
+            if calendarService.access == .granted { await calendarService.refresh() }
+        }
+    }
+
+    private func calendarBinding(for calendarID: String) -> Binding<Bool> {
+        Binding(
+            get: { calendarService.selectedCalendarIDs.contains(calendarID) },
+            set: { isOn in
+                if isOn {
+                    calendarService.selectedCalendarIDs.insert(calendarID)
+                } else {
+                    calendarService.selectedCalendarIDs.remove(calendarID)
+                }
+            }
+        )
     }
 
     // MARK: - Notifications

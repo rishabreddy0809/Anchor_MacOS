@@ -660,6 +660,8 @@
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/Info.plist;
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Anchor shows the classes on your calendar so your dashboard knows what you are teaching next. It only reads the calendars you pick, nothing is uploaded, and your events never leave this Mac.";
+				INFOPLIST_KEY_NSCalendarsUsageDescription = "Anchor shows the classes on your calendar so your dashboard knows what you are teaching next. It only reads the calendars you pick, nothing is uploaded, and your events never leave this Mac.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Anchor's meeting bot uses the Zoom Meeting SDK to join classes; camera access is required by the SDK even though the bot's own video stays off.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Anchor's meeting bot uses the Zoom Meeting SDK to join classes; microphone access is required by the SDK even though the bot's own audio stays off.";
@@ -706,6 +708,8 @@
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/Info.plist;
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Anchor shows the classes on your calendar so your dashboard knows what you are teaching next. It only reads the calendars you pick, nothing is uploaded, and your events never leave this Mac.";
+				INFOPLIST_KEY_NSCalendarsUsageDescription = "Anchor shows the classes on your calendar so your dashboard knows what you are teaching next. It only reads the calendars you pick, nothing is uploaded, and your events never leave this Mac.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Anchor's meeting bot uses the Zoom Meeting SDK to join classes; camera access is required by the SDK even though the bot's own video stays off.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Anchor's meeting bot uses the Zoom Meeting SDK to join classes; microphone access is required by the SDK even though the bot's own audio stays off.";

@@ -20,6 +20,11 @@ struct DashboardView: View {
             ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 12) {
                     meetingCard(meeting)
+                    // Only once it has something to say. Mid-class the roster is
+                    // what matters, and an unconfigured prompt here would be
+                    // asking a teacher to go and set something up during a
+                    // lesson — hence no `onConnect`.
+                    ScheduleCard()
                     riskSummary
                     // Above the roster on purpose: this is the part a teacher
                     // can act on without reading anything else, and the ranked
@@ -35,7 +40,21 @@ struct DashboardView: View {
             }
             .scrollBounceBehavior(.basedOnSize)
         } else {
-            EmptyStateView(isCompact: true) { router.push(.settings) }
+            // The dashboard's weakest moment, and most of a teaching day:
+            // nothing is running. The schedule is the one thing worth showing
+            // between classes, so it goes above the empty state rather than
+            // instead of it — the empty state still explains why there is no
+            // roster.
+            ScrollView(.vertical) {
+                VStack(alignment: .leading, spacing: 12) {
+                    ScheduleCard(onConnect: { router.push(.settings) })
+                    EmptyStateView(isCompact: true) { router.push(.settings) }
+                }
+                .padding(.horizontal, Theme.contentPadding)
+                .padding(.top, 12)
+                .padding(.bottom, 14)
+            }
+            .scrollBounceBehavior(.basedOnSize)
         }
     }
 
