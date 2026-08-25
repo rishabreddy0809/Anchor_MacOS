@@ -23,6 +23,7 @@ export const Route = createFileRoute("/privacy")({
 const SECTIONS: LegalSection[] = [
   { id: "summary", heading: "The short version" },
   { id: "who", heading: "Who we are" },
+  { id: "account", heading: "Your Anchor account" },
   { id: "zoom", heading: "What Anchor observes in a Zoom class" },
   { id: "classroom", heading: "What Anchor reads from Google Classroom" },
   { id: "storage", heading: "Where the data lives" },
@@ -40,20 +41,22 @@ function Privacy() {
   return (
     <LegalPage
       title="Privacy Policy"
-      summary="Anchor runs on your Mac. Student data is processed there and is never sent to us — we operate no server that could receive it."
+      summary="Anchor runs on your Mac. Student data is processed there and is never sent to us. Your Anchor account holds your name and email address — never anything about your classes."
       sections={SECTIONS}
     >
       <LegalSectionBody id="summary" index={1} heading="The short version">
         <p>This summary is not a substitute for the sections below, but it is accurate.</p>
         <ul>
           <li>
-            <strong>Anchor has no backend.</strong> There is no Anchor server, account system or
-            database. Nothing you or your students do in Anchor is transmitted to us.
+            <strong>Anchor has one server, and it only knows your name.</strong> Signing in creates
+            an Anchor account holding your email address and name. There is no server anywhere that
+            receives a roster, a score, a transcript or a student's name — see{" "}
+            <a href="#account">Your Anchor account</a>.
           </li>
           <li>
             <strong>We never receive student data.</strong> Not names, not grades, not speech, not
             engagement scores. It is technically impossible for us to, because the app never sends
-            it anywhere.
+            student data anywhere.
           </li>
           <li>
             <strong>No video is analysed and no facial recognition is used.</strong> Anchor reads
@@ -85,7 +88,57 @@ function Privacy() {
         </p>
       </LegalSectionBody>
 
-      <LegalSectionBody id="zoom" index={3} heading="What Anchor observes in a Zoom class">
+      <LegalSectionBody id="account" index={3} heading="Your Anchor account">
+        <p>
+          Anchor asks you to create an account the first time you open it. This is the only part of
+          Anchor that involves a server of ours at all, so it is worth being exact about what it
+          holds and what it does not.
+        </p>
+        <h3>What the account holds</h3>
+        <ul>
+          <li>Your email address</li>
+          <li>
+            Your name, if you give one — or the name on your Google account, if you choose to sign
+            in with Google
+          </li>
+          <li>An identifier Anchor uses to recognise you when you sign in again</li>
+        </ul>
+        <h3>What the account does not hold</h3>
+        <p>
+          <strong>
+            No student names, no rosters, no engagement scores, no session history, no transcripts,
+            and nothing read from Zoom or Google Classroom.
+          </strong>{" "}
+          None of that is uploaded when you sign in, and none of it is linked to your account. It
+          stays on your Mac exactly as described in the sections below. Creating an account does not
+          change where a single piece of classroom data lives.
+        </p>
+        <h3>Who operates it</h3>
+        <p>
+          Accounts run on <strong>Firebase Authentication</strong>, a Google service acting as a
+          processor on our behalf. The email address and name above are stored on Google's servers
+          for that purpose and are not used for advertising.
+        </p>
+        <p>
+          If you sign in with Google, Anchor asks Google only to confirm who you are — your name and
+          email address, and no other permission.{" "}
+          <strong>
+            That is a separate request from connecting Google Classroom, and neither one implies the
+            other.
+          </strong>{" "}
+          You can sign in with Google without ever connecting Classroom, connect Classroom without
+          signing in with Google, and revoke either without affecting the other.
+        </p>
+        <h3>Deleting it</h3>
+        <p>
+          Email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> and we will delete your
+          account. That removes the email address and name described above.{" "}
+          <strong>It does not touch anything on your Mac</strong> — that data is yours and was never
+          ours to delete; Settings → Data &amp; Privacy is where you clear it.
+        </p>
+      </LegalSectionBody>
+
+      <LegalSectionBody id="zoom" index={4} heading="What Anchor observes in a Zoom class">
         <p>
           To read in-meeting state, Anchor joins your Zoom meeting as an additional participant
           named <strong>"Anchor (engagement assistant)"</strong>. This is deliberate: participant
@@ -122,7 +175,7 @@ function Privacy() {
         </p>
       </LegalSectionBody>
 
-      <LegalSectionBody id="classroom" index={4} heading="What Anchor reads from Google Classroom">
+      <LegalSectionBody id="classroom" index={5} heading="What Anchor reads from Google Classroom">
         <p>
           Connecting Google Classroom is optional. Anchor works on Zoom signals alone; Classroom
           adds academic context. If you connect it, Anchor requests these scopes:
@@ -181,7 +234,7 @@ function Privacy() {
         </p>
       </LegalSectionBody>
 
-      <LegalSectionBody id="storage" index={5} heading="Where the data lives">
+      <LegalSectionBody id="storage" index={6} heading="Where the data lives">
         <ul>
           <li>
             <strong>Session history</strong> — a JSON file in your Mac's Application Support
@@ -203,6 +256,11 @@ function Privacy() {
             not send you back through Zoom's sign-in page mid-lesson.
           </li>
           <li>
+            <strong>Your Anchor account session</strong> — the macOS Keychain. Signing in stores a
+            token that keeps you signed in between launches. It identifies you to Anchor and carries
+            no classroom data. Signing out removes it.
+          </li>
+          <li>
             <strong>Settings and onboarding state</strong> — standard macOS preferences.
           </li>
           <li>
@@ -216,9 +274,14 @@ function Privacy() {
         </p>
       </LegalSectionBody>
 
-      <LegalSectionBody id="transmission" index={6} heading="What leaves your Mac">
-        <p>Anchor connects to exactly three destinations, all of them necessary:</p>
+      <LegalSectionBody id="transmission" index={7} heading="What leaves your Mac">
+        <p>Anchor connects to exactly four destinations, all of them necessary:</p>
         <ul>
+          <li>
+            <strong>Firebase Authentication</strong> — to create your Anchor account and keep you
+            signed in. It receives your email address and name, and{" "}
+            <strong>never any classroom data</strong>
+          </li>
           <li>
             <strong>Zoom</strong> — to join the meeting and receive participant state
           </li>
@@ -237,7 +300,7 @@ function Privacy() {
         </p>
       </LegalSectionBody>
 
-      <LegalSectionBody id="ai" index={7} heading="How the models work">
+      <LegalSectionBody id="ai" index={8} heading="How the models work">
         <p>
           Anchor's struggle detection is a Core ML model that runs on your Mac. The lesson-assistant
           features use Apple's on-device Foundation Models via Apple Intelligence, which also run
@@ -257,7 +320,7 @@ function Privacy() {
         </p>
       </LegalSectionBody>
 
-      <LegalSectionBody id="students" index={8} heading="Student data, FERPA and children">
+      <LegalSectionBody id="students" index={9} heading="Student data, FERPA and children">
         <p>
           Anchor is used in classrooms that include children. This deserves a direct answer rather
           than a hedge.
@@ -291,7 +354,7 @@ function Privacy() {
 
       <LegalSectionBody
         id="responsibilities"
-        index={9}
+        index={10}
         heading="Your responsibilities as the teacher"
       >
         <p>
@@ -317,7 +380,7 @@ function Privacy() {
         </ul>
       </LegalSectionBody>
 
-      <LegalSectionBody id="retention" index={10} heading="Retention and deletion">
+      <LegalSectionBody id="retention" index={11} heading="Retention and deletion">
         <p>
           We hold nothing, so there is nothing for us to delete. Everything is under your control:
         </p>
@@ -356,16 +419,21 @@ function Privacy() {
         </ul>
       </LegalSectionBody>
 
-      <LegalSectionBody id="rights" index={11} heading="Your rights">
+      <LegalSectionBody id="rights" index={12} heading="Your rights">
         <p>
           Depending on where you live you may have rights to access, correct, export or delete
           personal data held about you, and to object to its processing.
         </p>
         <p>
           For data inside Anchor these rights are satisfied directly: the data is on your Mac, in
-          files you can read, copy and delete without asking us. If you email us about the pilot, we
-          hold that correspondence, and you can ask us to delete it at{" "}
-          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+          files you can read, copy and delete without asking us.
+        </p>
+        <p>
+          For the two things we do hold — your{" "}
+          <a href="#account">Anchor account</a> (your email address and name), and any
+          correspondence if you email us about the pilot — write to{" "}
+          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> and we will provide, correct or
+          delete it.
         </p>
         <p>
           This website is served as static files. It sets no cookies, runs no analytics and does not
@@ -374,7 +442,7 @@ function Privacy() {
         </p>
       </LegalSectionBody>
 
-      <LegalSectionBody id="changes" index={12} heading="Changes to this policy">
+      <LegalSectionBody id="changes" index={13} heading="Changes to this policy">
         <p>
           If this policy changes materially — particularly if Anchor ever gains a backend, or begins
           transmitting data anywhere it does not today — we will update the date at the top of this
@@ -386,7 +454,7 @@ function Privacy() {
         </p>
       </LegalSectionBody>
 
-      <LegalSectionBody id="contact" index={13} heading="Contact">
+      <LegalSectionBody id="contact" index={14} heading="Contact">
         <p>
           Questions about this policy, or about anything Anchor does with data, go to{" "}
           <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. Questions from a school's privacy

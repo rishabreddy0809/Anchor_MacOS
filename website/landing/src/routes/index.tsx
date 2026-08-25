@@ -474,7 +474,7 @@ const TRUST = [
   {
     icon: Cpu,
     title: "On-device processing",
-    copy: "Anchor has no server and no accounts. Nothing about a student reaches us.",
+    copy: "Scoring runs on your Mac. Nothing about a student reaches us.",
   },
   {
     icon: Eye,
@@ -692,8 +692,8 @@ function About() {
             <p>
               It's just me — {LEGAL_NAME}. No company, no funding, no investor waiting to be repaid
               out of a classroom. That's the constraint and the promise: support email is answered
-              by the person who wrote the code, there's no server holding your students' data
-              because there's no server, and when something is unproven — the model's accuracy, most
+              by the person who wrote the code, there's no server holding your students' data, and
+              when something is unproven — the model's accuracy, most
               of all — you'll be told so plainly rather than sold around it.
             </p>
           </div>

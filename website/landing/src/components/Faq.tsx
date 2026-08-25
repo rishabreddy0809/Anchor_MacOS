@@ -50,8 +50,9 @@ const FAQS: { q: string; a: ReactNode }[] = [
     q: "Where does my students' data go?",
     a: (
       <p>
-        Nowhere. Anchor has no server and no account system, so student data stays on your Mac. We
-        never receive it — not names, grades, speech or scores. The{" "}
+        Nowhere. Student data stays on your Mac and we never receive it — not names, grades,
+        speech or scores. Your Anchor account holds your name and email address and nothing about a
+        class. The{" "}
         <Link to="/privacy">Privacy Policy</Link> sets out exactly what is stored and where.
       </p>
     ),

@@ -160,8 +160,9 @@ function PilotTerms() {
             and you will not be moved onto a paid plan without being asked first and agreeing.
           </li>
           <li>
-            <strong>Nothing about your students reaches us.</strong> Anchor has no server and no
-            account system. Not names, not grades, not speech, not scores.
+            <strong>Nothing about your students reaches us.</strong> Not names, not grades, not
+            speech, not scores. Your Anchor account holds your name and email address, and nothing
+            about a class is ever sent.
           </li>
           <li>
             <strong>Notice before the program ends.</strong> If the pilot is wound up early you get

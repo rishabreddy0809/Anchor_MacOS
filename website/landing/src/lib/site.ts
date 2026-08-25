@@ -24,7 +24,7 @@ export const CONTACT_EMAIL = "rishabreddy0809@gmail.com";
 export const LEGAL_NAME = "Rishab Reddy Paili";
 
 /** Shown on the legal pages. Bump when any of them changes materially. */
-export const LEGAL_LAST_UPDATED = "August 21, 2026";
+export const LEGAL_LAST_UPDATED = "August 24, 2026";
 
 /** Minimum macOS version, from MACOSX_DEPLOYMENT_TARGET in the Xcode project. */
 export const MIN_MACOS = "macOS 14";
