@@ -25,6 +25,7 @@ struct SettingsView: View {
     @ObservedObject private var oauth = ZoomOAuthStore.shared
     @ObservedObject private var googleCredentials = GoogleCredentialsStore.shared
     @ObservedObject private var classroom = ClassroomViewModel.shared
+    @ObservedObject private var accounts = AccountStore.shared
 
     /// Optional because a macOS sidebar `List` selection binding is —
     /// mirrors LiveSessionView's own `SidebarSelection?`. Nil is treated as
@@ -38,12 +39,16 @@ struct SettingsView: View {
     @State private var category: Category? = .general
 #endif
     @State private var isConfirmingClear = false
+    /// Presents the onboarding account screen on its own, so signing in does
+    /// not require replaying the whole seven-step walkthrough.
+    @State private var isPresentingSignIn = false
     @State private var isConnectingZoom = false
     @State private var isConnectingClassroom = false
     @State private var zoomConnectError: String?
     @State private var classroomConnectError: String?
 
     enum Category: String, CaseIterable, Identifiable {
+        case account = "Account"
         case general = "General"
         case integrations = "Integrations"
         case notifications = "Notifications"
@@ -54,6 +59,7 @@ struct SettingsView: View {
 
         var symbolName: String {
             switch self {
+            case .account: "person.crop.circle"
             case .general: "gearshape"
             case .integrations: "puzzlepiece.extension"
             case .notifications: "bell"
@@ -69,6 +75,9 @@ struct SettingsView: View {
                 .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 260)
         } detail: {
             content
+        }
+        .sheet(isPresented: $isPresentingSignIn) {
+            SignInSheet()
         }
     }
 
@@ -145,6 +154,7 @@ struct SettingsView: View {
         ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 16) {
                 switch category ?? .general {
+                case .account: accountContent
                 case .general: generalContent
                 case .integrations: integrationsContent
                 case .notifications: notificationsContent
@@ -167,6 +177,85 @@ struct SettingsView: View {
             Text(subtitle)
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Account
+
+    /// Sign-in, reachable without replaying onboarding.
+    ///
+    /// The account screen used to exist *only* inside the onboarding sheet,
+    /// which meant a teacher who finished or skipped onboarding had no way to
+    /// sign in at all — `hasCompletedOnboarding` is durable, so the sheet never
+    /// comes back on its own. Every other connection Anchor makes is reachable
+    /// from Settings afterwards; this one now is too.
+    private var accountContent: some View {
+        Group {
+            pageHeader("Account", "Your Anchor account, and what it does not hold.")
+
+            settingsCard(
+                title: "Anchor account",
+                subtitle: "Keeps your settings and connected tools together."
+            ) {
+                if !accounts.isConfigured {
+                    // Same sentence the onboarding step shows. Named as a setup
+                    // problem rather than a teacher problem, because it is one.
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Accounts aren't set up in this build of Anchor.")
+                            .font(.system(size: 12, weight: .medium))
+                        Text("Everything else works normally. Whoever installed Anchor "
+                             + "can finish account setup in one step.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                } else if let account = accounts.account {
+                    VStack(alignment: .leading, spacing: 9) {
+                        HStack(spacing: 7) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 12))
+                                .foregroundStyle(Theme.riskLow)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(account.label)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                                Text("Signed in via \(account.provider.label)")
+                                    .font(.system(size: 10.5))
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 0)
+                        }
+
+                        Button("Sign out") { accounts.signOut() }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 9) {
+                        Text("You're not signed in.")
+                            .font(.system(size: 12, weight: .medium))
+                        Button("Sign in or create an account") {
+                            isPresentingSignIn = true
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                    }
+                }
+            }
+
+            settingsCard(title: "What the account holds") {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Your name and email address — nothing else.")
+                        .font(.system(size: 11.5))
+                    Text("No rosters, scores, session history or transcripts. Those stay "
+                         + "on this Mac and are never uploaded. Signing in changes nothing "
+                         + "about where your class data lives.")
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
         }
     }
 
@@ -367,10 +456,15 @@ struct SettingsView: View {
                     + "changes anything. Once connected, choose which classes to sync in this panel.",
                 isConnected: classroom.isConnected,
                 isBusy: isConnectingClassroom,
-                canConnect: googleCredentials.hasClientID,
-                unavailableReason: googleCredentials.hasClientID
+                // `canCompleteSignIn`, not `hasClientID` — see the corrected note
+                // on the onboarding twin. A client id alone is enough to open a
+                // browser and not enough to redeem the code that comes back.
+                canConnect: googleCredentials.canCompleteSignIn,
+                unavailableReason: googleCredentials.canCompleteSignIn
                     ? nil
-                    : "This copy of Anchor is missing part of its Google setup. It isn't something you can fix from here.",
+                    : "This copy of Anchor is missing part of its Google setup, so signing "
+                        + "in would fail after you'd already approved it. It isn't something "
+                        + "you can fix from here.",
                 connectedDetail: googleCredentials.tokens?.accountEmail,
                 onConnect: connectClassroom,
                 onDisconnect: disconnectClassroom

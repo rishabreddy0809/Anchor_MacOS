@@ -3,13 +3,23 @@
 //  Anchor
 //
 //  First-launch walkthrough, shown as a sheet over the main window until a
-//  teacher finishes or skips it. Six steps: what Anchor does, who's using it,
-//  a dedicated sign-in screen for Zoom, a dedicated one for Google Classroom,
-//  a couple of preferences worth setting up front, and a confirmation screen.
+//  teacher finishes or skips it. Seven steps: what Anchor does, an Anchor
+//  account, who's using it, a dedicated sign-in screen for Zoom, a dedicated
+//  one for Google Classroom, a couple of preferences worth setting up front,
+//  and a confirmation screen.
 //
 //  Skipping or finishing both mark onboarding complete — see OnboardingStore.
-//  Nothing here is required to use Anchor; every connection and setting
-//  offered is also reachable from Settings afterwards.
+//
+//  **The account step is the one exception to "nothing here is required".**
+//  Continue stays disabled on it until the teacher has an account — but only
+//  in a build where accounts actually work. If FirebaseAuth isn't linked or
+//  GoogleService-Info.plist is missing, the gate lifts and the step becomes
+//  informational, because a walkthrough that cannot be completed is worse than
+//  one that skips a screen. That branch is what keeps QA-PROTOCOL.md Pass A
+//  runnable on a build made before the Firebase package lands.
+//
+//  Every connection and setting offered here is also reachable from Settings
+//  afterwards.
 //
 
 import SwiftUI
@@ -17,9 +27,10 @@ import SwiftUI
 struct OnboardingView: View {
     @EnvironmentObject private var store: EngagementStore
     @ObservedObject private var onboarding = OnboardingStore.shared
+    @ObservedObject private var accounts = AccountStore.shared
 
     enum Step: Int, CaseIterable {
-        case welcome, name, zoom, classroom, preferences, done
+        case welcome, account, name, zoom, classroom, preferences, done
     }
 
     @State private var step: Step = .welcome
@@ -33,6 +44,7 @@ struct OnboardingView: View {
                 Group {
                     switch step {
                     case .welcome: WelcomeStep()
+                    case .account: AccountStep()
                     case .name: NameStep()
                     case .zoom: ZoomStep()
                     case .classroom: ClassroomStep()
@@ -104,6 +116,7 @@ struct OnboardingView: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
                 .keyboardShortcut(.defaultAction)
+                .disabled(!canAdvance)
         }
         .padding(18)
     }
@@ -111,9 +124,20 @@ struct OnboardingView: View {
     private var primaryLabel: String {
         switch step {
         case .welcome: "Get Started"
-        case .name, .zoom, .classroom, .preferences: "Continue"
+        case .account, .name, .zoom, .classroom, .preferences: "Continue"
         case .done: "Go to Anchor"
         }
+    }
+
+    /// The account step is the only one that can hold the flow.
+    ///
+    /// Reads `isConfigured` first and deliberately fails *open*: in a build
+    /// without Firebase there is no way to satisfy the gate, so gating would
+    /// strand the teacher on step 2 with a disabled button and no explanation.
+    /// The step itself already says setup is unfinished in that case.
+    private var canAdvance: Bool {
+        guard step == .account, accounts.isConfigured else { return true }
+        return accounts.isSignedIn
     }
 
     private func advance() {
@@ -508,20 +532,28 @@ private struct ClassroomStep: View {
                 ],
                 isConnected: classroom.isConnected,
                 isBusy: isBusy,
-                canConnect: credentials.hasClientID,
-                unavailableReason: credentials.hasClientID
+                // Gated on `canCompleteSignIn`, not `hasClientID`.
+                //
+                // CORRECTED 2026-08-24. The comment that stood here said this
+                // branch was "not expected to be reachable — googleClientID
+                // ships non-empty and Google genuinely accepts PKCE without a
+                // secret". The second half was false, and it was the load-
+                // bearing half. Probing Google's token endpoint with a valid
+                // client id, a PKCE verifier and no secret returns
+                // `client_secret is missing`, so with no secret provisioned
+                // this branch was reachable by EVERY teacher — and worse, it
+                // was not reached here at all: `hasClientID` was true, the
+                // button was offered, the browser opened, consent was granted,
+                // and the failure landed after it. The note ended "unreachable
+                // is what the Zoom branch was assumed to be too", which turned
+                // out to be the most accurate sentence in it.
+                canConnect: credentials.canCompleteSignIn,
+                unavailableReason: credentials.canCompleteSignIn
                     ? nil
-                    // Found by the scan on 2026-08-20, immediately after the term
-                    // that catches it was added for the Zoom twin above. Same
-                    // defect: ClassroomConnectionPanel's Advanced disclosure is
-                    // `#if DEBUG` (lines 163–237), so a teacher sent there finds
-                    // nothing. Unlike Zoom this is not expected to be reachable —
-                    // googleClientID ships non-empty and Google genuinely accepts
-                    // PKCE without a secret — but "unreachable" is what the Zoom
-                    // branch was assumed to be too.
-                    : "Anchor's Google setup isn't finished on this Mac. Classroom is "
-                        + "optional, so you can carry on without it — whoever installed "
-                        + "Anchor can finish setup later.",
+                    : "Anchor's Google setup isn't finished on this Mac, so signing in "
+                        + "would fail after you'd already approved it in your browser. "
+                        + "Classroom is optional — carry on without it, and whoever "
+                        + "installed Anchor can finish setup later.",
                 connectedDetail: credentials.tokens?.accountEmail ?? "Connected",
                 privacyNote: "Anchor opens Google in your browser to sign in, and only "
                     + "ever reads Classroom — it never posts, grades or changes anything.",
@@ -632,6 +664,7 @@ private struct FinishStep: View {
     @ObservedObject private var oauth = ZoomOAuthStore.shared
     @ObservedObject private var classroom = ClassroomViewModel.shared
     @ObservedObject private var profile = TeacherProfileStore.shared
+    @ObservedObject private var accounts = AccountStore.shared
 
     var body: some View {
         VStack(spacing: 18) {
@@ -655,6 +688,16 @@ private struct FinishStep: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
+                // Only shown when this build has accounts at all — otherwise
+                // the row would report "not signed in" as though the teacher
+                // had skipped something they were never offered.
+                if accounts.isConfigured {
+                    summaryRow(
+                        connected: accounts.isSignedIn,
+                        label: accounts.account.map { "Signed in as \($0.label)" }
+                            ?? "Not signed in"
+                    )
+                }
                 summaryRow(
                     connected: oauth.isConnected,
                     label: oauth.isConnected ? "Zoom connected" : "Zoom not connected yet"
@@ -688,7 +731,12 @@ private struct FinishStep: View {
     }
 
     private var title: String {
-        guard let first = profile.firstName else { return "You're all set" }
+        // `AccountStore` already mirrors a Google-supplied name into the
+        // profile when the profile is blank, so this fallback only matters for
+        // the ordering case where the mirror hasn't landed yet.
+        guard let first = profile.firstName ?? accounts.account?.firstName else {
+            return "You're all set"
+        }
         return "You're all set, \(first)"
     }
 
