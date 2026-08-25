@@ -261,9 +261,12 @@ function PilotTerms() {
           altogether.
         </p>
         <p>
-          Either way, everything on your Mac stays on your Mac. Deleting the app removes it; there
-          is nothing on our side to delete because there was never anything there. Revoking Anchor's
-          access to your Zoom and Google accounts is done in those accounts, not here.
+          Either way, everything on your Mac stays on your Mac. Deleting the app removes it, and no
+          classroom data was ever on our side to delete. The one thing that is ours to delete is
+          your Anchor account, which holds your email address and name and nothing about a class:
+          email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> and we will remove it.
+          Revoking Anchor's access to your Zoom and Google accounts is done in those accounts, not
+          here.
         </p>
       </LegalSectionBody>
 

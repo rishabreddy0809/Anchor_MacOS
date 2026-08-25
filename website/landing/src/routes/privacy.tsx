@@ -390,7 +390,9 @@ function Privacy() {
 
       <LegalSectionBody id="retention" index={11} heading="Retention and deletion">
         <p>
-          We hold nothing, so there is nothing for us to delete. Everything is under your control:
+          We hold nothing about your classes, so there is nothing of theirs for us to delete.
+          Everything below is under your control, and the one thing we do hold is at the end of the
+          list:
         </p>
         <ul>
           <li>
@@ -423,6 +425,12 @@ function Privacy() {
           <li>
             <strong>Everything</strong> — deleting the app and its Application Support directory
             removes all locally stored Anchor data.
+          </li>
+          <li>
+            <strong>Your Anchor account</strong> — the one item on this list that is ours rather
+            than yours. Email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> and we will
+            delete it. See <a href="#account">Your Anchor account</a> for what it holds; deleting
+            the app does not remove it, because it does not live on your Mac.
           </li>
         </ul>
       </LegalSectionBody>

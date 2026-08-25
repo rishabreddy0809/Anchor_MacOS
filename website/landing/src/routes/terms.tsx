@@ -241,8 +241,10 @@ function Terms() {
           end the pilot program.
         </p>
         <p>
-          Termination does not delete anything of yours from your machine, and there is nothing on
-          our side to delete. Sections 4, 8, 9, 10 and 12 survive termination.
+          Termination does not delete anything of yours from your machine, and nothing about your
+          classes was ever on our side to delete. Your Anchor account is the exception, since it
+          does not live on your Mac: email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>{" "}
+          and we will delete it. Sections 4, 8, 9, 10 and 12 survive termination.
         </p>
       </LegalSectionBody>
 
