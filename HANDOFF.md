@@ -2,11 +2,22 @@
 
 Repo: `/Users/rishabreddypaili/Documents/Anchor`
 Branch: `ship/pilot-readiness`; **default is `main`** since 2026-08-19
-(`app-split` is retired — do not push it). **Both branches always point at the
-same commit and are pushed** — `git log --oneline -1` for which one, because a
-hash written here is stale the moment the commit writing it lands. Tests:
+(`app-split` is retired — do not push it). This line used to read *"Both
+branches always point at the same commit and are pushed"*, in bold, as a
+statement of fact. **On 2026-08-25 it had not been true for nine commits, and
+because `anchor-landing` deploys `main`, every published page was nine commits
+stale** — see *The invariant that was written down instead of checked* below.
+It is an invariant that has to be **enforced**, not recalled:
+
+```sh
+git rev-parse origin/main origin/ship/pilot-readiness   # must be identical
+```
+
+Run that before believing anything about what is deployed; a hash written here
+is stale the moment the commit writing it lands. Tests:
 `xcodebuild test -project Anchor.xcodeproj -scheme Anchor -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
-→ **311 passing**, 21 test files. Release config builds clean.
+→ **347 passing**, 24 test files (re-counted 2026-08-25, not carried forward).
+Release config builds clean, and so does `npm run build` in `website/landing`.
 
 Deadline: term starts ~31 Aug 2026. Goal is 1–3 real pilot users.
 
@@ -609,6 +620,128 @@ check** — eighteen should fall to nine, before any App Listing copy is written
   completed the handshake with no password. Worth trying before asking for a
   human click next time.
 
+## Done on 2026-08-25 (evening) — the invariant that was written down instead of checked
+
+**One root cause, four false sentences live on the site, and a guard.** None of
+it was on any list. It came from the standing method — check the artifact, not
+the sentence about the artifact — pointed at the thing this page itself asserts.
+
+### The invariant that was written down instead of checked
+
+This page opened with *"Both branches always point at the same commit and are
+pushed"*, in bold. **`origin/main` was nine commits behind
+`origin/ship/pilot-readiness`**, and had been since 22 Aug. `anchor-landing`
+deploys `main`. So every page on `anchorteach.vercel.app` was the 22 Aug site.
+
+What that meant, measured rather than inferred:
+
+- **The live privacy policy said *"There is no Anchor server, account system or
+  database"*** while `AnchorAccount` had shipped Firebase Authentication and
+  `POST /api/zoom/sdk-token` had shipped a server endpoint. `9f19c1f` fixed that
+  on 25 Aug. It had never reached a reader.
+- **The live policy did not mention the calendar at all**, while `CalendarService`
+  reads EventKit events. `223bcfc` fixed that too, also unreached.
+- **`POST /api/zoom/sdk-token` returned 404, not 503.** The handoff brief
+  described it as "503 until the Vercel env vars are set", which was true of the
+  code and false of production, for a reason that had nothing to do with env
+  vars. Both statements look identical from a reading of the repo.
+- The homepage and `/pilot-terms` carried the same false claim, five occurrences
+  between them.
+
+**Rishab approved the fast-forward; `main` now points at the same commit and the
+pages were read back.** The endpoint now returns 503 with its fail-closed body,
+which is the documented state, and 405 on GET.
+
+**The generalisable bit, and it is uncomfortable, because this page is where the
+project keeps its hard-won lessons.** This page already warns that its own
+numbers rot, and gives two commands for re-counting the checklist boxes. The
+branch invariant had **no command**, so it was recalled rather than checked, and
+it was recalled correctly for six days and wrongly on the seventh. **An
+invariant stated in prose is a belief. Give every one of them a command, and
+run it.** The intro now carries `git rev-parse origin/main
+origin/ship/pilot-readiness`.
+
+**A second-order trap worth naming.** The Notion task *"Connect anchor-landing
+to Git in Vercel"* is Done, and its notes say the Production branch is
+`app-split`. That was true on 18 Aug and stopped being true when `main` became
+the default on 19 Aug. It was not the source of this failure, but it is the kind
+of record that would send the next reader to the wrong branch. **Production is
+`main`, and that was established by evidence rather than by the dashboard:**
+`origin/app-split`'s `privacy.tsx` is last touched by `044e81e` and lacks the
+21 Aug Zoom Keychain bullet, while the live page had it. Only `main` could have
+served that page.
+
+### Three more places said Anchor holds nothing (`da86bed`)
+
+`9f19c1f` corrected that claim and found it in five files. **It missed three,
+because they say it in different words** — and one of them is the contract.
+
+- **`terms.tsx` §Termination**: *"there is nothing on our side to delete"*.
+  Nobody had read this file during the accounts work. **The new scan found it on
+  its first run.**
+- **`pilot-terms.tsx` §Leaving**: *"nothing on our side to delete because there
+  was never anything there"* — in the section a departing teacher reads to find
+  out how to have their account removed, which is now the one thing that section
+  owes them, since deleting the app does not touch it.
+- **`privacy.tsx` §Retention**: *"We hold nothing, so there is nothing for us to
+  delete"* — **contradicted one section later** by §Your rights, which correctly
+  names *"the two things we do hold"*. The document disagreed with itself across
+  two adjacent sections, and both were live.
+
+All three now say nothing about a **class** is held, and each names the deletion
+route rather than merely dropping the false sentence. **Removing a claim and
+answering the question it used to answer are two different repairs**, and the
+first can be done without noticing the second.
+
+### `PublishedClaimScanTests` — and the canary that fired nothing
+
+The guard is a **shape, not a phrase**: a sentence claiming Anchor holds nothing
+must say nothing *of what*. A blocklist of the corrected sentence catches the
+sentence; the next writer phrases it their own way. It sweeps every `.ts`/`.tsx`
+under `website/landing/src` with no per-file exemption.
+
+**Seven canaries, and the first one is the whole value.** Planted as an
+attribute — `<footer data-x="Anchor has no server and no accounts.">` — it fired
+**nothing**. Treated as information, per this page's own rule, and it was:
+`prose()` strips `<[^>]+>` wholesale, so everything inside a tag went with it,
+and it strips `{…}` as JSX spacing, so object literals went too. **Both carry
+real published copy here** — `og:description` in four routes, which is the
+sentence in a search result and in a pasted-link card, and `PilotForm`'s
+`description=` attributes, which render under fields on `/apply`. **A guard
+reading only text nodes would have covered the legal pages and missed the
+sentence a reviewer sees before opening one.** Now two streams, and the plant
+fires.
+
+The other six: `site.ts` (the constants file a hand-written list would have
+missed, and it holds `REQUIREMENTS` and `PILOT_TERMS`); a footer text node; an
+`og:description` literal; **a *scoped* claim, which must and does PASS**, since
+a guard that fails everything is no guard; an unscoped claim whose *next*
+sentence is scoped, which still fails because the split is per sentence; and the
+exit-route test, checked by deleting the account bullet. **Every run reported
+2 test cases executed**, so no plant passed by failing to compile — the trap
+this page records from 21 Aug.
+
+**And the scan's own first version was broken in the way it exists to catch.**
+`(?s)` and `(?m)` were missing, so the comment stripper spanned no lines and
+stripped nothing, and `pilot-application.ts`'s true header remark *"There is no
+database"* was reported as a published claim. **A stripper that strips nothing
+looks exactly like a file with no comments in it.**
+
+### Verified by probe, not assumption, on the way past
+
+- **345 → 347 tests, all passing.** The brief's 345 was correct before this
+  session's two.
+- **The Google OAuth secret does inject into the built artifact.**
+  `plutil -extract ANGoogleOAuthClientSecret raw` against the **Release**
+  `Anchor.app` returns a real value, not the source.
+- **`GoogleService-Info.plist` is absent from the built artifact**, so accounts
+  are inert exactly as recorded. Not a regression; still the state.
+- **Vercel Web Analytics is NOT live**, and `/privacy` §Your rights says *"runs
+  no analytics"*. There is an unmerged `origin/vercel/install-vercel-web-analytics-0ah9rd`
+  branch from 22 Aug. **Merging it makes that sentence false**, and it is in the
+  policy rather than the marketing copy. Nothing to do today; do not merge it
+  without the same pass.
+
 ## Next, in order
 
 Everything Claude-owned and unblocked is done, and that sentence has now
@@ -622,8 +755,19 @@ that is load-bearing for a pilot teacher, and check the artifact rather than
 the sentence about the artifact.** All four came from that — the token
 endpoint, the live privacy page, the deployed bounce page, the setup document.
 
-1. **Send the outreach emails.** `OUTREACH.md` has both drafts; `PROSPECTS.md`
-   has the fourteen organisations. **Read `PROSPECTS.md`'s findings first** —
+1. **Send the outreach emails.** **`OUTREACH-READY.md` (25 Aug) supersedes the
+   drafts for sending**: seven personalised, addressed, ordered emails, plus a
+   table of the other seven prospects that are *not* emails — two sites refuse
+   fetches, one is an SMS, one is a phone call, one is a Monday open house, two
+   publish no address. "Send the emails" silently skips those seven.
+   **One thing is genuinely blocked on Rishab and it is the first line of that
+   file: which address they come from.** The three Google accounts on this Mac
+   include a supervised Family Link account, and that is the same question as
+   the Apple enrollment, so answer it once for both.
+   **The legal links in those emails are now correct** — `/privacy` and
+   `/pilot-terms` were nine commits stale until this evening. `OUTREACH.md` has
+   the underlying drafts; `PROSPECTS.md` has the reasoning. **Read
+   `PROSPECTS.md`'s findings first** —
    three of four contradict something the plan assumed: the segment mostly runs
    **Canvas, not Google Classroom**; **most local co-ops meet in person**, so
    that pool is far smaller than the academy pool; and **Kepler Education is
