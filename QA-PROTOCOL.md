@@ -46,8 +46,9 @@ consent screens are seen by an account that has never granted anything.
 ### Making a Mac genuinely fresh — the step that is easy to skip
 
 Dragging Anchor to the Trash does **not** produce a fresh install. Four
-Keychain services and a defaults domain survive it, and any one of them makes
-Pass A test a path no pilot user will ever walk:
+Keychain services, **the Anchor account session**, and a defaults domain
+survive it, and any one of them makes Pass A test a path no pilot user will
+ever walk:
 
 ```bash
 # Credentials — four separate services, all of them persist.
@@ -67,6 +68,24 @@ nothing left, so run each until it reports `could not be found`. Then confirm:
 security dump-keychain 2>/dev/null | grep -c 'com\.anchor\.'   # expect 0
 defaults read Rishab-Reddy.Anchor 2>&1 | head -1               # expect "does not exist"
 ```
+
+**The fifth item, added 2026-08-24 with Anchor accounts.** Firebase keeps the
+signed-in session in the login Keychain under its own item, not under a
+`com.anchor.*` service — so the `grep -c 'com\.anchor\.'` check above returns
+0 while the session is still there, and the account step is skipped on a Mac
+you believed was clean. That is the same class of false pass §0 exists to
+prevent, one layer further out.
+
+The reliable route is **Anchor → onboarding → account step → Sign out**, or
+Settings, *before* deleting the app. To check afterwards:
+
+```bash
+security dump-keychain 2>/dev/null | grep -ci 'firebase'   # expect 0
+```
+
+Confirm the item's exact service name on the day rather than trusting this
+line — Firebase has changed it between major versions, and a delete command
+that silently matches nothing looks identical to one that worked.
 
 A borrowed Mac that has never had Anchor needs none of this, which is why a
 borrowed Mac is worth more than a cleaned one — it cannot lie to you.

@@ -144,3 +144,59 @@ separately.
 - A `notarytool` keychain profile stored locally (`AnchorNotary` above).
 - The fresh-install click: both Connect buttons pressed on a machine with no
   developer Keychain, watching what happens *after* browser consent.
+- **`Config/Secrets.xcconfig` with `GOOGLE_OAUTH_CLIENT_SECRET` filled in.**
+  Without it Google Classroom cannot be connected by anyone: Google requires
+  `client_secret` for a Desktop OAuth client (probed 2026-08-24 — the endpoint
+  answers `client_secret is missing.`), and PKCE does not substitute for it.
+  The build still succeeds and the app still runs; the Connect button simply
+  refuses up front, saying setup is unfinished. **That is a silent ship, not a
+  failed build**, so check the file the way you check the plist below:
+
+  ```bash
+  # Should print your secret, not an empty line.
+  plutil -extract ANGoogleOAuthClientSecret raw -o - \
+    "<path to built Anchor.app>/Contents/Info.plist"
+  ```
+
+  Never move this value into `OAuthClientDefaults.swift`. The repository is
+  public; the secret is fine inside the shipped binary and not fine in git
+  history. See `Config/Secrets.example.xcconfig`.
+- **`GoogleService-Info.plist` in `Anchor/`.** Without it the app still builds,
+  launches and runs — accounts simply switch off and the onboarding gate lifts
+  (see `FirebaseAuthService.configureIfNeeded`). So a build missing it does not
+  fail; it ships with the sign-up screen inert. Check for the file, do not wait
+  to be told.
+
+## Firebase, and what it did *not* cost the signing pipeline
+
+Added 2026-08-24 with Anchor accounts — the project's first Swift Package
+Manager dependency (the Zoom SDK is vendored, so this is genuinely new ground).
+
+**The thing to know: it added nothing to `Contents/Frameworks`.** Firebase's
+SPM distribution links statically, so `FirebaseAuth` and its dependencies end
+up inside the app binary rather than as nested bundles. The framework count is
+unchanged at 83, all of them still Zoom's, and `codesign --verify --deep
+--strict` passes exactly as it did after commit 82e5bcf. The worry that this
+would multiply the 682 MB of third-party frameworks notarization has to chew
+through did not materialise — there is no new binary to sign.
+
+What *is* worth knowing before someone greps the binary and panics:
+
+- **Only `FirebaseAuth` is linked.** Do not add Firestore, Analytics,
+  Crashlytics or Messaging without re-reading this section — Firestore alone
+  drags in gRPC, leveldb and abseil as *binary* targets, which is precisely the
+  nested-bundle problem this avoided. Verified absent: `grpc`, `leveldb`,
+  `FIRFirestore`, `GoogleAppMeasurement`, `APMAnalytics` all return zero
+  symbols.
+- **`FIRAnalyticsConfiguration` *does* appear in the binary, and is not
+  analytics.** It is a notification shim inside FirebaseCore that the Analytics
+  SDK would observe if it were present. It is not, and no measurement code is
+  linked. The privacy policy's "no analytics SDK" line is still true — this
+  paragraph exists so that a future grep for `FIRAnalytics` resolves in one
+  minute instead of an afternoon.
+- **`Package.resolved` lists far more than is linked.** SPM resolves the whole
+  `firebase-ios-sdk` manifest, so `google-ads-on-device-conversion-ios-sdk`,
+  `googleappmeasurement`, `grpc-binary` and `leveldb` all appear there. Resolved
+  is not linked; none of them are in the binary. Expect to be asked about it
+  anyway if anyone reads that file.
+- Pinned `upToNextMajorVersion` from 11.0.0; resolved to 11.15.0.
