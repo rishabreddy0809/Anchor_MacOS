@@ -256,6 +256,14 @@ function Privacy() {
             not send you back through Zoom's sign-in page mid-lesson.
           </li>
           <li>
+            <strong>Your calendar</strong> — <strong>nothing is stored</strong>. If you connect it,
+            Anchor reads today's events from the calendars you pick, through macOS's own Calendar
+            permission, and holds them in memory to show on your dashboard. They are never written to
+            disk, never sent anywhere, and never given to any model. Anchor asks macOS rather than
+            Google, so no additional Google permission is involved. Turn it off in Settings →
+            Integrations, or in System Settings → Privacy &amp; Security → Calendars.
+          </li>
+          <li>
             <strong>Your Anchor account session</strong> — the macOS Keychain. Signing in stores a
             token that keeps you signed in between launches. It identifies you to Anchor and carries
             no classroom data. Signing out removes it.
