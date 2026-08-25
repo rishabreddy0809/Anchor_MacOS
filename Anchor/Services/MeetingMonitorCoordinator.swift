@@ -6,7 +6,7 @@
 //
 //    local call detection
 //      → confirm the teacher is the HOST of a live meeting (REST)
-//      → notification "Start monitoring [name]?  [X] participants"  [Yes] [No]
+//      → floating panel "Start monitoring [name]?  [X] participants"  [Start] [Not now]
 //      → Yes: bot credentials from Keychain → bot OAuth → bot joins → monitoring
 //      → No:  dismiss, nothing joins, dashboard sits at "Ready to monitor"
 //
@@ -59,6 +59,10 @@ final class MeetingMonitorCoordinator: ObservableObject {
     /// Shared, not owned: LiveCoachViewModel posts recommendation banners
     /// through the same object. See MeetingNotifier.
     private let notifier = MeetingNotifier.shared
+    /// The consent prompt itself. Notifications are still used for the
+    /// mid-class recommendation banners — this replaces only the one prompt
+    /// that has to be answered before anything can happen.
+    private let consentPanel = MeetingConsentPanelController.shared
 
     init(zoom: ZoomViewModel, store: EngagementStore) {
         self.zoom = zoom
@@ -113,7 +117,16 @@ final class MeetingMonitorCoordinator: ObservableObject {
         switch await resolveHostedMeeting() {
         case .found(let meeting):
             phase = .awaitingConsent(meeting)
-            notifier.notifyMonitoringPrompt(for: meeting)
+            // A floating panel rather than a notification. The teacher is about
+            // to teach, so a Focus is very likely on and a banner would be
+            // suppressed silently — and if they ever declined notification
+            // permission, the prompt had nowhere to go at all. See
+            // MeetingConsentPanel for the rest of the reasoning.
+            consentPanel.present(
+                meeting: meeting,
+                onAccept: { [weak self] in Task { await self?.acceptMonitoring() } },
+                onDecline: { [weak self] in self?.declineMonitoring() }
+            )
 
         case .noCredentials:
             phase = .idle
@@ -145,6 +158,7 @@ final class MeetingMonitorCoordinator: ObservableObject {
     }
 
     private func handleCallEnded() async {
+        consentPanel.dismiss()
         notifier.clear()
         if phase.isMonitoring {
             await zoom.leaveBot()
@@ -206,6 +220,7 @@ final class MeetingMonitorCoordinator: ObservableObject {
     func acceptMonitoring() async {
         guard case .awaitingConsent(let meeting) = phase else { return }
 
+        consentPanel.dismiss()
         phase = .joining(meeting)
         confirmation = nil
         store.setConnectionSummary("Sending the bot into \(meeting.name)…")
@@ -231,6 +246,7 @@ final class MeetingMonitorCoordinator: ObservableObject {
         // Requirement: nothing else happens. No join, no polling, no data.
         phase = .declined(meeting)
         confirmation = nil
+        consentPanel.dismiss()
         notifier.clear()
         store.setConnectionSummary("Ready to monitor — Anchor is not watching this meeting.")
     }

@@ -125,6 +125,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 #endif
 
+#if DEBUG
+        // Shows the consent panel on launch with a fabricated meeting, so its
+        // layout can be looked at without waiting for a real class to start.
+        // Compiled out of Release along with the rest of the demo scaffolding.
+        if ProcessInfo.processInfo.environment["ANCHOR_DEMO_CONSENT_PANEL"] == "1" {
+            MeetingConsentPanelController.shared.present(
+                meeting: DetectedMeeting(
+                    id: "81234567890",
+                    uuid: nil,
+                    name: "AP Biology · Period 3",
+                    participantCount: 14
+                ),
+                onAccept: { NSLog("[Anchor] consent panel: Start") },
+                onDecline: { NSLog("[Anchor] consent panel: Not now") }
+            )
+        }
+#endif
+
+        // Accounts come up before anything reads AccountStore. Placed after the
+        // screenshot branch on purpose: capture mode fabricates a classroom and
+        // makes no network calls, and a real signed-in account has no business
+        // appearing in a marketing screenshot.
+        //
+        // Neither call throws or blocks. A build with no Firebase package, or
+        // no GoogleService-Info.plist, logs once and leaves accounts disabled —
+        // the onboarding gate lifts to match. See FirebaseAuthService.
+        FirebaseAuthService.shared.configureIfNeeded()
+        AccountStore.shared.start()
+
         // Tapping a recommendation banner opens that student. Wired here rather
         // than inside LiveCoachViewModel because the popover is an AppKit
         // concern the view models deliberately know nothing about.
