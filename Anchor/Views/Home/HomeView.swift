@@ -31,9 +31,17 @@ struct HomeView: View {
     @ObservedObject private var classroom = ClassroomViewModel.shared
     @ObservedObject private var googleCredentials = GoogleCredentialsStore.shared
     @ObservedObject private var profile = TeacherProfileStore.shared
+    @ObservedObject private var calendarService = CalendarService.shared
 
     /// Jumps to the Live tab.
     let onOpenLive: () -> Void
+    /// Jumps to the Settings tab, which is where the calendar picker lives.
+    ///
+    /// A closure rather than a `SettingsLink`: the picker sits in the window's
+    /// own Settings tab, and sending the teacher to the separate Settings
+    /// *scene* would open a second place with the same name for the one action
+    /// Home just asked them to take.
+    let onOpenSettings: () -> Void
 
     @State private var path: [HomeRoute] = []
     @State private var isConnecting = false
@@ -87,117 +95,136 @@ struct HomeView: View {
     // MARK: - Populated
 
     private var populated: some View {
-        ScrollView(.vertical) {
-            VStack(alignment: .leading, spacing: 20) {
-                title
+        // The width is read here rather than guessed because the split below is
+        // the whole point of the layout: on a 1472pt window a teacher with one
+        // Classroom class used to see a single card against a thousand points
+        // of nothing, and on a narrow one a fixed 300pt rail would squeeze the
+        // course grid to a column of slivers. Neither width is hypothetical —
+        // this is a tab in a resizable window.
+        GeometryReader { geo in
+            let isWide = geo.size.width >= 980
 
-                if store.hasData {
-                    LiveNowBanner(onOpenLive: onOpenLive)
-                }
+            ScrollView(.vertical) {
+                VStack(alignment: .leading, spacing: 18) {
+                    HomeHeroBand(
+                        now: store.now,
+                        onConfigureCalendar: configureCalendar,
+                        onConnectClassroom: connect
+                    )
 
-                if classroom.isConnected {
-                    coursesSection
-                } else {
-                    ClassroomConnectBanner(isConnecting: isConnecting, onConnect: connect)
-                }
-
-                if !unlinkedSummaries.isEmpty {
-                    recordedSection
-                }
-
-                if !recentSessions.isEmpty {
-                    recentSection
-                }
-
-                if !archive.hasHistory, store.hasData {
-                    firstSessionNotice
-                }
-            }
-            .padding(22)
-            .frame(maxWidth: 1100, alignment: .leading)
-            .frame(maxWidth: .infinity, alignment: .center)
-        }
-        .scrollBounceBehavior(.basedOnSize)
-    }
-
-    private var title: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                AnchorGlyph()
-                    .stroke(style: StrokeStyle(lineWidth: 1.8, lineCap: .round, lineJoin: .round))
-                    .foregroundStyle(Theme.accent)
-                    .frame(width: 20, height: 20)
-                    .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 7 }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(titleText)
-                        .font(.system(size: 22, weight: .semibold))
-                    Text(subtitle)
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Spacer(minLength: 8)
-
-            if classroom.isConnected {
-                HStack(spacing: 7) {
-                    // Only the course-list load, and only while there is nothing
-                    // on screen yet. A coursework sync never spins: it runs on
-                    // its own clock every ten minutes, and a spinner appearing
-                    // over a populated grid reads as the app doing something the
-                    // teacher has to wait for, when they don't.
-                    if classroom.isLoadingCourses, classroom.courses.isEmpty {
-                        ProgressView().controlSize(.small).scaleEffect(0.7)
+                    if store.hasData {
+                        LiveNowBanner(onOpenLive: onOpenLive)
                     }
 
-                    Button {
-                        Task { await classroom.loadCourses() }
-                    } label: {
-                        Label("Refresh", systemImage: "arrow.clockwise")
-                            .font(.system(size: 11))
+                    if isWide {
+                        HStack(alignment: .top, spacing: 18) {
+                            VStack(alignment: .leading, spacing: 18) { mainColumn }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                            VStack(alignment: .leading, spacing: 18) { rail }
+                                .frame(width: 312)
+                        }
+                    } else {
+                        // Today first when stacked. It is the only part of this
+                        // screen that is about the next hour, so it earns the
+                        // top of a narrow window.
+                        VStack(alignment: .leading, spacing: 18) { rail }
+                        VStack(alignment: .leading, spacing: 18) { mainColumn }
                     }
-                    .buttonStyle(.borderless)
-                    .disabled(classroom.isLoadingCourses)
                 }
+                .padding(22)
+                .frame(maxWidth: 1240, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .center)
             }
+            .scrollBounceBehavior(.basedOnSize)
         }
+        // Nothing else refreshes the calendar. `CalendarService.init` reads the
+        // stored selection without loading events — property observers do not
+        // fire during initialisation — and only SettingsView called `refresh()`,
+        // so a teacher who never opened Settings this launch saw "Nothing on
+        // your calendar today" against a full timetable. That is a wrong answer
+        // rather than a missing one, which is why it is worth a call here.
+        .task { await calendarService.refresh() }
     }
 
-    private var titleText: String {
-        guard let first = profile.firstName else { return "Your classes" }
-        return "\(first)'s classes"
-    }
-
-    private var subtitle: String {
-        var parts: [String] = []
-
+    /// The history half: what Anchor is connected to and what it has recorded.
+    @ViewBuilder
+    private var mainColumn: some View {
         if classroom.isConnected {
-            let courses = classroom.courses.count
-            parts.append(courses == 0
-                ? "Google Classroom connected"
-                : "\(courses) Classroom \(courses == 1 ? "class" : "classes")")
+            coursesSection
+        } else {
+            ClassroomConnectBanner(isConnecting: isConnecting, onConnect: connect)
+        }
+
+        if !unlinkedSummaries.isEmpty {
+            recordedSection
+        }
+
+        if !recentSessions.isEmpty {
+            recentSection
+        }
+
+        if !archive.hasHistory, store.hasData {
+            firstSessionNotice
+        }
+    }
+
+    /// The today half: the next hour, and how much Anchor has seen so far.
+    @ViewBuilder
+    private var rail: some View {
+        TodayPanel(now: store.now, onConfigure: configureCalendar)
+
+        GlancePanel(
+            sessionCount: archive.sessions.count,
+            studentCount: distinctStudentCount,
+            classCount: archive.classrooms.count
+        )
+    }
+
+    /// Distinct people, not student-places.
+    ///
+    /// `ClassroomSummary.studentsTracked` is per class, so summing it counts a
+    /// student in two of your classes twice — which is fine on a class card and
+    /// wrong under a heading that says how many students Anchor has seen.
+    /// `identityKey` is documented as stable across sessions, so the set is the
+    /// honest count.
+    private var distinctStudentCount: Int {
+        Set(archive.sessions.flatMap { $0.students.map(\.identityKey) }).count
+    }
+
+    /// Grants calendar access, or sends the teacher to the picker.
+    ///
+    /// Two steps rather than one, and the order matters: macOS records a
+    /// refusal permanently, so prompting is only ever correct while access is
+    /// undetermined. Once it is granted, the thing still missing is a choice of
+    /// calendars, and that is a picker in Settings rather than a prompt.
+    private func configureCalendar() {
+        Task {
+            if calendarService.access == .notDetermined {
+                await calendarService.requestAccess()
+                // Access alone is not enough: nothing is selected by default,
+                // deliberately, so a granted prompt still leaves an empty
+                // schedule until they pick. Send them straight on rather than
+                // leaving them looking at an unchanged card.
+                if calendarService.access == .granted, calendarService.selectedCalendarIDs.isEmpty {
+                    onOpenSettings()
+                }
+                return
+            }
+            onOpenSettings()
+        }
+    }
+
+    /// The account the classes below came from.
+    ///
+    /// Moved out of the page title and next to the classes it describes: an
+    /// email address under a greeting says nothing about which Google account
+    /// those course cards belong to, which is the only question it answers.
+    private var classroomAccountLabel: String? {
 #if DEBUG
-            if DemoData.isEnabled {
-                parts.append(DemoData.teacherEmail)
-            } else if let email = googleCredentials.tokens?.accountEmail {
-                parts.append(email)
-            }
-#else
-            if let email = googleCredentials.tokens?.accountEmail {
-                parts.append(email)
-            }
+        if DemoData.isEnabled { return DemoData.teacherEmail }
 #endif
-        }
-
-        let sessions = archive.sessions.count
-        if sessions > 0 {
-            parts.append("\(sessions) recorded \(sessions == 1 ? "session" : "sessions")")
-        } else if parts.isEmpty {
-            return "Anchor is monitoring. This fills in once the class ends."
-        }
-
-        return parts.joined(separator: " · ")
+        return googleCredentials.tokens?.accountEmail
     }
 
     private func connect() {
@@ -220,7 +247,46 @@ struct HomeView: View {
 
     private var coursesSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            SectionLabel(text: "Google Classroom", trailingText: monitoringSummary)
+            HStack(spacing: 8) {
+                Text("GOOGLE CLASSROOM")
+                    .font(Theme.sectionFont)
+                    .kerning(0.6)
+                    .foregroundStyle(.secondary)
+
+                if let classroomAccountLabel {
+                    Text(classroomAccountLabel)
+                        .font(Theme.captionFont)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+
+                Spacer(minLength: 4)
+
+                Text(monitoringSummary)
+                    .font(Theme.captionFont)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+
+                // Only the course-list load, and only while there is nothing on
+                // screen yet. A coursework sync never spins: it runs on its own
+                // clock every ten minutes, and a spinner over a populated grid
+                // reads as the app doing something the teacher has to wait for,
+                // when they don't.
+                if classroom.isLoadingCourses, classroom.courses.isEmpty {
+                    ProgressView().controlSize(.small).scaleEffect(0.7)
+                }
+
+                Button {
+                    Task { await classroom.loadCourses() }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 10, weight: .semibold))
+                }
+                .buttonStyle(.borderless)
+                .disabled(classroom.isLoadingCourses)
+                .help("Reload your classes from Google Classroom")
+            }
 
             if let error = classroom.lastError {
                 ClassroomErrorRow(error: error, onRetry: connect)
@@ -236,7 +302,7 @@ struct HomeView: View {
                 emptyCoursesRow
             } else {
                 LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 260, maximum: 340), spacing: 14)],
+                    columns: [GridItem(.adaptive(minimum: 280, maximum: 400), spacing: 14)],
                     alignment: .leading,
                     spacing: 14
                 ) {

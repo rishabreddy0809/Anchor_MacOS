@@ -30,11 +30,25 @@ struct ScheduleCard: View {
     var now: Date = Date()
 
     var body: some View {
-        if calendar.isConfigured {
-            configured
-        } else if onConnect != nil {
-            invitation
+        Group {
+            if calendar.isConfigured {
+                configured
+            } else if onConnect != nil {
+                invitation
+            }
         }
+        // Nothing else loads the events. `CalendarService.init` reads the
+        // stored calendar selection but not the day — property observers do not
+        // fire during initialisation — and `refresh()` had exactly one caller,
+        // in SettingsView. So a teacher who had configured the calendar and did
+        // not open Settings this launch saw "Nothing on your calendar today"
+        // against a full timetable: a wrong answer rather than a missing one,
+        // and indistinguishable from a quiet day.
+        //
+        // On the card rather than in the service because this is the view that
+        // is wrong without it, and it is the cheap call — `refresh()` returns
+        // immediately unless access has been granted.
+        .task { await calendar.refresh() }
     }
 
     // MARK: - Configured

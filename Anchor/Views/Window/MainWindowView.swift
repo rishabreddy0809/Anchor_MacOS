@@ -44,7 +44,7 @@ struct MainWindowView: View {
 
     var body: some View {
         TabView(selection: $tab) {
-            HomeView(onOpenLive: { tab = .live })
+            HomeView(onOpenLive: { tab = .live }, onOpenSettings: { tab = .settings })
                 .tabItem { Label("Home", systemImage: "square.grid.2x2") }
                 .tag(Tab.home)
 
