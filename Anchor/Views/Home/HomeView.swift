@@ -211,6 +211,11 @@ struct HomeView: View {
             // version of this that returned early after a failed request left
             // the card unchanged, which is a button that does nothing.
             guard calendarService.isConfigured else {
+                // Name the pane. Switching to Settings alone lands on General,
+                // which has no calendar on it, and a teacher who asked to
+                // connect a calendar and arrived somewhere without one has
+                // been told nothing.
+                SettingsRoute.shared.requested = .integrations
                 onOpenSettings()
                 return
             }

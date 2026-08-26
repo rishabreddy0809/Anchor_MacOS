@@ -14,7 +14,26 @@
 //  to the traffic lights for free, rather than a hand-drawn imitation of it.
 //
 
+import Combine
 import SwiftUI
+
+/// A one-shot request to open Settings on a particular pane.
+///
+/// Exists because `SettingsView.category` is `@State` and the Settings tab is
+/// built once and then kept alive, so nothing outside it can choose the pane.
+/// Without this, "Connect your calendar" on Home switched to Settings and
+/// landed on **General** — a page with no calendar on it — which from the
+/// teacher's side is indistinguishable from the button having done nothing.
+/// That is precisely the bug it was meant to fix, one screen further along.
+///
+/// One-shot on purpose: the request is cleared as it is applied, so a teacher
+/// who then clicks General is not dragged back to Integrations.
+@MainActor
+final class SettingsRoute: ObservableObject {
+    static let shared = SettingsRoute()
+    @Published var requested: SettingsView.Category?
+    private init() {}
+}
 
 struct SettingsView: View {
     @EnvironmentObject private var store: EngagementStore
@@ -27,6 +46,7 @@ struct SettingsView: View {
     @ObservedObject private var classroom = ClassroomViewModel.shared
     @ObservedObject private var accounts = AccountStore.shared
     @ObservedObject private var calendarService = CalendarService.shared
+    @ObservedObject private var route = SettingsRoute.shared
 
     /// Optional because a macOS sidebar `List` selection binding is —
     /// mirrors LiveSessionView's own `SidebarSelection?`. Nil is treated as
@@ -80,6 +100,18 @@ struct SettingsView: View {
         .sheet(isPresented: $isPresentingSignIn) {
             SignInSheet()
         }
+        // Both, and neither is redundant. `.task` covers the first time this
+        // view appears, which is when a TabView builds the pane on the way in;
+        // `.onChange` covers every request after that, when the view is already
+        // alive and only the request changes.
+        .task { applyRequestedPane() }
+        .onChange(of: route.requested) { _, _ in applyRequestedPane() }
+    }
+
+    private func applyRequestedPane() {
+        guard let requested = route.requested else { return }
+        category = requested
+        route.requested = nil
     }
 
     // MARK: - Sidebar
@@ -553,6 +585,20 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
+
+                    // Still `.notDetermined` after asking means the prompt
+                    // never appeared: declining one writes `.denied`. Without
+                    // this the pane just redraws the same button, and pressing
+                    // a button that redraws itself is how a teacher concludes
+                    // the app is broken.
+                    if let failure = calendarService.lastAccessFailure {
+                        Text(failure + " You can also turn calendar access on "
+                             + "for Anchor in System Settings, under Privacy & "
+                             + "Security.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Theme.riskElevated)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
 
                 case .denied:
                     // Anchor cannot re-prompt once macOS has recorded a refusal,
