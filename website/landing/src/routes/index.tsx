@@ -760,6 +760,12 @@ function FinalCta() {
  * host named, the runtime stated, and a link to the episode itself rather than
  * to the show's channel. A reader who doubts it is one click from checking.
  *
+ * The copy follows how the show itself announced the episode rather than being
+ * a second description written for this page. That is not laziness: a press
+ * mention that paraphrases itself into different claims invites the reader to
+ * check which version the episode actually supports, and this one survives the
+ * check because it is the host's own summary.
+ *
  * The artwork is served from our own assets rather than hot-linked from
  * img.youtube.com. On a site whose entire pitch is that nothing about your
  * classroom leaves your machine, silently calling a Google CDN on page load is
@@ -775,9 +781,9 @@ function OnTheShow() {
             This was on The Professor Kev Show
           </h2>
           <p className="mt-5 text-lg leading-relaxed text-white/85">
-            {PRESS.host} — who teaches at UMass Lowell, SNHU and Nashua Community College — asked
-            about the math class that started this, why Anchor runs on the teacher's own Mac, and
-            what it does with the data it never sends anywhere.
+            {PRESS.host} had me on to talk about how a hard summer math class led to a privacy-first
+            macOS app: one that monitors Zoom classes, detects when students are struggling in real
+            time, and alerts the teacher — all without transmitting student voice data to the cloud.
           </p>
           <a
             href={PRESS.url}
@@ -786,7 +792,7 @@ function OnTheShow() {
             className="group mt-8 inline-flex min-h-12 items-center gap-2.5 rounded-full bg-white px-7 text-base font-medium text-[color:var(--show-band)] transition-transform duration-300 hover:scale-[1.04]"
           >
             <Play size={15} fill="currentColor" aria-hidden="true" />
-            Watch the episode
+            Watch the full conversation
             <span className="text-[color:var(--show-band)]/60">{PRESS.duration}</span>
           </a>
         </Reveal>
