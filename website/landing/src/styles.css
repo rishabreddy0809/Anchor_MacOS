@@ -68,6 +68,9 @@
   --color-muted-invert: var(--muted-invert);
   --color-signal-risk: var(--signal-risk);
   --color-signal-ok: var(--signal-ok);
+  --color-show-band: var(--show-band);
+  --color-show-band-soft: var(--show-band-soft);
+  --color-show-band-line: var(--show-band-line);
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-display: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
@@ -102,6 +105,27 @@
   --muted-invert: oklch(0.72 0 0);
   --signal-risk: oklch(0.68 0.19 22);
   --signal-ok: oklch(0.82 0.16 168);
+
+  /* The Professor Kev Show band that sits above the footer.
+   *
+   * Deliberately its own token rather than --signal-risk or --destructive.
+   * Those two mean "a student is in trouble" everywhere else on this site — the
+   * risk badge in the hero panel, the alert rows in the dashboard — and a press
+   * feature is not a warning.
+   *
+   * The hue is taken from the show's own branding: the episode thumbnail's
+   * background is #961e1f, which is oklch(0.441 0.156 26). The band is a
+   * deliberately darker shade of that same hue rather than a match, because a
+   * match would make the thumbnail — which is mostly that red — dissolve into
+   * the band it is sitting on. Darker backdrop, lighter artwork, so the image
+   * reads as an object on a surface.
+   *
+   * Like the other brand tokens it has one value, not a light and a dark: the
+   * band is always this red, the same way the footer is always black.
+   */
+  --show-band: oklch(0.35 0.135 26);
+  --show-band-soft: oklch(0.93 0.05 30);
+  --show-band-line: oklch(1 0 0 / 20%);
 
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);

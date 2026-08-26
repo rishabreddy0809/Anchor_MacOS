@@ -94,6 +94,25 @@ export const PILOT_TERMS: { label: string; value: string | null; hint: string }[
 /** True once every term above has a real value. Drives the "not final" notice. */
 export const PILOT_TERMS_SETTLED = PILOT_TERMS.every((t) => t.value !== null);
 
+/**
+ * The one outside credential Anchor has, and the only one that belongs on the
+ * page until a pilot produces results.
+ *
+ * Anchor was the subject of an August 2026 episode of The Professor Kev Show,
+ * the founder-interview show hosted by Prof. Kevin Willett (UMass Lowell, SNHU,
+ * Nashua Community College). `url` is the episode itself rather than the show's
+ * channel — the claim is only worth making if a reader can check it in one
+ * click, which is the same rule the Teacher impact section is written under.
+ * The band that renders this is `OnTheShow` in the landing route.
+ */
+export const PRESS = {
+  show: "The Professor Kev Show",
+  host: "Prof. Kevin Willett",
+  episode: "How an Incoming High School Freshman Built an AI App to Help Struggling Students",
+  url: "https://www.youtube.com/watch?v=VoFpL0FOjO0",
+  duration: "6:15",
+} as const;
+
 export function absoluteUrl(path: string): string {
   return new URL(path, SITE_URL).toString();
 }

@@ -9,6 +9,7 @@ import {
   Eye,
   ArrowRight,
   Check,
+  Play,
 } from "lucide-react";
 
 import { AuroraSilk } from "@/components/AuroraSilk";
@@ -23,6 +24,7 @@ import {
   LEGAL_NAME,
   MIN_MACOS,
   PILOT_TERMS,
+  PRESS,
   PILOT_TERMS_SETTLED,
   REQUIREMENTS,
   absoluteUrl,
@@ -33,6 +35,7 @@ import insightsShot from "@/assets/insights.jpg";
 import menubarShot from "@/assets/menubar.jpg";
 import integrationsShot from "@/assets/integrations.jpg";
 import recommendationsShot from "@/assets/recommendations.jpg";
+import episodeShot from "@/assets/professor-kev-episode.jpg";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -122,6 +125,7 @@ function Hero() {
               How it works
             </a>
           </div>
+
           <p className="mt-8 text-sm text-muted-invert">
             Runs on-device on {MIN_MACOS}+ · No student install · Free for pilot classrooms
           </p>
@@ -745,6 +749,89 @@ function FinalCta() {
   );
 }
 
+/**
+ * The Professor Kev Show feature, sitting between the final CTA and the black
+ * footer.
+ *
+ * This is the only outside credential Anchor has, and the page is otherwise
+ * scrupulous about not claiming anything it cannot show — the Teacher impact
+ * section says outright that there are no pilot results yet. So this one gets
+ * the real treatment rather than a badge: the actual episode thumbnail, the
+ * host named, the runtime stated, and a link to the episode itself rather than
+ * to the show's channel. A reader who doubts it is one click from checking.
+ *
+ * The artwork is served from our own assets rather than hot-linked from
+ * img.youtube.com. On a site whose entire pitch is that nothing about your
+ * classroom leaves your machine, silently calling a Google CDN on page load is
+ * the wrong default, and a self-hosted 148KB JPEG is faster anyway.
+ */
+function OnTheShow() {
+  return (
+    <section id="press" className="bg-show-band py-20 sm:py-24">
+      <div className="shell grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
+        <Reveal from="left">
+          <p className="eyebrow text-show-band-soft">On the show</p>
+          <h2 className="mt-4 text-3xl font-bold text-white sm:text-4xl">
+            This was on The Professor Kev Show
+          </h2>
+          <p className="mt-5 text-lg leading-relaxed text-white/85">
+            {PRESS.host} — who teaches at UMass Lowell, SNHU and Nashua Community College — asked
+            about the math class that started this, why Anchor runs on the teacher's own Mac, and
+            what it does with the data it never sends anywhere.
+          </p>
+          <a
+            href={PRESS.url}
+            target="_blank"
+            rel="noreferrer"
+            className="group mt-8 inline-flex min-h-12 items-center gap-2.5 rounded-full bg-white px-7 text-base font-medium text-[color:var(--show-band)] transition-transform duration-300 hover:scale-[1.04]"
+          >
+            <Play size={15} fill="currentColor" aria-hidden="true" />
+            Watch the episode
+            <span className="text-[color:var(--show-band)]/60">{PRESS.duration}</span>
+          </a>
+        </Reveal>
+
+        <Reveal from="right" delay={120}>
+          <a
+            href={PRESS.url}
+            target="_blank"
+            rel="noreferrer"
+            className="group relative block overflow-hidden rounded-2xl ring-1 ring-white/25 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)] transition-transform duration-300 hover:scale-[1.02]"
+          >
+            <img
+              src={episodeShot}
+              alt={`Thumbnail for the episode "${PRESS.episode}" — Prof. Kev and Rishab either side of the show's microphone logo.`}
+              width={1280}
+              height={720}
+              loading="lazy"
+              className="w-full"
+            />
+            {/* No caption overlay and no scrim. The artwork already carries
+                the episode title, the host's name and both faces — printing our
+                own title on top of it just collided with the text that is
+                baked into the image. The runtime is not stamped on the frame
+                either — the button beside it already says 6:15, and on artwork
+                this busy the badge landed against the guest's name. Only the
+                play affordance is added. */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 flex items-center justify-center"
+            >
+              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/95 shadow-lg transition-transform duration-300 group-hover:scale-110">
+                <Play
+                  size={24}
+                  fill="currentColor"
+                  className="translate-x-0.5 text-[color:var(--show-band)]"
+                />
+              </span>
+            </span>
+          </a>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
 function Landing() {
   return (
     <div className="bg-background">
@@ -764,6 +851,7 @@ function Landing() {
         <Faq />
         <About />
         <FinalCta />
+        <OnTheShow />
       </main>
       <SiteFooter onLanding />
     </div>
