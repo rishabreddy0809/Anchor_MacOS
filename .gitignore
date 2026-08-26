@@ -12,6 +12,16 @@ BotCredentials.local.swift
 # The Google OAuth client secret, injected at build time. The .example twin IS
 # committed as the template; this one never is. See Config/Secrets.example.xcconfig.
 Config/Secrets.xcconfig
+# The Firebase config for Anchor accounts. Not a credential in Firebase's model
+# -- it ships inside every copy of the app and its API key is a public
+# identifier -- but this repo is public, and a file naming the project, its
+# number and its storage bucket is a free map of the backend for anyone who
+# wants to point traffic at it. Ignored on the same principle as the line
+# above: an artifact that has to be present in the build and absent from the
+# tree. Written 2026-08-26, before the file existed, because the moment to add
+# this rule is the moment before somebody drags the download into the project.
+Anchor/GoogleService-Info.plist
+GoogleService-Info.plist
 .env
 .env.local
 .env.*.local
