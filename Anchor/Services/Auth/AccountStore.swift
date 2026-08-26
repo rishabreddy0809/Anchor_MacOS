@@ -83,6 +83,35 @@ final class AccountStore: ObservableObject {
     var account: AnchorAccount? { state.account }
     var isSignedIn: Bool { state.isSignedIn }
 
+    /// No account, no app.
+    ///
+    /// The single definition of the rule, because it is enforced in two places
+    /// — the window shows `SignedOutGate` instead of the tabs, and onboarding
+    /// hides Skip — and two copies of a gate drift apart in exactly the
+    /// direction that opens one of them.
+    ///
+    /// **`isConfigured` first, and it is not a nicety.** It is false when
+    /// FirebaseAuth is absent or `GoogleService-Info.plist` is missing, and in
+    /// that state no teacher can create an account however much they want to.
+    /// Gating there would not protect a subscription; it would make the app
+    /// unopenable for everyone, including whoever is building it. So the rule
+    /// is dormant until accounts can actually work, and becomes real the moment
+    /// the config lands, with no further change.
+    var requiresSignIn: Bool {
+        Self.requiresSignIn(isConfigured: isConfigured, isSignedIn: isSignedIn)
+    }
+
+    /// The rule itself, lifted out pure so it can be tested.
+    ///
+    /// `AccountStore` is a singleton whose `isConfigured` is answered by
+    /// Firebase, so the live object cannot be put into the state that matters
+    /// most — configured, signed out — from a test. The interesting case would
+    /// therefore be the one nothing covered. Same move as
+    /// `sessionsSurvivingRetention`.
+    nonisolated static func requiresSignIn(isConfigured: Bool, isSignedIn: Bool) -> Bool {
+        isConfigured && !isSignedIn
+    }
+
     // MARK: - Actions
 
     func signUp(email: String, password: String, displayName: String?) async {

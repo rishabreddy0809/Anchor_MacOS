@@ -28,6 +28,7 @@ struct MainWindowView: View {
     @EnvironmentObject private var store: EngagementStore
     @EnvironmentObject private var zoom: ZoomViewModel
     @ObservedObject private var onboarding = OnboardingStore.shared
+    @ObservedObject private var accounts = AccountStore.shared
 
     enum Tab: Hashable {
         case home
@@ -42,7 +43,29 @@ struct MainWindowView: View {
     /// instead of being pulled to Live on every refresh.
     @State private var hasAutoSwitched = false
 
+    /// No account, no app. See SignedOutGate for why this is on the window
+    /// rather than in onboarding, and why it is dormant when accounts cannot
+    /// work at all.
+    private var requiresSignIn: Bool { accounts.requiresSignIn }
+
     var body: some View {
+        Group {
+            if requiresSignIn {
+                SignedOutGate()
+            } else {
+                tabs
+            }
+        }
+        // Onboarding still presents over the gate on a first run, so a new
+        // teacher meets the walkthrough rather than a locked window.
+        .sheet(isPresented: $onboarding.isPresented) {
+            OnboardingView()
+                .environmentObject(store)
+                .environmentObject(zoom)
+        }
+    }
+
+    private var tabs: some View {
         TabView(selection: $tab) {
             HomeView(onOpenLive: { tab = .live }, onOpenSettings: { tab = .settings })
                 .tabItem { Label("Home", systemImage: "square.grid.2x2") }
@@ -97,11 +120,6 @@ struct MainWindowView: View {
             guard !hasAutoSwitched else { return }
             hasAutoSwitched = true
             withAnimation(.easeInOut(duration: 0.25)) { tab = .live }
-        }
-        .sheet(isPresented: $onboarding.isPresented) {
-            OnboardingView()
-                .environmentObject(store)
-                .environmentObject(zoom)
         }
         .sheet(
             isPresented: Binding(

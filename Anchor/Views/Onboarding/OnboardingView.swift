@@ -69,7 +69,7 @@ struct OnboardingView: View {
     private var header: some View {
         HStack {
             Group {
-                if step != .welcome && step != .done {
+                if step != .welcome && step != .done && !mustSignIn {
                     Button("Skip") { onboarding.finish() }
                         .buttonStyle(.plain)
                         .font(.system(size: 11.5))
@@ -127,6 +127,15 @@ struct OnboardingView: View {
         case .done: "Go to Anchor"
         }
     }
+
+    /// True while an account is required and there is not one yet.
+    ///
+    /// Hides Skip, because skipping would land the teacher on the window's own
+    /// sign-in gate a moment later — a button whose only effect is to move the
+    /// same requirement one screen along. Keyed on `isConfigured` for the same
+    /// reason the gate is: in a build where accounts cannot work, Skip is the
+    /// only way through and removing it would strand everybody.
+    private var mustSignIn: Bool { accounts.requiresSignIn }
 
     /// The account step is the only one that can hold the flow.
     ///
