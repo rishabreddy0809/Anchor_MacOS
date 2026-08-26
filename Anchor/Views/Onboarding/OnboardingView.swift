@@ -538,7 +538,10 @@ private struct CalendarStep: View {
             IntegrationHeroStep(
                 symbolName: "calendar",
                 tint: Color(red: 0.85, green: 0.35, blue: 0.24),
-                title: "Your calendar",
+                // Reads through "Connect \(title)" on the button, so it has to
+                // work mid-sentence: "Your calendar" rendered as "Connect Your
+                // calendar", capital Y and all.
+                title: "Calendar",
                 tagline: "Optional. Anchor reads today's classes from this Mac's own "
                     + "calendar, so your dashboard knows what you are teaching next.",
                 benefits: [
