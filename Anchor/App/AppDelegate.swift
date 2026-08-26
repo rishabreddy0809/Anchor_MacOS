@@ -126,6 +126,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 #endif
 
 #if DEBUG
+        // Asks for calendar access at launch and reports exactly what came
+        // back, because the click that normally asks reports nothing useful.
+        //
+        // Written 2026-08-26 while chasing a request that produced no prompt
+        // and no entry in System Settings > Privacy & Security > Calendars --
+        // that is, one that never reached TCC at all. Every explanation for
+        // that is a guess until the thrown error is read, and the error was
+        // unreachable: it happens inside a button press, on a machine where
+        // the tooling cannot press buttons. This makes the same call on a path
+        // that can be run and logged.
+        //
+        //     ANCHOR_CALENDAR_REQUEST=1 ./Anchor.app/Contents/MacOS/Anchor
+        //     log stream --predicate 'subsystem == "com.anchor.diag"'
+        //
+        // Compiled out of Release with the rest of the debug scaffolding.
+        if ProcessInfo.processInfo.environment["ANCHOR_CALENDAR_REQUEST"] == "1" {
+            // NSLog rather than AnchorDiag: `print` to a redirected stdout is
+            // block-buffered and a GUI app does not flush it, and AnchorDiag's
+            // os_log call is at `.debug` level, which the unified log discards
+            // unless logging is explicitly enabled for the subsystem. Both were
+            // tried first and both reported nothing, which looks identical to
+            // the branch not running.
+            Task { @MainActor in
+                let service = CalendarService.shared
+                NSLog("ANCHOR-CAL before=\(service.access)")
+                await service.requestAccess()
+                NSLog(
+                    "ANCHOR-CAL after=\(service.access) "
+                    + "failure=\(service.lastAccessFailure ?? "none") "
+                    + "events=\(service.today.count)"
+                )
+            }
+        }
+
         // Shows the consent panel on launch with a fabricated meeting, so its
         // layout can be looked at without waiting for a real class to start.
         // Compiled out of Release along with the rest of the demo scaffolding.
