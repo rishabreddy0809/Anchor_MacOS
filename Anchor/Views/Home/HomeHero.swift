@@ -309,15 +309,25 @@ struct TodayPanel: View {
     }
 
     private var invitationSubtitle: String {
+        // A failed request outranks the state, because the state is what makes
+        // the failure confusing: still "not determined" after asking looks
+        // exactly like never having asked, and the card would otherwise repeat
+        // the invitation the teacher just accepted.
+        if let failure = calendar.lastAccessFailure {
+            return failure + " You can turn calendar access on for Anchor in "
+                + "System Settings, under Privacy & Security."
+        }
+
         switch calendar.access {
         case .notDetermined:
-            "See what you are teaching next, read from this Mac's own calendar. "
-            + "Nothing is uploaded."
+            return "See what you are teaching next, read from this Mac's own "
+                + "calendar. Nothing is uploaded."
         case .denied:
-            "Anchor was refused calendar access. Turn it back on in System "
-            + "Settings, under Privacy & Security."
+            return "Anchor was refused calendar access. Turn it back on in "
+                + "System Settings, under Privacy & Security."
         case .granted:
-            "Access is on. Choose which calendars Anchor should read in Settings."
+            return "Access is on. Choose which calendars Anchor should read in "
+                + "Settings."
         }
     }
 }

@@ -91,6 +91,16 @@ final class CalendarService: ObservableObject {
     /// Every calendar EventKit can see, for the picker in Settings.
     @Published private(set) var availableCalendars: [(id: String, title: String)] = []
 
+    /// Why the last access request produced nothing, in a teacher's words.
+    ///
+    /// Exists because the failure it describes is invisible otherwise. The
+    /// request used to be `try?`, which turns every error into `false`, and
+    /// `false` is indistinguishable from "the teacher said no" — so a request
+    /// that never reached a prompt left the button looking broken and the card
+    /// unchanged. A permission flow that can fail silently will, and the person
+    /// it fails for is the one who cannot read the console.
+    @Published private(set) var lastAccessFailure: String?
+
     /// Which calendars the teacher chose. Empty means none — see the file
     /// comment for why that is the default rather than "all".
     @Published var selectedCalendarIDs: Set<String> {
@@ -138,8 +148,26 @@ final class CalendarService: ObservableObject {
             return
         }
 
-        let granted = (try? await store.requestFullAccessToEvents()) ?? false
-        access = granted ? .granted : Self.currentAccess()
+        lastAccessFailure = nil
+
+        do {
+            let granted = try await store.requestFullAccessToEvents()
+            access = granted ? .granted : Self.currentAccess()
+
+            // A refusal macOS did not record is not a refusal. Declining the
+            // prompt writes `.denied`, so still being `.notDetermined` after a
+            // completed request means no prompt was ever shown — which is a
+            // different problem with a different fix, and the teacher is
+            // entitled to know which one they have.
+            if !granted, access == .notDetermined {
+                lastAccessFailure = "macOS did not show the calendar permission prompt."
+            }
+        } catch {
+            access = Self.currentAccess()
+            lastAccessFailure = error.localizedDescription
+            AnchorDiag.log("Calendar access request failed: \(error)")
+        }
+
         if access == .granted { await refresh() }
     }
 

@@ -202,16 +202,18 @@ struct HomeView: View {
         Task {
             if calendarService.access == .notDetermined {
                 await calendarService.requestAccess()
-                // Access alone is not enough: nothing is selected by default,
-                // deliberately, so a granted prompt still leaves an empty
-                // schedule until they pick. Send them straight on rather than
-                // leaving them looking at an unchanged card.
-                if calendarService.access == .granted, calendarService.selectedCalendarIDs.isEmpty {
-                    onOpenSettings()
-                }
+            }
+
+            // Always ends somewhere visible. Granted-and-nothing-picked is the
+            // common case, because nothing is selected by default and a granted
+            // prompt still leaves an empty schedule until they choose; and a
+            // request that failed needs the Settings copy that explains it. The
+            // version of this that returned early after a failed request left
+            // the card unchanged, which is a button that does nothing.
+            guard calendarService.isConfigured else {
+                onOpenSettings()
                 return
             }
-            onOpenSettings()
         }
     }
 
