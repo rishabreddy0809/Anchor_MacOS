@@ -141,7 +141,29 @@ done**. Walk all six.
      tester's account must be on the test-users list or they cannot get in at
      all. Check that before the tester arrives; it is a five-minute fix
      beforehand and a dead pass on the day.
-5. **Preferences, done.** Then confirm the app opens onto its real empty
+5. **Calendar step — press Connect and watch for the macOS prompt.**
+   Added 2026-08-26. Two halves: macOS grants access, then the teacher picks
+   which calendars. Nothing is selected by default, so access alone leaves the
+   dashboard's Today panel empty — a tester who stops at the prompt will report
+   the feature as broken when it is merely unfinished.
+   - **A permission that is refused by policy is indistinguishable from an app
+     that is broken, and this is not hypothetical.** On the developer's own Mac
+     the calendar request returns false in 25 ms with no prompt and no entry
+     written to System Settings → Privacy & Security → Calendars. Measured
+     against three independent minimal apps — different bundle identifiers,
+     different entitlements, launched by LaunchServices with nothing else
+     pending — so it is the machine, not Anchor. Contacts and Reminders in the
+     same process seconds apart both got normal decisions, so it is specific to
+     the calendar rather than a blanket privacy lock.
+   - **Record which happened**, because the three outcomes need different
+     answers: a prompt appears; the step shows amber text naming what came
+     back; or nothing at all. Anchor now reports the middle case rather than
+     leaving the button apparently dead, which is what it did when this was
+     first hit.
+   - A school-managed Mac is the likeliest place for a pilot teacher to meet
+     this, and their report will be *"the calendar button does nothing"*.
+
+6. **Preferences, done.** Then confirm the app opens onto its real empty
    state, not a populated one. **Any student data visible here is a
    release-blocking failure** — demo data is gated behind `ANCHOR_DEMO_DATA=1`
    and must be unreachable in a Release build.

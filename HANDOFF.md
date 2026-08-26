@@ -742,6 +742,44 @@ looks exactly like a file with no comments in it.**
   policy rather than the marketing copy. Nothing to do today; do not merge it
   without the same pass.
 
+## Calendar access on this Mac: closed, and it is not Anchor
+
+**Do not spend another session on this.** The calendar request returns false in
+25 ms, throws nothing, shows no prompt, and writes no entry to System Settings →
+Privacy & Security → Calendars.
+
+**It is the machine.** Measured against three independent minimal apps — a 60 KB
+binary with no Anchor code, different bundle identifiers, one with Zoom's
+`disable-library-validation` and one without, one with `get-task-allow` and one
+without, launched by LaunchServices with nothing else pending. Every one behaves
+identically. **Contacts and Reminders, requested in the same process seconds
+apart, both received normal TCC decisions** — so it is calendar-specific rather
+than a blanket privacy lock, and the mechanism is demonstrably working for its
+siblings.
+
+**Anchor's calendar code is correct and has never once been allowed to run.**
+Nothing in it needs fixing. It ships behind an affordance that now reports what
+happened instead of sitting dead.
+
+**Four theories were put to Rishab and all four were wrong**, three of them
+before being tested. Screen Time (the profile restricts Safari only, read from
+`/Library/Managed Preferences`); the Xcode debugger (fails identically under
+LaunchServices); the Zoom SDK (a minimal app with the same entitlement fails,
+and one without it fails too); and an orphaned probe process holding a pending
+prompt (killed it, still fails). **The lesson is the one this page already
+teaches and it was ignored for an hour: the measurement took twenty minutes to
+build and should have come first.** `ANCHOR_CALENDAR_REQUEST=1` is that
+measurement, DEBUG-only, and it is why the answer is now known rather than
+argued.
+
+Three traps hit while measuring, each of which looks exactly like "the code did
+not run": `print` to a redirected stdout is block-buffered and a GUI app never
+flushes it; `AnchorDiag`'s `os_log` call is `.debug` level, which the unified log
+discards; and in a Debug build Xcode splits the code into `Anchor.debug.dylib`,
+leaving a 59 KB stub executable that contains none of the strings you would
+search for. **`grep -a` on a Mach-O, for the same reason it is needed on the
+site's HTML.**
+
 ## Next, in order
 
 Everything Claude-owned and unblocked is done, and that sentence has now
