@@ -313,7 +313,16 @@ actor GoogleOAuthClient {
 
     /// Opens the system browser, waits for the loopback redirect, and exchanges
     /// the code for tokens.
-    func authorize(config: GoogleOAuthConfig) async throws -> GoogleTokens {
+    /// - Parameter loginHint: the Google address to pre-select, when one is
+    ///   already known. Passed when the teacher created their Anchor account
+    ///   with Google: they have just proved which Google identity is theirs, so
+    ///   asking them to pick it out of a list again is a question Anchor has
+    ///   already been told the answer to. It only pre-selects — Google still
+    ///   shows the consent screen and the teacher can still switch accounts,
+    ///   which is why this does not make the Classroom grant implicit in the
+    ///   sign-in. The privacy policy says those two are separate grants and
+    ///   neither implies the other, and that stays true.
+    func authorize(config: GoogleOAuthConfig, loginHint: String? = nil) async throws -> GoogleTokens {
         let verifier = PKCE.makeCodeVerifier()
         let challenge = PKCE.makeCodeChallenge(from: verifier)
         let state = PKCE.makeState()
@@ -347,6 +356,14 @@ actor GoogleOAuthClient {
             URLQueryItem(name: "access_type", value: "offline"),
             URLQueryItem(name: "prompt", value: "consent")
         ]
+
+        // Appended rather than included above so the hint is plainly optional:
+        // an empty or whitespace value must not be sent, because Google treats
+        // `login_hint=` as a hint to an account named "" and shows an error
+        // instead of the picker.
+        if let hint = loginHint?.trimmed, !hint.isEmpty {
+            components.queryItems?.append(URLQueryItem(name: "login_hint", value: hint))
+        }
 
         guard let authorizationURL = components.url else {
             throw ClassroomError.authorizationFailed("Could not build the sign-in URL.")

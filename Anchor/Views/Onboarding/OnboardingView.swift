@@ -30,7 +30,7 @@ struct OnboardingView: View {
     @ObservedObject private var accounts = AccountStore.shared
 
     enum Step: Int, CaseIterable {
-        case welcome, account, name, zoom, classroom, calendar, preferences, done
+        case welcome, account, name, tools, preferences, done
     }
 
     @State private var step: Step = .welcome
@@ -46,9 +46,7 @@ struct OnboardingView: View {
                     case .welcome: WelcomeStep()
                     case .account: AccountStep()
                     case .name: NameStep()
-                    case .zoom: ZoomStep()
-                    case .classroom: ClassroomStep()
-                    case .calendar: CalendarStep()
+                    case .tools: ToolsStep()
                     case .preferences: PreferencesStep()
                     case .done: FinishStep()
                     }
@@ -125,7 +123,7 @@ struct OnboardingView: View {
     private var primaryLabel: String {
         switch step {
         case .welcome: "Get Started"
-        case .account, .name, .zoom, .classroom, .calendar, .preferences: "Continue"
+        case .account, .name, .tools, .preferences: "Continue"
         case .done: "Go to Anchor"
         }
     }
@@ -436,81 +434,6 @@ private struct IntegrationHeroStep: View {
     }
 }
 
-private struct ZoomStep: View {
-    @EnvironmentObject private var zoom: ZoomViewModel
-    @ObservedObject private var oauth = ZoomOAuthStore.shared
-
-    @State private var isBusy = false
-
-    /// The error itself rather than its description: `ErrorNotice` needs to
-    /// know whether the teacher can act on it, which only the value knows.
-    @State private var error: ZoomError?
-
-    var body: some View {
-        VStack(spacing: 14) {
-            IntegrationHeroStep(
-                symbolName: "video.fill",
-                tint: Color(red: 0.15, green: 0.47, blue: 0.94),
-                title: "Zoom",
-                tagline: "Sign in with your Zoom account so Anchor can watch your classes as they happen.",
-                benefits: [
-                    "Live roster while class is running",
-                    "Mute, camera and hand-raise signals",
-                    "Optional in-meeting bot for speaking time"
-                ],
-                isConnected: oauth.isConnected,
-                isBusy: isBusy,
-                canConnect: oauth.hasClientCredentials,
-                unavailableReason: oauth.hasClientCredentials
-                    ? nil
-                    // Was "Add one in Settings → Zoom connection → Advanced",
-                    // which is a `#if DEBUG` panel — so in the build a teacher
-                    // actually runs, that sentence pointed at a screen that is
-                    // not there. Same class of defect as the three strings the
-                    // Advanced disclosure left wrong in HANDOFF.md.
-                    : "Anchor's Zoom setup isn't finished on this Mac, so sign-in "
-                        + "would fail after you signed in. Whoever installed Anchor "
-                        + "can finish it in one step — you can skip this and connect later.",
-                connectedDetail: oauth.accountLabel.map { "Connected as \($0)" } ?? "Connected",
-                privacyNote: "Anchor opens Zoom in your browser to sign in — nothing is "
-                    + "typed here, and Anchor never sees your password.",
-                onConnect: connect,
-                onDisconnect: disconnect
-            )
-
-            if let error {
-                ErrorNotice(
-                    message: [error.errorDescription, error.recoverySuggestion]
-                        .compactMap { $0 }
-                        .joined(separator: " "),
-                    isSetupProblem: error.isSetupProblem,
-                    technicalDetail: error.technicalDetail
-                )
-            }
-        }
-    }
-
-    private func connect() {
-        error = nil
-        Task {
-            isBusy = true
-            defer { isBusy = false }
-            switch await zoom.connectAccount() {
-            case .success:
-                break
-            case .failure(let failure):
-                // Cancelling isn't worth a red banner — the teacher closed the tab.
-                guard failure != .authorizationCancelled else { return }
-                error = failure
-            }
-        }
-    }
-
-    private func disconnect() {
-        Task { await zoom.disconnectAccount() }
-    }
-}
-
 /// Today's teaching, asked for where the other two connections are asked for.
 ///
 /// It was not in onboarding at all: the calendar shipped 2026-08-25 reachable
@@ -528,192 +451,198 @@ private struct ZoomStep: View {
 ///
 /// Titles are never shown here, only calendar names. The list a teacher picks
 /// from is theirs; what is in it stays on this Mac, per `CalendarService`.
-private struct CalendarStep: View {
-    @ObservedObject private var calendar = CalendarService.shared
-
-    @State private var isBusy = false
-
-    var body: some View {
-        VStack(spacing: 14) {
-            IntegrationHeroStep(
-                symbolName: "calendar",
-                tint: Color(red: 0.85, green: 0.35, blue: 0.24),
-                // Reads through "Connect \(title)" on the button, so it has to
-                // work mid-sentence: "Your calendar" rendered as "Connect Your
-                // calendar", capital Y and all.
-                title: "Calendar",
-                tagline: "Optional. Anchor reads today's classes from this Mac's own "
-                    + "calendar, so your dashboard knows what you are teaching next.",
-                benefits: [
-                    "What you are teaching now, and what is next",
-                    "Read from this Mac, not from Google — no extra permission",
-                    "Nothing is stored, uploaded, or given to any model"
-                ],
-                isConnected: calendar.isConfigured,
-                isBusy: isBusy,
-                canConnect: calendar.access != .denied,
-                unavailableReason: calendar.access == .denied
-                    ? "macOS is refusing Anchor access to your calendar. You can turn "
-                        + "it on in System Settings, under Privacy & Security, and pick "
-                        + "your calendars later in Anchor's own Settings."
-                    : nil,
-                connectedDetail: connectedDetail,
-                privacyNote: "Anchor asks macOS for your calendar, never Google, so "
-                    + "connecting it needs no new Google permission and changes nothing "
-                    + "about Classroom.",
-                onConnect: connect,
-                onDisconnect: { calendar.selectedCalendarIDs = [] }
-            )
-
-            // The second half. Only once macOS has said yes, because before that
-            // there is nothing to list and an empty box reads as a broken one.
-            if calendar.access == .granted {
-                calendarPicker
-            }
-
-            // Access granted and the prompt never seen is the case that looks
-            // like nothing happened. Say so here rather than leaving the step
-            // apparently inert.
-            if let failure = calendar.lastAccessFailure {
-                ErrorNotice(
-                    message: failure + " You can turn calendar access on for Anchor "
-                        + "in System Settings, under Privacy & Security.",
-                    isSetupProblem: false,
-                    technicalDetail: nil
-                )
-            }
-        }
-    }
-
-    private var connectedDetail: String {
-        let count = calendar.selectedCalendarIDs.count
-        guard count > 0 else { return "Choose a calendar below" }
-        return "\(count) calendar\(count == 1 ? "" : "s") selected"
-    }
-
-    private var calendarPicker: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Which calendars should Anchor read?")
-                .font(.system(size: 12, weight: .medium))
-
-            if calendar.availableCalendars.isEmpty {
-                Text("No calendars found on this Mac.")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(calendar.availableCalendars, id: \.id) { item in
-                    Toggle(isOn: binding(for: item.id)) {
-                        Text(item.title).font(.system(size: 12))
-                    }
-                    .toggleStyle(.checkbox)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                .fill(Theme.surface)
-        )
-    }
-
-    private func binding(for id: String) -> Binding<Bool> {
-        Binding(
-            get: { calendar.selectedCalendarIDs.contains(id) },
-            set: { isOn in
-                if isOn { calendar.selectedCalendarIDs.insert(id) }
-                else { calendar.selectedCalendarIDs.remove(id) }
-            }
-        )
-    }
-
-    private func connect() {
-        Task {
-            isBusy = true
-            defer { isBusy = false }
-            await calendar.requestAccess()
-        }
-    }
-}
-
-private struct ClassroomStep: View {
+/// One page for everything Anchor plugs into, instead of three.
+///
+/// Zoom, Classroom and the calendar each had a full-screen hero step, which
+/// made connecting three things feel like three separate decisions and put two
+/// "Continue" clicks between a teacher and the end of setup. They are one
+/// decision — *what should Anchor read?* — so they are one page, using the same
+/// compact card as Settings → Integrations rather than a fourth layout.
+///
+/// **What signing in with Google does and does not do.** If the teacher created
+/// their Anchor account with Google, connecting Classroom pre-selects that
+/// address, so they are not asked to pick their identity twice in one screen.
+/// It stays a separate consent: Google still shows its screen and they can
+/// still switch accounts. That matters beyond taste — the published privacy
+/// policy states that signing in with Google and connecting Classroom are
+/// separate grants and that neither implies the other, and a build where one
+/// silently authorised the other would make a live legal page false.
+private struct ToolsStep: View {
+    @EnvironmentObject private var zoom: ZoomViewModel
     @ObservedObject private var classroom = ClassroomViewModel.shared
     @ObservedObject private var credentials = GoogleCredentialsStore.shared
+    @ObservedObject private var calendar = CalendarService.shared
+    @ObservedObject private var accounts = AccountStore.shared
 
-    @State private var isBusy = false
-    @State private var error: ClassroomError?
+    @State private var isConnectingZoom = false
+    @State private var isConnectingClassroom = false
+    @State private var zoomError: ZoomError?
+    @State private var classroomError: ClassroomError?
 
     var body: some View {
-        VStack(spacing: 14) {
-            IntegrationHeroStep(
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Connect your tools")
+                    .font(.system(size: 21, weight: .semibold))
+                Text(subtitle)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            IntegrationCard(
+                symbolName: "video.fill",
+                tint: Theme.accent,
+                title: "Zoom",
+                description: "The live roster, and the signals Anchor scores a class on.",
+                learnMoreDetail: "Anchor reads who is in the meeting and how they are "
+                    + "taking part. No video is analysed and no recording is made.",
+                isConnected: zoom.state.isActive,
+                isBusy: isConnectingZoom,
+                canConnect: true,
+                unavailableReason: nil,
+                connectedDetail: zoom.account?.email,
+                onConnect: connectZoom,
+                onDisconnect: { Task { await zoom.disconnectAccount() } },
+                advanced: { EmptyView() }
+            )
+
+            IntegrationCard(
                 symbolName: "graduationcap.fill",
                 tint: Color(red: 0.20, green: 0.60, blue: 0.36),
                 title: "Google Classroom",
-                tagline: "Optional. Connect Classroom to see missing work and grade "
-                    + "trends alongside engagement.",
-                benefits: [
-                    "Missing assignments per student",
-                    "Grade trend context on every score",
-                    "Read-only — Anchor never posts or grades"
-                ],
+                description: "Optional. Adds missing assignments and grade trends to each "
+                    + "student's score.",
+                learnMoreDetail: classroomLearnMore,
                 isConnected: classroom.isConnected,
-                isBusy: isBusy,
-                // Gated on `canCompleteSignIn`, not `hasClientID`.
-                //
-                // CORRECTED 2026-08-24. The comment that stood here said this
-                // branch was "not expected to be reachable — googleClientID
-                // ships non-empty and Google genuinely accepts PKCE without a
-                // secret". The second half was false, and it was the load-
-                // bearing half. Probing Google's token endpoint with a valid
-                // client id, a PKCE verifier and no secret returns
-                // `client_secret is missing`, so with no secret provisioned
-                // this branch was reachable by EVERY teacher — and worse, it
-                // was not reached here at all: `hasClientID` was true, the
-                // button was offered, the browser opened, consent was granted,
-                // and the failure landed after it. The note ended "unreachable
-                // is what the Zoom branch was assumed to be too", which turned
-                // out to be the most accurate sentence in it.
+                isBusy: isConnectingClassroom,
+                // Same gate as the old step, and it is load-bearing: without a
+                // usable Google setup the browser opens, consent is granted,
+                // and the failure lands *after* the teacher has approved it.
                 canConnect: credentials.canCompleteSignIn,
                 unavailableReason: credentials.canCompleteSignIn
                     ? nil
                     : "Anchor's Google setup isn't finished on this Mac, so signing in "
-                        + "would fail after you'd already approved it in your browser. "
-                        + "Classroom is optional — carry on without it, and whoever "
-                        + "installed Anchor can finish setup later.",
-                connectedDetail: credentials.tokens?.accountEmail ?? "Connected",
-                privacyNote: "Anchor opens Google in your browser to sign in, and only "
-                    + "ever reads Classroom — it never posts, grades or changes anything.",
-                onConnect: connect,
-                onDisconnect: disconnect
+                        + "would fail after you'd already approved it in your browser.",
+                connectedDetail: credentials.tokens?.accountEmail,
+                onConnect: connectClassroom,
+                onDisconnect: { classroom.disconnect() },
+                advanced: { EmptyView() }
             )
 
-            if let error {
+            IntegrationCard(
+                symbolName: "calendar",
+                tint: Color(red: 0.85, green: 0.35, blue: 0.24),
+                title: "Calendar",
+                description: "Optional. Shows what you're teaching next on your dashboard.",
+                learnMoreDetail: "Anchor asks macOS for today's events from the calendars "
+                    + "you pick, never Google, so this needs no new Google permission. "
+                    + "Nothing is stored or uploaded.",
+                isConnected: calendar.isConfigured,
+                isBusy: false,
+                canConnect: calendar.access != .denied,
+                unavailableReason: calendar.access == .denied
+                    ? "macOS is refusing Anchor access to your calendar. You can turn it "
+                        + "on in System Settings, under Privacy & Security."
+                    : nil,
+                connectedDetail: calendarDetail,
+                onConnect: connectCalendar,
+                onDisconnect: { calendar.selectedCalendarIDs = [] },
+                advanced: { EmptyView() }
+            )
+
+            if let zoomError {
                 ErrorNotice(
-                    message: [error.errorDescription, error.recoverySuggestion]
+                    message: [zoomError.errorDescription, zoomError.recoverySuggestion]
                         .compactMap { $0 }
                         .joined(separator: " "),
-                    isSetupProblem: error.isSetupProblem,
-                    technicalDetail: error.technicalDetail
+                    isSetupProblem: zoomError.isSetupProblem,
+                    technicalDetail: zoomError.technicalDetail
                 )
             }
+
+            if let classroomError {
+                ErrorNotice(
+                    message: [classroomError.errorDescription, classroomError.recoverySuggestion]
+                        .compactMap { $0 }
+                        .joined(separator: " "),
+                    isSetupProblem: classroomError.isSetupProblem,
+                    technicalDetail: classroomError.technicalDetail
+                )
+            }
+
+            if let failure = calendar.lastAccessFailure {
+                ErrorNotice(
+                    message: failure + " You can turn calendar access on for Anchor in "
+                        + "System Settings, under Privacy & Security.",
+                    isSetupProblem: false,
+                    technicalDetail: nil
+                )
+            }
+
+            Text("You can skip any of these and connect them later in Settings.")
+                .font(.system(size: 11))
+                .foregroundStyle(.tertiary)
         }
     }
 
-    private func connect() {
-        error = nil
+    /// Says out loud when Google is already known, so the teacher understands
+    /// why Classroom is about to skip the account picker.
+    private var subtitle: String {
+        if accounts.account?.googleEmail != nil {
+            return "Anchor reads a live class from Zoom, and optionally your coursework "
+                + "and calendar. You're signed in with Google, so Classroom already knows "
+                + "which account to use."
+        }
+        return "Anchor reads a live class from Zoom, and optionally your coursework and "
+            + "calendar. Connect what you want now, or leave any of it for later."
+    }
+
+    private var classroomLearnMore: String {
+        if let email = accounts.account?.googleEmail {
+            return "Read-only: Anchor never posts, grades or changes anything. Connecting "
+                + "will use \(email), the account you signed in with, and Google will "
+                + "still ask you to approve it."
+        }
+        return "Read-only: Anchor never posts, grades or changes anything."
+    }
+
+    private var calendarDetail: String? {
+        guard calendar.isConfigured else { return nil }
+        let count = calendar.selectedCalendarIDs.count
+        return "\(count) calendar\(count == 1 ? "" : "s")"
+    }
+
+    private func connectZoom() {
+        zoomError = nil
         Task {
-            isBusy = true
-            defer { isBusy = false }
-            await classroom.connect()
-            // Cancelling isn't worth a red banner here either — matches Zoom.
-            if let failure = classroom.lastError, failure != .authorizationCancelled {
-                error = failure
+            isConnectingZoom = true
+            defer { isConnectingZoom = false }
+            switch await zoom.connectAccount() {
+            case .success:
+                break
+            case .failure(let failure):
+                // Cancelling isn't worth a red banner — the teacher closed the
+                // tab. Anything else is, because a connect button that reports
+                // nothing is the exact failure this session spent a day on.
+                guard failure != .authorizationCancelled else { return }
+                zoomError = failure
             }
         }
     }
 
-    private func disconnect() {
-        classroom.disconnect()
+    private func connectClassroom() {
+        classroomError = nil
+        Task {
+            isConnectingClassroom = true
+            defer { isConnectingClassroom = false }
+            await classroom.connect()
+            classroomError = classroom.lastError
+        }
+    }
+
+    private func connectCalendar() {
+        Task { await calendar.requestAccess() }
     }
 }
 

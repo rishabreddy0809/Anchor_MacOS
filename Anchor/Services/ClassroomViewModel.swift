@@ -358,6 +358,15 @@ final class ClassroomViewModel: ObservableObject {
 
     // MARK: - Connect
 
+    /// The Google address to pre-select, if the Anchor account is a Google one.
+    ///
+    /// Nil for an email-and-password account: there is no Google identity to
+    /// hint at, and guessing from the Anchor account's email would be wrong
+    /// whenever a teacher signs up with one address and teaches from another.
+    private var googleSignInHint: String? {
+        AccountStore.shared.account?.googleEmail
+    }
+
     /// Runs the browser sign-in, then loads the course list.
     func connect() async {
         guard let config = credentials.config() else {
@@ -370,7 +379,14 @@ final class ClassroomViewModel: ObservableObject {
         lastError = nil
 
         do {
-            let tokens = try await oauth.authorize(config: config)
+            // Pre-select the Google account the teacher just used for their
+            // Anchor account, when that is how they signed in. Saves them
+            // picking their identity twice in the space of one onboarding
+            // screen. Only ever a *hint*: Google still shows consent and can
+            // still be switched, so this does not make connecting Classroom
+            // implicit in signing in — which the privacy policy says are
+            // separate grants, and they remain so.
+            let tokens = try await oauth.authorize(config: config, loginHint: googleSignInHint)
             credentials.save(tokens)
             state = .connected(email: tokens.accountEmail)
             await loadCourses()

@@ -51,6 +51,18 @@ nonisolated struct AnchorAccount: Codable, Equatable, Sendable {
     var displayName: String?
     var provider: AccountProvider
 
+    /// The Google address to hand Google as a `login_hint`, or nil.
+    ///
+    /// Gated on the provider rather than just returning `email`, because a
+    /// password account's email is frequently not a Google address at all —
+    /// and hinting at one that Google does not recognise makes its account
+    /// picker worse, not better. Only a teacher who actually signed in with
+    /// Google has proved which Google identity is theirs.
+    var googleEmail: String? {
+        guard provider == .google, let email, !email.trimmed.isEmpty else { return nil }
+        return email
+    }
+
     /// What to show in Settings and on the finish screen — a name if there is
     /// one, otherwise the email, otherwise something honest rather than blank.
     var label: String {

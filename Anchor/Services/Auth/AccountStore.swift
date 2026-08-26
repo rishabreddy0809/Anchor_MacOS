@@ -42,7 +42,7 @@ final class AccountStore: ObservableObject {
 
     /// The last failure, cleared on the next attempt. Cancellations never land
     /// here — closing a browser tab is not an error worth a red banner, the
-    /// same rule `ZoomStep` and `ClassroomStep` already follow.
+    /// same rule `ToolsStep` already follows for Zoom and Classroom.
     @Published var lastError: AccountError?
 
     private let service: FirebaseAuthService
