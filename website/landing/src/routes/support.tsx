@@ -77,9 +77,9 @@ function Support() {
           authorize the app, your account has not been added yet — email us rather than retrying.
         </p>
         <p>
-          <strong>The bot does not join the meeting.</strong> Anchor only joins after you answer
-          yes to the monitoring prompt, and only for meetings you host. It cannot join a meeting
-          hosted by somebody else.
+          <strong>The bot does not join the meeting.</strong> Anchor only joins after you answer yes
+          to the monitoring prompt, and only for meetings you host. It cannot join a meeting hosted
+          by somebody else.
         </p>
         <p>
           <strong>Some panels stay empty.</strong> A few live signals come from Zoom endpoints that
