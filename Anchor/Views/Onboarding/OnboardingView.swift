@@ -30,7 +30,7 @@ struct OnboardingView: View {
     @ObservedObject private var accounts = AccountStore.shared
 
     enum Step: Int, CaseIterable {
-        case welcome, account, name, zoom, classroom, preferences, done
+        case welcome, account, name, zoom, classroom, calendar, preferences, done
     }
 
     @State private var step: Step = .welcome
@@ -48,6 +48,7 @@ struct OnboardingView: View {
                     case .name: NameStep()
                     case .zoom: ZoomStep()
                     case .classroom: ClassroomStep()
+                    case .calendar: CalendarStep()
                     case .preferences: PreferencesStep()
                     case .done: FinishStep()
                     }
@@ -124,7 +125,7 @@ struct OnboardingView: View {
     private var primaryLabel: String {
         switch step {
         case .welcome: "Get Started"
-        case .account, .name, .zoom, .classroom, .preferences: "Continue"
+        case .account, .name, .zoom, .classroom, .calendar, .preferences: "Continue"
         case .done: "Go to Anchor"
         }
     }
@@ -507,6 +508,128 @@ private struct ZoomStep: View {
 
     private func disconnect() {
         Task { await zoom.disconnectAccount() }
+    }
+}
+
+/// Today's teaching, asked for where the other two connections are asked for.
+///
+/// It was not in onboarding at all: the calendar shipped 2026-08-25 reachable
+/// only from a card on Home and a pane in Settings, so the one moment a teacher
+/// is already saying yes to things went past without mentioning it. Zoom and
+/// Classroom are both here; this was the odd one out for no reason other than
+/// having been built later.
+///
+/// **Two halves, and both are shown here.** macOS grants access, and then the
+/// teacher chooses which calendars Anchor may read — nothing is selected by
+/// default, deliberately, because a teaching dashboard that silently lists
+/// someone's private appointments is worse than one that lists nothing. Access
+/// alone leaves Today empty, so a step that stopped after the prompt would look
+/// like it had worked and produce nothing.
+///
+/// Titles are never shown here, only calendar names. The list a teacher picks
+/// from is theirs; what is in it stays on this Mac, per `CalendarService`.
+private struct CalendarStep: View {
+    @ObservedObject private var calendar = CalendarService.shared
+
+    @State private var isBusy = false
+
+    var body: some View {
+        VStack(spacing: 14) {
+            IntegrationHeroStep(
+                symbolName: "calendar",
+                tint: Color(red: 0.85, green: 0.35, blue: 0.24),
+                title: "Your calendar",
+                tagline: "Optional. Anchor reads today's classes from this Mac's own "
+                    + "calendar, so your dashboard knows what you are teaching next.",
+                benefits: [
+                    "What you are teaching now, and what is next",
+                    "Read from this Mac, not from Google — no extra permission",
+                    "Nothing is stored, uploaded, or given to any model"
+                ],
+                isConnected: calendar.isConfigured,
+                isBusy: isBusy,
+                canConnect: calendar.access != .denied,
+                unavailableReason: calendar.access == .denied
+                    ? "macOS is refusing Anchor access to your calendar. You can turn "
+                        + "it on in System Settings, under Privacy & Security, and pick "
+                        + "your calendars later in Anchor's own Settings."
+                    : nil,
+                connectedDetail: connectedDetail,
+                privacyNote: "Anchor asks macOS for your calendar, never Google, so "
+                    + "connecting it needs no new Google permission and changes nothing "
+                    + "about Classroom.",
+                onConnect: connect,
+                onDisconnect: { calendar.selectedCalendarIDs = [] }
+            )
+
+            // The second half. Only once macOS has said yes, because before that
+            // there is nothing to list and an empty box reads as a broken one.
+            if calendar.access == .granted {
+                calendarPicker
+            }
+
+            // Access granted and the prompt never seen is the case that looks
+            // like nothing happened. Say so here rather than leaving the step
+            // apparently inert.
+            if let failure = calendar.lastAccessFailure {
+                ErrorNotice(
+                    message: failure + " You can turn calendar access on for Anchor "
+                        + "in System Settings, under Privacy & Security.",
+                    isSetupProblem: false,
+                    technicalDetail: nil
+                )
+            }
+        }
+    }
+
+    private var connectedDetail: String {
+        let count = calendar.selectedCalendarIDs.count
+        guard count > 0 else { return "Choose a calendar below" }
+        return "\(count) calendar\(count == 1 ? "" : "s") selected"
+    }
+
+    private var calendarPicker: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Which calendars should Anchor read?")
+                .font(.system(size: 12, weight: .medium))
+
+            if calendar.availableCalendars.isEmpty {
+                Text("No calendars found on this Mac.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(calendar.availableCalendars, id: \.id) { item in
+                    Toggle(isOn: binding(for: item.id)) {
+                        Text(item.title).font(.system(size: 12))
+                    }
+                    .toggleStyle(.checkbox)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                .fill(Theme.surface)
+        )
+    }
+
+    private func binding(for id: String) -> Binding<Bool> {
+        Binding(
+            get: { calendar.selectedCalendarIDs.contains(id) },
+            set: { isOn in
+                if isOn { calendar.selectedCalendarIDs.insert(id) }
+                else { calendar.selectedCalendarIDs.remove(id) }
+            }
+        )
+    }
+
+    private func connect() {
+        Task {
+            isBusy = true
+            defer { isBusy = false }
+            await calendar.requestAccess()
+        }
     }
 }
 
