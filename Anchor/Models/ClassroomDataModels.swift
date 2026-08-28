@@ -27,12 +27,6 @@ struct ClassroomCourse: Identifiable, Hashable, Sendable {
     var section: String?
     var enrollmentCode: String?
     var courseState: String?
-    /// True when the signed-in account is enrolled in this class rather than
-    /// teaching it. Google only lets a student read their *own* submissions, so
-    /// a roster and a class-wide missing-work count are not available — the UI
-    /// says so instead of showing an empty roster as fact.
-    var enrolledAsStudent: Bool = false
-
     var displayName: String {
         guard let section, !section.isEmpty else { return name }
         return "\(name) · \(section)"

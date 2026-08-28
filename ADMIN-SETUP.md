@@ -171,3 +171,11 @@ Marketplace. Each of these fails in a way that is quiet or misleading:
 - **A Server-to-Server app.** It used to be required for the bot and is not any
   more; the bot joins with the teacher's own identity. It remains supported for
   a school that specifically wants a dedicated robot account, and only then.
+
+  **It does not connect Zoom on a teacher's behalf** (changed 2026-08-27). A
+  Server-to-Server credential used to satisfy Anchor's "is Zoom connected?"
+  check for everybody on the Mac, which meant the second teacher to sign in
+  found Zoom already connected — to an account that was not theirs, holding
+  none of their classes, so the dashboard sat empty with no explanation. Every
+  teacher now connects their own Zoom in onboarding or Settings, whatever else
+  is provisioned on the machine. See `ZoomViewModel.hasTeacherZoomConnection`.

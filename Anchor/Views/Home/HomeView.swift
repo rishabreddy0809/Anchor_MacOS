@@ -321,17 +321,11 @@ struct HomeView: View {
                             detail: detail(for: course),
                             linkedClasses: linkedClasses(for: course),
                             onOpen: { path.append(.course(course.id)) },
-                            // Monitoring a class you attend rather than teach
-                            // would only produce 403s from Google.
-                            onMonitor: course.enrolledAsStudent
-                                ? nil
-                                : { classroom.setMonitored(true, courseID: course.id) },
+                            onMonitor: { classroom.setMonitored(true, courseID: course.id) },
                             onOpenLinked: { path.append(.classroom($0)) }
                         )
                         .contextMenu {
-                            if course.enrolledAsStudent {
-                                EmptyView()
-                            } else if classroom.isMonitored(courseID: course.id) {
+                            if classroom.isMonitored(courseID: course.id) {
                                 Button("Stop monitoring") {
                                     classroom.setMonitored(false, courseID: course.id)
                                 }
@@ -375,7 +369,6 @@ struct HomeView: View {
     /// reading the pooled rollups would print one class's missing work on
     /// another class's card.
     private func detail(for course: ClassroomCourse) -> CourseCardDetail {
-        if course.enrolledAsStudent { return .enrolledAsStudent }
         guard classroom.isMonitored(courseID: course.id) else {
             // Not synced, but a linked class still has real history behind it.
             let linked = linkedClasses(for: course)
@@ -447,11 +440,18 @@ struct HomeView: View {
         .sorted { $0.sessionCount > $1.sessionCount }
     }
 
+    /// Shown when Classroom is connected and holds nothing.
+    ///
+    /// This row is load-bearing, and more so since the student fallback was
+    /// removed: an empty course list is now the honest answer for an account
+    /// that teaches nothing, and the risk that comes with it is the teacher
+    /// reading it as a connection that failed. So it names the account it is
+    /// talking about, and says what Anchor lists and what it does not.
     private var emptyCoursesRow: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(classroom.isLoadingCourses
                  ? "Loading your classes from Google Classroom…"
-                 : "No active classes on this Google account.")
+                 : emptyCoursesHeadline)
                 .font(.system(size: 12, weight: .medium))
 
             if !classroom.isLoadingCourses {
@@ -469,6 +469,17 @@ struct HomeView: View {
             RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                 .fill(Theme.surface)
         )
+    }
+
+    /// Names the account when Anchor knows it. "No active classes on this
+    /// Google account" invites the question *which* one — and the answer is
+    /// what tells a teacher whether they connected the wrong address or simply
+    /// teach nothing on the right one.
+    private var emptyCoursesHeadline: String {
+        guard let email = googleCredentials.tokens?.accountEmail, !email.trimmed.isEmpty else {
+            return "No active classes on this Google account."
+        }
+        return "No active classes you teach on \(email)."
     }
 
     // MARK: - Recorded classes
@@ -518,11 +529,11 @@ struct HomeView: View {
 
     // MARK: - Linking
 
-    /// What a recorded class can be tied to: classes the teacher actually
-    /// teaches, since Google gives a student account nothing to sync.
+    /// What a recorded class can be tied to. Every course Anchor holds is one
+    /// the teacher teaches — see `GoogleClassroomService.courses()`.
     private var linkableCourses: [ClassroomCourse] {
         guard classroom.isConnected else { return [] }
-        return classroom.courses.filter { !$0.enrolledAsStudent }
+        return classroom.courses
     }
 
     /// A linked class has moved into the Google Classroom section, so it isn't
@@ -880,7 +891,7 @@ private struct HomeEmptyState: View {
                         .controlSize(.large)
                 }
 
-                if ZoomViewModel.hasAnyZoomCredential {
+                if ZoomViewModel.hasTeacherZoomConnection {
                     Button("Go to Live Class") { onOpenLive() }
                         .buttonStyle(.bordered)
                         .controlSize(.large)
@@ -905,7 +916,7 @@ private struct HomeEmptyState: View {
     }
 
     private var hint: String {
-        ZoomViewModel.hasAnyZoomCredential
+        ZoomViewModel.hasTeacherZoomConnection
             ? "Anchor records a session automatically once its bot is in a meeting. Nothing is stored until then."
             : "Connect your Zoom account in Settings before Anchor can read a class."
     }

@@ -112,7 +112,7 @@ struct EmptyStateView: View {
             break
         }
 
-        if !ZoomViewModel.hasAnyZoomCredential {
+        if !ZoomViewModel.hasTeacherZoomConnection {
             return Presentation(
                 symbolName: "key.slash",
                 title: "Connect Zoom",

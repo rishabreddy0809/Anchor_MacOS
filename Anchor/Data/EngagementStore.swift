@@ -63,8 +63,36 @@ final class EngagementStore: ObservableObject {
 
     @Published var settings = AppSettings()
 
+    private var scopeObserver: Any?
+
     init(archive: SessionArchive = .shared) {
         self.archive = archive
+        scopeObserver = AccountScope.observe { [weak self] in self?.accountDidChange() }
+    }
+
+    /// Takes the previous teacher's class off the screen when the account
+    /// changes.
+    ///
+    /// Deliberately **not** `clear()`. That finalizes the running session into
+    /// the archive, and by the time this runs `SessionArchive` may already have
+    /// swapped to the incoming teacher's file — the class would be filed under
+    /// the wrong person, which is a worse outcome than the one this fixes. An
+    /// interrupted session is closed at its last known sample by
+    /// `closeOrphanedSessions` the next time its own teacher signs in, which is
+    /// exactly the case that path was written for.
+    private func accountDidChange() {
+        students = []
+        meeting = nil
+        dataSource = .none
+        connectionSummary = nil
+        capabilities = ZoomCapabilities()
+        lastRefresh = nil
+        sessionState = .paused
+        elapsed = 0
+        sessionStartedAt = nil
+        isScoring = false
+        liveMeetingIdentifier = nil
+        settings.selectedMeetingID = nil
     }
 
 #if DEBUG

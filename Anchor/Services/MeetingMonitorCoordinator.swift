@@ -182,7 +182,7 @@ final class MeetingMonitorCoordinator: ObservableObject {
     /// Asks Zoom for a live meeting this account hosts, with its name and
     /// participant count.
     private func resolveHostedMeeting() async -> HostLookup {
-        guard ZoomViewModel.hasAnyZoomCredential else { return .noCredentials }
+        guard ZoomViewModel.hasTeacherZoomConnection else { return .noCredentials }
 
         let meetings: [ZoomMeeting]
         do {

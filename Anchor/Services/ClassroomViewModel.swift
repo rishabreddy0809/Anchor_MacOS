@@ -158,6 +158,7 @@ final class ClassroomViewModel: ObservableObject {
     /// already done. See `loadCourses()`.
     private var courseLoadTask: Task<Void, Never>?
     private var cancellables = Set<AnyCancellable>()
+    private var scopeObserver: Any?
 
     /// Assignment data moves on the order of days; 10 minutes is already
     /// generous and keeps a full course refresh cheap.
@@ -200,6 +201,10 @@ final class ClassroomViewModel: ObservableObject {
         links.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)
+
+        // Courses, rosters and grades belong to whoever's Google account they
+        // were fetched with. Signing in as somebody else has to drop them.
+        scopeObserver = AccountScope.observe { [weak self] in self?.accountDidChange() }
     }
 
     deinit {
@@ -367,6 +372,28 @@ final class ClassroomViewModel: ObservableObject {
         AccountStore.shared.account?.googleEmail
     }
 
+    /// Whether Google should offer the account picker rather than going
+    /// straight to consent for the account Anchor already knows.
+    ///
+    /// Pure so the rule can be tested; it is the whole of "use the account I
+    /// signed in with, and ask me when you can't".
+    ///
+    /// The third case is the one that is easy to miss. A grant already held for
+    /// a *different* address means the pin has failed once already — the
+    /// teacher's browser was signed into somebody else and Google honoured the
+    /// session over the hint. Pinning again would fail the same way every time,
+    /// with no way out from inside the app, so the picker is the escape hatch
+    /// and it opens itself.
+    nonisolated static func forcesAccountPicker(
+        signedInGoogleEmail: String?,
+        connectedEmail: String?
+    ) -> Bool {
+        // No Google identity to pin to — a password account must say which.
+        guard let hint = signedInGoogleEmail?.trimmed.lowercased(), !hint.isEmpty else { return true }
+        guard let connected = connectedEmail?.trimmed.lowercased(), !connected.isEmpty else { return false }
+        return connected != hint
+    }
+
     /// Runs the browser sign-in, then loads the course list.
     func connect() async {
         guard let config = credentials.config() else {
@@ -386,7 +413,14 @@ final class ClassroomViewModel: ObservableObject {
             // still be switched, so this does not make connecting Classroom
             // implicit in signing in — which the privacy policy says are
             // separate grants, and they remain so.
-            let tokens = try await oauth.authorize(config: config, loginHint: googleSignInHint)
+            let tokens = try await oauth.authorize(
+                config: config,
+                loginHint: googleSignInHint,
+                forcesAccountPicker: Self.forcesAccountPicker(
+                    signedInGoogleEmail: googleSignInHint,
+                    connectedEmail: credentials.tokens?.accountEmail
+                )
+            )
             credentials.save(tokens)
             state = .connected(email: tokens.accountEmail)
             await loadCourses()
@@ -415,8 +449,37 @@ final class ClassroomViewModel: ObservableObject {
         clearStudentData()
         state = .notConnected
         lastError = nil
-        UserDefaults.standard.removeObject(forKey: Self.monitoredCoursesKey)
-        UserDefaults.standard.removeObject(forKey: Self.legacySelectedCourseKey)
+        AccountScope.shared.defaults.removeObject(forKey: Self.monitoredCoursesKey)
+        AccountScope.shared.defaults.removeObject(forKey: Self.legacySelectedCourseKey)
+    }
+
+    /// Forgets the previous teacher's Classroom entirely.
+    ///
+    /// Not `disconnect()`, which is a deliberate act by a teacher and revokes
+    /// the stored grant. The previous teacher's grant is theirs and stays where
+    /// `GoogleCredentialsStore` put it, under their own account — so signing
+    /// back in finds Classroom still connected. This only drops what is in
+    /// memory and picks up whatever the incoming account already had.
+    private func accountDidChange() {
+        stopSync()
+        courses = []
+        monitoredCourseIDs = []
+        activeCourseID = nil
+        rosters = [:]
+        clearStudentData()
+        lastError = nil
+        state = .notConnected
+
+        // Deferred, and not merely for the `await`. `GoogleCredentialsStore`
+        // is reloading its own tokens from the same notification, and
+        // NotificationCenter does not promise the order observers run in — so
+        // reading `credentials.isConnected` synchronously here could see the
+        // outgoing teacher's grant. A Task runs after the whole dispatch has
+        // finished, by which point the answer is the incoming teacher's.
+        //
+        // `restoreIfConnected` no-ops for an account with no grant, which is
+        // every brand new one.
+        Task { [weak self] in await self?.restoreIfConnected() }
     }
 
     /// Drops every piece of student information held in memory.
@@ -533,14 +596,11 @@ final class ClassroomViewModel: ObservableObject {
         // Only when the teacher has never expressed a preference. Without this,
         // switching the one class off would be undone by the next launch, since
         // the monitored set is empty again at that point.
-        let defaults = UserDefaults.standard
+        let defaults = AccountScope.shared.defaults
         guard defaults.object(forKey: Self.monitoredCoursesKey) == nil,
               defaults.object(forKey: Self.legacySelectedCourseKey) == nil
         else { return }
 
-        // A class the account attends rather than teaches has nothing Anchor can
-        // read — monitoring it would only produce 403s.
-        guard !only.enrolledAsStudent else { return }
         setMonitored(true, courseID: only.id)
     }
 
@@ -572,10 +632,11 @@ final class ClassroomViewModel: ObservableObject {
     /// are untouched.
     func setMonitored(_ isMonitored: Bool, courseID: String) {
         if isMonitored {
-            // A class the account attends rather than teaches would only produce
-            // 403s — Google shows a student nobody's work but their own.
-            guard let course = courses.first(where: { $0.id == courseID }),
-                  !course.enrolledAsStudent,
+            // Only a class Anchor actually holds. `courses` is teaching-only —
+            // see `GoogleClassroomService.courses()` — so an id that is not in
+            // it is either stale or a class the account merely attends, and
+            // syncing either would only produce 403s.
+            guard courses.contains(where: { $0.id == courseID }),
                   monitoredCourseIDs.insert(courseID).inserted
             else { return }
 
@@ -608,7 +669,7 @@ final class ClassroomViewModel: ObservableObject {
     }
 
     private func persistMonitoredCourses() {
-        UserDefaults.standard.set(monitoredCourseIDs.sorted(), forKey: Self.monitoredCoursesKey)
+        AccountScope.shared.defaults.set(monitoredCourseIDs.sorted(), forKey: Self.monitoredCoursesKey)
     }
 
     /// Restores the monitored set, carrying over the single course id written by
@@ -620,7 +681,7 @@ final class ClassroomViewModel: ObservableObject {
         // tab — which is exactly what happened before this guard existed.
         if isDemoClassroom { return }
 #endif
-        let defaults = UserDefaults.standard
+        let defaults = AccountScope.shared.defaults
         var saved = defaults.stringArray(forKey: Self.monitoredCoursesKey) ?? []
 
         if saved.isEmpty, let legacy = defaults.string(forKey: Self.legacySelectedCourseKey) {

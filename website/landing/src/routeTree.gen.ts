@@ -15,6 +15,7 @@ import { Route as PilotTermsRouteImport } from './routes/pilot-terms'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as DocsZoomRouteImport } from './routes/docs.zoom'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -46,6 +47,11 @@ const TermsRoute = TermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DocsZoomRoute = DocsZoomRouteImport.update({
+  id: '/docs/zoom',
+  path: '/docs/zoom',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
+  '/docs/zoom': typeof DocsZoomRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
+  '/docs/zoom': typeof DocsZoomRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,13 +79,27 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
+  '/docs/zoom': typeof DocsZoomRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/apply' | '/pilot-terms' | '/privacy' | '/support' | '/terms'
+    | '/'
+    | '/apply'
+    | '/pilot-terms'
+    | '/privacy'
+    | '/support'
+    | '/terms'
+    | '/docs/zoom'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/apply' | '/pilot-terms' | '/privacy' | '/support' | '/terms'
+  to:
+    | '/'
+    | '/apply'
+    | '/pilot-terms'
+    | '/privacy'
+    | '/support'
+    | '/terms'
+    | '/docs/zoom'
   id:
     | '__root__'
     | '/'
@@ -86,6 +108,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/support'
     | '/terms'
+    | '/docs/zoom'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -95,6 +118,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   SupportRoute: typeof SupportRoute
   TermsRoute: typeof TermsRoute
+  DocsZoomRoute: typeof DocsZoomRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -141,6 +165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/docs/zoom': {
+      id: '/docs/zoom'
+      path: '/docs/zoom'
+      fullPath: '/docs/zoom'
+      preLoaderRoute: typeof DocsZoomRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -151,6 +182,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   SupportRoute: SupportRoute,
   TermsRoute: TermsRoute,
+  DocsZoomRoute: DocsZoomRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

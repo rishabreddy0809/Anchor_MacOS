@@ -91,6 +91,8 @@ final class ZoomViewModel: ObservableObject {
     /// so this deliberately does not remember a dismissal for the next join.
     @Published private(set) var isLessonTopicPromptPresented = false
 
+    private var scopeObserver: Any?
+
     // MARK: - Dependencies
 
     private let store: EngagementStore
@@ -115,6 +117,7 @@ final class ZoomViewModel: ObservableObject {
         self.store = store
         self.coach = coach
         self.service = service ?? Self.makeLiveService()
+        scopeObserver = AccountScope.observe { [weak self] in self?.accountDidChange() }
     }
 
     deinit {
@@ -149,9 +152,26 @@ final class ZoomViewModel: ObservableObject {
         return ZoomService(credentialsProvider: { await ZoomCredentialsStore.shared.snapshot() })
     }
 
-    /// Whether Anchor can talk to Zoom at all, by either route.
-    static var hasAnyZoomCredential: Bool {
-        ZoomOAuthStore.shared.isConnected || ZoomCredentialsStore.shared.hasCredentials
+    /// Whether **this teacher** has connected their own Zoom account.
+    ///
+    /// Was `hasTeacherZoomConnection`, and was
+    /// `ZoomOAuthStore.shared.isConnected || ZoomCredentialsStore.shared.hasCredentials`.
+    /// The second half is a Server-to-Server credential an administrator
+    /// provisions once per Mac, and counting it here meant every teacher who
+    /// signed in afterwards looked connected to a Zoom account that was not
+    /// theirs: their classes are not in it, so "Go to Live Class" led to an
+    /// empty dashboard, and a brand new account inherited a connection it had
+    /// never made — the "pre-connected from the previous installment" report.
+    ///
+    /// Decided 2026-08-27: a Zoom connection is per teacher, and a shared
+    /// credential does not stand in for one. This deliberately overrides the
+    /// per-school route in ADMIN-SETUP.md, where one provisioned credential was
+    /// meant to serve everybody on the Mac — every teacher now connects for
+    /// themselves. The Server-to-Server credential is still what
+    /// `makeLiveService` falls back to for transport; it just no longer *claims*
+    /// a connection on a teacher's behalf.
+    static var hasTeacherZoomConnection: Bool {
+        ZoomOAuthStore.shared.isConnected
     }
 
     // MARK: - Browser sign-in
@@ -174,6 +194,11 @@ final class ZoomViewModel: ObservableObject {
         }
 
         useService(ZoomService(userTokens: .shared))
+
+        // On the connect, not on every refresh: a partial scope set is a fact
+        // about the Marketplace app, so it is worth saying once, to the person
+        // who just finished setting it up and is still watching the Terminal.
+        ZoomOAuthStore.shared.reportDegradedScopesToOperator()
 
         do {
             let info = try await service.verifyConnection()
@@ -201,6 +226,36 @@ final class ZoomViewModel: ObservableObject {
         stop()
         await ZoomUserTokenProvider.shared.disconnect()
         account = nil
+        useLiveService()
+    }
+
+    /// Forgets everything the previous teacher was connected to.
+    ///
+    /// `state`, `account`, the live meeting and the bot session are all
+    /// in-memory, so none of them were touched by scoping the Keychain — a
+    /// teacher who signed out mid-term and handed the Mac to a colleague saw
+    /// the colleague's Anchor claiming *their* Zoom account was connected,
+    /// which is the "pre-connected from the previous installment" report.
+    ///
+    /// Deliberately **not** `disconnectAccount()`. That revokes the grant with
+    /// Zoom and deletes it; signing out is not the same as disconnecting, and
+    /// the outgoing teacher's grant has to survive under their own uid so that
+    /// signing back in returns them to a connected app. See
+    /// `ZoomUserTokenProvider.forgetCachedTokens`.
+    private func accountDidChange() {
+        stop()
+        account = nil
+        meeting = nil
+        capabilities = ZoomCapabilities()
+        lastSyncedAt = nil
+        lastError = nil
+        consecutiveFailures = 0
+        botSession = nil
+        botStatus = nil
+        needsMeetingNumber = false
+        Task { await ZoomUserTokenProvider.shared.forgetCachedTokens() }
+        // Re-resolve which route this teacher has: their own grant if they
+        // brought one, the deployment's credentials otherwise.
         useLiveService()
     }
 
@@ -247,7 +302,7 @@ final class ZoomViewModel: ObservableObject {
 
     /// Asks Zoom for a live meeting hosted by this account.
     private func resolveMeetingNumber() async -> String? {
-        guard Self.hasAnyZoomCredential else { return nil }
+        guard Self.hasTeacherZoomConnection else { return nil }
         guard let live = try? await service.liveMeetings(), let first = live.first else { return nil }
         meeting = first
         return first.id
@@ -305,7 +360,7 @@ final class ZoomViewModel: ObservableObject {
         // Some Zoom identity has to exist, or there is no ZAK and no way to
         // verify the meeting — `notSignedIn` says which button to press,
         // whereas the SDK's own failure would not.
-        guard Self.hasAnyZoomCredential else {
+        guard Self.hasTeacherZoomConnection else {
             let error = ZoomError.notSignedIn
             botStatus = error.errorDescription
             return .failure(error)

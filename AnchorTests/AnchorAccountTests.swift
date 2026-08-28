@@ -193,3 +193,187 @@ final class AnchorAccountTests: XCTestCase {
         }
     }
 }
+
+// MARK: - Which account the UI names
+
+/// Pins the two lines that tell a teacher which Google account is which.
+///
+/// Reported from a pilot Mac on 2026-08-27: signed in as one Google account,
+/// the Settings profile card named a different one. Nothing about the sign-in
+/// was wrong — the card sourced its address from `GoogleCredentialsStore`, the
+/// *Classroom* grant, because it was written before Anchor had accounts. Under
+/// the teacher's own name, that reads as "you are signed in as this".
+@MainActor
+final class AccountIdentityLabelTests: XCTestCase {
+
+    private func google(email: String?, name: String? = nil) -> AnchorAccount {
+        AnchorAccount(uid: "uid", email: email, displayName: name, provider: .google)
+    }
+
+    // MARK: - The profile card
+
+    /// The card names the account, and only the account.
+    func testProfileSubtitleIsTheAccountsOwnEmail() {
+        let subtitle = AnchorAccount.profileSubtitle(for: google(email: "teacher@school.edu"))
+
+        XCTAssertEqual(subtitle, "teacher@school.edu")
+    }
+
+    /// The defect itself, stated as the thing that must not happen: a connected
+    /// Classroom address belongs to a different account and must never reach
+    /// this line. `profileSubtitle` takes no connection to reach for, which is
+    /// what makes that true — this case documents why the signature is narrow.
+    func testProfileSubtitleCannotBeAConnectionsEmail() {
+        let signedIn = "signed-in@school.edu"
+        let connectedElsewhere = "other-account@gmail.com"
+
+        let subtitle = AnchorAccount.profileSubtitle(for: google(email: signedIn))
+
+        XCTAssertEqual(subtitle, signedIn)
+        XCTAssertNotEqual(subtitle, connectedElsewhere)
+    }
+
+    /// Signed out is said plainly. It used to read "No account connected",
+    /// which described a *connection* and left a signed-out teacher no wiser.
+    func testProfileSubtitleSaysSoWhenNobodyIsSignedIn() {
+        XCTAssertEqual(AnchorAccount.profileSubtitle(for: nil), "Not signed in")
+    }
+
+    /// Firebase can hold an account with no email — an anonymous or
+    /// provider-only record. Blank under a name is worse than a plain sentence.
+    func testProfileSubtitleFallsBackToTheProviderRatherThanBlank() {
+        XCTAssertEqual(
+            AnchorAccount.profileSubtitle(for: google(email: nil)),
+            "Signed in via Google"
+        )
+        XCTAssertEqual(
+            AnchorAccount.profileSubtitle(for: google(email: "   ")),
+            "Signed in via Google"
+        )
+    }
+
+    // MARK: - The Classroom card
+
+    /// Matching accounts get the address and nothing else — no note, no noise.
+    func testConnectionDetailIsBareWhenBothAccountsMatch() {
+        let detail = AnchorAccount.connectionDetail(
+            connected: "teacher@school.edu",
+            signedInGoogleEmail: "teacher@school.edu"
+        )
+
+        XCTAssertEqual(detail, "teacher@school.edu")
+    }
+
+    /// Google addresses are case-insensitive; a difference in case is not a
+    /// different account and must not be reported as one.
+    func testConnectionDetailIgnoresCaseAndSurroundingSpace() {
+        let detail = AnchorAccount.connectionDetail(
+            connected: " Teacher@School.edu ",
+            signedInGoogleEmail: "teacher@school.edu"
+        )
+
+        XCTAssertEqual(detail, " Teacher@School.edu ")
+    }
+
+    /// A genuine mismatch is legal — personal Anchor login, school Google — so
+    /// it is stated rather than treated as an error. Being invisible is what
+    /// made the original report so confusing.
+    func testConnectionDetailSaysSoWhenTheAccountsDiffer() {
+        let detail = AnchorAccount.connectionDetail(
+            connected: "other-account@gmail.com",
+            signedInGoogleEmail: "teacher@school.edu"
+        )
+
+        XCTAssertEqual(detail, "other-account@gmail.com — not the account you signed in with")
+    }
+
+    /// A password account has no Google identity to compare against, and its
+    /// address is frequently not a Google one at all. Comparing anyway would
+    /// put a mismatch note on every password account that ever connects
+    /// Classroom — which is all of them.
+    func testConnectionDetailDoesNotAccuseAPasswordAccount() {
+        let detail = AnchorAccount.connectionDetail(
+            connected: "teacher@school.edu",
+            signedInGoogleEmail: AnchorAccount(
+                uid: "uid",
+                email: "teacher@personal.com",
+                displayName: nil,
+                provider: .password
+            ).googleEmail
+        )
+
+        XCTAssertEqual(detail, "teacher@school.edu")
+    }
+
+    /// Nothing connected, nothing to say.
+    func testConnectionDetailIsNilWhenClassroomIsNotConnected() {
+        XCTAssertNil(
+            AnchorAccount.connectionDetail(connected: nil, signedInGoogleEmail: "teacher@school.edu")
+        )
+        XCTAssertNil(
+            AnchorAccount.connectionDetail(connected: "  ", signedInGoogleEmail: "teacher@school.edu")
+        )
+    }
+}
+
+// MARK: - Which Google account Classroom connects as
+
+/// Pins "use the account I signed in with, and ask me when you can't".
+///
+/// Three requirements meet in this one rule. A teacher who signed in to Anchor
+/// with Google should not have to choose an identity twice in one onboarding
+/// flow. A teacher who signed in with an email and password has no Google
+/// identity to pin to and must be asked. And neither may ever be handed a
+/// Classroom that belongs to somebody else — which is what `prompt=consent`
+/// with no picker does when Anchor has no account to pin to: Google re-consents
+/// whichever account the browser is already signed into, silently.
+@MainActor
+final class ClassroomAccountPinningTests: XCTestCase {
+
+    /// Signed in with Google, nothing connected yet: straight to consent for
+    /// that address. No picker.
+    func testGoogleAccountIsUsedWithoutAskingAgain() {
+        XCTAssertFalse(
+            ClassroomViewModel.forcesAccountPicker(
+                signedInGoogleEmail: "teacher@school.edu",
+                connectedEmail: nil
+            )
+        )
+    }
+
+    /// Reconnecting the same account stays pinned.
+    func testReconnectingTheSameAccountStaysPinned() {
+        XCTAssertFalse(
+            ClassroomViewModel.forcesAccountPicker(
+                signedInGoogleEmail: "teacher@school.edu",
+                connectedEmail: "Teacher@School.edu "
+            ),
+            "Case and spacing are not a different Google account."
+        )
+    }
+
+    /// A password account has no Google identity to pin to. Without the picker
+    /// Google would consent as whatever the browser is signed into — the silent
+    /// wrong-account grant this rule exists to prevent.
+    func testPasswordAccountIsAlwaysAsked() {
+        XCTAssertTrue(
+            ClassroomViewModel.forcesAccountPicker(signedInGoogleEmail: nil, connectedEmail: nil)
+        )
+        XCTAssertTrue(
+            ClassroomViewModel.forcesAccountPicker(signedInGoogleEmail: "  ", connectedEmail: nil)
+        )
+    }
+
+    /// The escape hatch. A grant already held for a different address means the
+    /// pin already failed once — the browser's session beat the hint. Pinning
+    /// again would fail identically every time and strand the teacher, so the
+    /// picker opens itself.
+    func testPickerReturnsAfterAMismatchedGrant() {
+        XCTAssertTrue(
+            ClassroomViewModel.forcesAccountPicker(
+                signedInGoogleEmail: "teacher@school.edu",
+                connectedEmail: "someone-else@gmail.com"
+            )
+        )
+    }
+}

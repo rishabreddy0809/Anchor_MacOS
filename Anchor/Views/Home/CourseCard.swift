@@ -199,8 +199,6 @@ struct CourseCard: View {
     }
 
     private var studentCountText: String {
-        // Google won't hand a student the roster, so a count would be a guess.
-        if course.enrolledAsStudent { return "You're enrolled as a student" }
         guard let studentCount else { return "— students" }
         return "\(studentCount) student\(studentCount == 1 ? "" : "s")"
     }
@@ -339,16 +337,6 @@ struct CourseCardDetail {
         headline: nil,
         caption: "Coursework isn't synced for this class yet. Open it to load the "
             + "roster and assignments.",
-        tint: .secondary
-    )
-
-    /// A class the signed-in account attends rather than teaches. Google gives a
-    /// student no view of anyone else's work, so Anchor has nothing to score.
-    static let enrolledAsStudent = CourseCardDetail(
-        symbol: "person.crop.circle",
-        headline: "Not your class to monitor",
-        caption: "You're enrolled here as a student, so Google won't share the "
-            + "roster or other students' coursework.",
         tint: .secondary
     )
 

@@ -38,11 +38,25 @@ final class TeacherProfileStore: ObservableObject {
     }
 #endif
 
-    private let defaults: UserDefaults
+    /// Pinned by a test; `nil` follows whichever account is signed in.
+    private let pinnedDefaults: UserDefaults?
+    private var defaults: UserDefaults { pinnedDefaults ?? AccountScope.shared.defaults }
+    private var scopeObserver: Any?
 
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
-        self.name = defaults.string(forKey: Self.nameKey) ?? ""
+    init(defaults: UserDefaults? = nil) {
+        self.pinnedDefaults = defaults
+        self.name = (defaults ?? AccountScope.shared.defaults).string(forKey: Self.nameKey) ?? ""
+        scopeObserver = AccountScope.observe { [weak self] in self?.accountDidChange() }
+    }
+
+    /// A teacher's name follows their account, not their Mac. Reloaded rather
+    /// than cleared, so signing back in greets them by name again.
+    private func accountDidChange() {
+        guard pinnedDefaults == nil else { return }
+#if DEBUG
+        isDemoName = false
+#endif
+        name = defaults.string(forKey: Self.nameKey) ?? ""
     }
 
     /// First word only, for a greeting that reads like one rather than a form

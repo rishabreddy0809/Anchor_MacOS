@@ -159,6 +159,18 @@ final class GoogleCredentialsStore: ObservableObject {
     private static let secretAccount = "oauth-client-secret"
 
     private let keychain = KeychainStore(service: GoogleCredentialsStore.service)
+    private var scopeObserver: Any?
+
+    /// The teacher's own Classroom grant, kept under the signed-in account.
+    ///
+    /// Only this one is scoped. `clientAccount` and `secretAccount` below hold
+    /// a *school's* OAuth registration, entered once in Settings → Advanced and
+    /// shared by everyone who uses the Mac — scoping those would leave the
+    /// second teacher to sign in staring at an unprovisioned app. See
+    /// `AccountScope` for the grant-versus-configuration line.
+    private var scopedTokenAccount: String {
+        AccountScope.shared.keychainAccount(Self.tokenAccount)
+    }
 
     @Published private(set) var tokens: GoogleTokens?
     /// A deployment's own OAuth client, entered in Settings → Advanced. `nil`
@@ -204,11 +216,34 @@ final class GoogleCredentialsStore: ObservableObject {
 
     init() {
         load()
+        scopeObserver = AccountScope.observe { [weak self] in self?.accountDidChange() }
+    }
+
+    /// Hands this Mac's pre-account Classroom grant to the first teacher who
+    /// signs in, so shipping account scoping does not silently disconnect
+    /// somebody who has been using Anchor all term. Called by `AccountScope`
+    /// before the scope switches; see its header for when and why once.
+    func adoptUnscopedGrant(into scope: AccountScopeIdentity) {
+        try? keychain.adopt(
+            account: Self.tokenAccount,
+            into: scope.keychainAccount(Self.tokenAccount)
+        )
+    }
+
+    /// Swaps in the incoming teacher's grant, or none if they have never
+    /// connected Classroom. The outgoing teacher's stays in the Keychain under
+    /// their own uid — signing back in reconnects with nothing to re-approve.
+    private func accountDidChange() {
+        tokens = nil
+        lastError = nil
+        if let data = (try? keychain.read(account: scopedTokenAccount)) ?? nil {
+            tokens = try? JSONDecoder().decode(GoogleTokens.self, from: data)
+        }
     }
 
     private func load() {
         // `read` returns Data?? through `try?` — flatten before unwrapping.
-        if let data = (try? keychain.read(account: Self.tokenAccount)) ?? nil {
+        if let data = (try? keychain.read(account: scopedTokenAccount)) ?? nil {
             tokens = try? JSONDecoder().decode(GoogleTokens.self, from: data)
         }
         if let data = (try? keychain.read(account: Self.clientAccount)) ?? nil {
@@ -254,11 +289,11 @@ final class GoogleCredentialsStore: ObservableObject {
         tokens = newTokens
         do {
             let data = try JSONEncoder().encode(newTokens.keychainPayload)
-            try keychain.save(data, account: Self.tokenAccount)
+            try keychain.save(data, account: scopedTokenAccount)
 
             // Read it straight back. A write that reports success but stores
             // nothing is the failure mode this whole path exists to catch.
-            guard let stored = (try? keychain.read(account: Self.tokenAccount)) ?? nil,
+            guard let stored = (try? keychain.read(account: scopedTokenAccount)) ?? nil,
                   !stored.isEmpty else {
                 lastError = "Signed in, but the Google credential could not be saved to the "
                     + "Keychain — you'll have to reconnect next time Anchor launches."
@@ -283,7 +318,7 @@ final class GoogleCredentialsStore: ObservableObject {
 
     func disconnect() {
         tokens = nil
-        try? keychain.delete(account: Self.tokenAccount)
+        try? keychain.delete(account: scopedTokenAccount)
     }
 
     func config() -> GoogleOAuthConfig? {
@@ -322,7 +357,11 @@ actor GoogleOAuthClient {
     ///   which is why this does not make the Classroom grant implicit in the
     ///   sign-in. The privacy policy says those two are separate grants and
     ///   neither implies the other, and that stays true.
-    func authorize(config: GoogleOAuthConfig, loginHint: String? = nil) async throws -> GoogleTokens {
+    func authorize(
+        config: GoogleOAuthConfig,
+        loginHint: String? = nil,
+        forcesAccountPicker: Bool = false
+    ) async throws -> GoogleTokens {
         let verifier = PKCE.makeCodeVerifier()
         let challenge = PKCE.makeCodeChallenge(from: verifier)
         let state = PKCE.makeState()
@@ -354,7 +393,28 @@ actor GoogleOAuthClient {
             // Required to get a refresh token at all, and to get a fresh one if
             // the teacher has authorised Anchor before.
             URLQueryItem(name: "access_type", value: "offline"),
-            URLQueryItem(name: "prompt", value: "consent")
+            // `prompt` is a space-delimited list, and which words are in it is
+            // decided by whether Anchor already knows *which* Google account
+            // this should be.
+            //
+            // **Signed in with Google (`forcesAccountPicker == false`).** Anchor
+            // knows the account, passes it as `login_hint` below, and asks only
+            // for `consent`. Google goes straight to the approval screen for
+            // that address — no picker, no choosing an identity twice in one
+            // onboarding flow. This is the case the teacher means by "it should
+            // just use the account I signed in with".
+            //
+            // **Anything else (`forcesAccountPicker == true`).** A password
+            // account has no Google identity to pin to, and a grant that
+            // already belongs to somebody else means pinning has failed once
+            // already. `consent` alone would then re-consent **whichever
+            // account the browser happens to be signed into, with no picker at
+            // all** — silently handing Anchor the wrong Classroom. So the
+            // teacher is asked.
+            URLQueryItem(
+                name: "prompt",
+                value: forcesAccountPicker ? "select_account consent" : "consent"
+            )
         ]
 
         // Appended rather than included above so the hint is plainly optional:

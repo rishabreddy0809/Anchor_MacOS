@@ -108,6 +108,17 @@ struct MainWindowView: View {
 #endif
             onboarding.presentIfNeeded()
         }
+        // Signing in as somebody new lands here without the tabs ever
+        // disappearing — the account step inside onboarding can do it, and so
+        // can Settings → Sign out followed by a sign-in. `onAppear` fires only
+        // on the gate-to-tabs transition, so it is not enough on its own.
+        .onChange(of: accounts.account?.uid) { _, uid in
+#if DEBUG
+            if DemoData.isEnabled { return }
+#endif
+            guard uid != nil else { return }
+            onboarding.presentIfNeeded()
+        }
         .onDisappear { store.removeTickObserver() }
         .onChange(of: store.hasData) { _, hasData in
             guard hasData else {

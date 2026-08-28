@@ -97,7 +97,12 @@ struct SettingsView: View {
         } detail: {
             content
         }
-        .sheet(isPresented: $isPresentingSignIn) {
+        // `onDismiss`, not a callback from inside the sheet: it runs once the
+        // sheet is fully gone, which is the only moment a second one can be
+        // raised. Signing in as an account that has never been onboarded needs
+        // the walkthrough, and asking for it while this sheet is still
+        // dismissing gets it silently dropped.
+        .sheet(isPresented: $isPresentingSignIn, onDismiss: { OnboardingStore.shared.presentIfNeeded() }) {
             SignInSheet()
         }
         // Both, and neither is redundant. `.task` covers the first time this
@@ -171,13 +176,30 @@ struct SettingsView: View {
         return String(letter).uppercased()
     }
 
+    /// The Anchor account — who the teacher is signed in as, not what they have
+    /// connected.
+    ///
+    /// This used to read
+    /// `googleCredentials.tokens?.accountEmail ?? oauth.accountLabel`: the
+    /// *Google Classroom* grant, falling back to the *Zoom* one. Neither is the
+    /// Anchor account. Under a name, beside an avatar, at the foot of the
+    /// sidebar, that pair reads as "you are signed in as this" — and it was
+    /// naming a different address entirely, because the profile card was
+    /// written before Anchor had accounts and was never revisited when they
+    /// landed.
+    ///
+    /// Reported from a pilot Mac on 2026-08-27: signed in as one Google
+    /// account, card showed another, and it looked exactly like the sign-in
+    /// had gone to the wrong account. The connection addresses are still shown
+    /// — on the Integrations cards that name the service they belong to, which
+    /// is the only place they answer a question anyone asked.
     private var profileSubtitle: String {
 #if DEBUG
         // These captures are published on the website. Whatever account happens
         // to be signed in on the machine taking them must not travel with them.
         if DemoData.isEnabled { return DemoData.teacherEmail }
 #endif
-        return googleCredentials.tokens?.accountEmail ?? oauth.accountLabel ?? "No account connected"
+        return AnchorAccount.profileSubtitle(for: accounts.account)
     }
 
     // MARK: - Content
@@ -475,6 +497,15 @@ struct SettingsView: View {
                 ZoomConnectionPanel()
             }
 
+            // A half-granted Zoom app is a working connection with features
+            // missing, and amber rather than red for exactly that reason —
+            // the same treatment the Classroom twin gets on Home. This is
+            // where `ADMIN-SETUP.md`'s end-of-call checks are done, so it is
+            // where a school's admin will see a scope they forgot.
+            if let warning = zoomScopeWarning {
+                warningLine(warning)
+            }
+
             if let zoomConnectError {
                 errorLine(zoomConnectError)
             }
@@ -498,7 +529,7 @@ struct SettingsView: View {
                     : "This copy of Anchor is missing part of its Google setup, so signing "
                         + "in would fail after you'd already approved it. It isn't something "
                         + "you can fix from here.",
-                connectedDetail: googleCredentials.tokens?.accountEmail,
+                connectedDetail: classroomConnectedDetail,
                 onConnect: connectClassroom,
                 onDisconnect: disconnectClassroom
             ) {
@@ -511,6 +542,55 @@ struct SettingsView: View {
                 errorLine(classroomConnectError)
             }
         }
+    }
+
+    /// The connected Classroom account, and a plain word when it is not the
+    /// account the teacher signed in to Anchor with.
+    ///
+    /// Stated, not flagged as an error: the two grants are deliberately
+    /// independent — a teacher may well sign in to Anchor personally and teach
+    /// from a school Google account, and the privacy policy says neither
+    /// implies the other. But until now a mismatch was invisible, and an
+    /// unexplained address on this card is what made a pilot teacher believe
+    /// their sign-in had gone to the wrong account.
+    private var classroomConnectedDetail: String? {
+        AnchorAccount.connectionDetail(
+            connected: googleCredentials.tokens?.accountEmail,
+            signedInGoogleEmail: accounts.account?.googleEmail
+        )
+    }
+
+    /// What a half-granted Zoom app costs, said where it is read.
+    ///
+    /// Two sentences on purpose. The first is for the teacher and is about
+    /// Anchor: something is switched off and it is not their doing. The second
+    /// names the Marketplace and the plan, which is an instruction for whoever
+    /// ran the setup call — and Settings → Integrations is exactly where they
+    /// are standing when `ADMIN-SETUP.md`'s end-of-call checks are done.
+    private var zoomScopeWarning: String? {
+        let costs = oauth.degradedCapabilities
+        guard !costs.isEmpty else { return nil }
+
+        let list = costs.map { $0.prefix(1).lowercased() + $0.dropFirst() }
+            .joined(separator: "; ")
+        return "Zoom connected, but without every permission Anchor asked for, so it "
+            + "can't: \(list). Everything else works as normal. This is Anchor's setup "
+            + "rather than anything you did — whoever installed it can turn these on."
+    }
+
+    /// Amber sibling of `errorLine`. A missing optional permission is not a
+    /// failure — Anchor connected and works — so it must not read as one.
+    private func warningLine(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: 5) {
+            Image(systemName: "exclamationmark.circle.fill")
+                .font(.system(size: 10))
+                .padding(.top, 1)
+            Text(text)
+                .font(.system(size: 10.5))
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(Theme.riskElevated)
     }
 
     private func errorLine(_ text: String) -> some View {

@@ -43,6 +43,10 @@ final class SessionArchive: ObservableObject {
     /// The session currently being written to, if a class is running.
     private var currentSessionID: UUID?
     private var saveTask: Task<Void, Never>?
+    private var scopeObserver: Any?
+    /// False for the in-memory instance the retention tests build, which must
+    /// not go looking at disk when an account switches.
+    private let loadsFromDisk: Bool
     private let logger = Logger(subsystem: "com.anchor.archive", category: "SessionArchive")
 
     /// Bumped only for changes the decoder can't absorb.
@@ -60,9 +64,35 @@ final class SessionArchive: ObservableObject {
     // MARK: - Init
 
     init(loadsFromDisk: Bool = true) {
+        self.loadsFromDisk = loadsFromDisk
         // Before `load()`, and outside its early return: the window has to be
         // right for the Settings UI even on a Mac with no archive yet.
         loadRetention()
+        scopeObserver = AccountScope.observe { [weak self] in self?.accountDidChange() }
+        guard loadsFromDisk else { return }
+        load()
+    }
+
+    /// Re-reads the archive from the account that just signed in.
+    ///
+    /// The pending debounced write is cancelled first, and that is the whole
+    /// reason this cannot be a plain `load()`: `save()` waits before touching
+    /// disk, and a write scheduled while the previous teacher was signed in
+    /// would otherwise land in the *new* teacher's directory a moment later,
+    /// pouring one term's classes into another's history. Cancel, then swap.
+    private func accountDidChange() {
+        saveTask?.cancel()
+        saveTask = nil
+        currentSessionID = nil
+        classrooms = []
+        sessions = []
+        // Through the setter, not `loadRetention()`. That one replaces the
+        // `Published` backing store, which is safe from `init` and only from
+        // `init` — doing it once SwiftUI has bound to the Settings picker drops
+        // the binding. The `didSet` is harmless here: it no-ops when the window
+        // is unchanged, and when it isn't, writing it to the incoming account's
+        // suite and pruning an archive that is momentarily empty are both right.
+        retention = storedRetention() ?? .term
         guard loadsFromDisk else { return }
         load()
     }
@@ -73,11 +103,13 @@ final class SessionArchive: ObservableObject {
 
     // MARK: - Location
 
-    private static var directoryURL: URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-            ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support")
-        return base.appendingPathComponent("Anchor", isDirectory: true)
-    }
+    /// `~/Library/Application Support/Anchor/Accounts/<uid>` once a teacher is
+    /// signed in. A session archive is the most personal thing Anchor holds —
+    /// months of named students and their scores — so it is the last thing that
+    /// should sit at one shared path on a Mac two teachers use. See
+    /// `AccountScope`, which also moves an existing archive into the first
+    /// account that signs in rather than stranding it.
+    private static var directoryURL: URL { AccountScope.shared.directoryURL }
 
     static var fileURL: URL {
         directoryURL.appendingPathComponent("session-archive.json")
@@ -251,16 +283,21 @@ final class SessionArchive: ObservableObject {
     @Published var retention: RetentionWindow = .term {
         didSet {
             guard retention != oldValue else { return }
-            UserDefaults.standard.set(retention.rawValue, forKey: Self.retentionKey)
+            AccountScope.shared.defaults.set(retention.rawValue, forKey: Self.retentionKey)
             pruneExpiredSessions()
             pruneStaleSidecarFiles()
         }
     }
 
+    /// The window the current account has chosen, if it has chosen one.
+    private func storedRetention() -> RetentionWindow? {
+        AccountScope.shared.defaults.string(forKey: Self.retentionKey)
+            .flatMap(RetentionWindow.init(rawValue:))
+    }
+
+    /// Init only — see `accountDidChange` for why.
     private func loadRetention() {
-        guard let raw = UserDefaults.standard.string(forKey: Self.retentionKey),
-              let stored = RetentionWindow(rawValue: raw)
-        else { return }
+        guard let stored = storedRetention() else { return }
         // Assigned through the backing store so loading a preference does not
         // trigger the prune-on-change side effect; `load()` prunes explicitly.
         _retention = Published(initialValue: stored)

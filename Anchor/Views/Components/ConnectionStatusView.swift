@@ -496,7 +496,7 @@ struct ZoomConnectionPanel: View {
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
-            .disabled(!ZoomViewModel.hasAnyZoomCredential || isTesting)
+            .disabled(!ZoomViewModel.hasTeacherZoomConnection || isTesting)
 
             // Monitoring is separate from being signed in: a teacher can pause
             // polling between classes without giving up the connection.
@@ -511,7 +511,7 @@ struct ZoomConnectionPanel: View {
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
-                .disabled(!ZoomViewModel.hasAnyZoomCredential)
+                .disabled(!ZoomViewModel.hasTeacherZoomConnection)
             }
 
             Spacer(minLength: 0)

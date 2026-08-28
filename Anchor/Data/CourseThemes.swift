@@ -86,10 +86,22 @@ final class CourseThemes: ObservableObject {
     /// Home rebuilds the whole grid on each Classroom publish.
     @Published private var chosen: [String: CourseTheme] = [:]
 
-    private let defaults: UserDefaults
+    /// Pinned by a test; `nil` follows whichever account is signed in.
+    private let pinnedDefaults: UserDefaults?
+    private var defaults: UserDefaults { pinnedDefaults ?? AccountScope.shared.defaults }
+    private var scopeObserver: Any?
 
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
+    init(defaults: UserDefaults? = nil) {
+        self.pinnedDefaults = defaults
+        scopeObserver = AccountScope.observe { [weak self] in self?.accountDidChange() }
+    }
+
+    /// Drops the in-memory mirror so the next read faults in the new account's
+    /// colours. Nothing is written: the previous teacher's picks stay in their
+    /// own suite, waiting for them.
+    private func accountDidChange() {
+        guard pinnedDefaults == nil, !chosen.isEmpty else { return }
+        chosen = [:]
     }
 
     /// The course's colour: the teacher's pick, or the id-derived default.

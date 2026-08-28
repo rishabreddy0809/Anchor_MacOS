@@ -91,9 +91,7 @@ struct CourseDetailView: View {
 
                 Spacer(minLength: 8)
 
-                if course.enrolledAsStudent {
-                    EmptyView()
-                } else if isMonitored {
+                if isMonitored {
                     Button("Stop monitoring") {
                         classroom.setMonitored(false, courseID: course.id)
                     }
@@ -108,15 +106,7 @@ struct CourseDetailView: View {
                 }
             }
 
-            if course.enrolledAsStudent {
-                note(
-                    symbol: "person.crop.circle",
-                    text: "You're enrolled in this class as a student. Google only lets a "
-                        + "student see their own work, so Anchor can't load the roster or "
-                        + "score anyone here. Sign in with the account that teaches the "
-                        + "class to monitor it."
-                )
-            } else if !isMonitored {
+            if !isMonitored {
                 note(
                     symbol: "info.circle",
                     text: "Monitor this class to pull in its assignments, grades and "
@@ -395,10 +385,7 @@ struct CourseDetailView: View {
     }
 
     private var rosterEmptyText: String {
-        if course?.enrolledAsStudent == true {
-            return "Google doesn't share a class roster with a student account."
-        }
-        return classroom.isLoadingCourses
+        classroom.isLoadingCourses
             ? "Loading the roster…"
             : "Google Classroom returned no students for this class."
     }

@@ -232,7 +232,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // provisioned Server-to-Server credentials, pick that back up. If Zoom
         // has nothing for us, the dashboard stays empty and says why.
         guard environment["ANCHOR_NO_AUTOCONNECT"] == nil else { return }
-        guard ZoomViewModel.hasAnyZoomCredential else { return }
+        guard ZoomViewModel.hasTeacherZoomConnection else { return }
 
         // The service built in `init` assumed Server-to-Server credentials,
         // which is the wrong one for a teacher who signed in through the

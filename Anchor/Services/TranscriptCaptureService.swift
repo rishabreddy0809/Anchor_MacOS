@@ -39,10 +39,27 @@ final class TranscriptCaptureService: ObservableObject {
     /// Transcripts are children talking in a classroom and stay in memory.
     private static let manualTopicKey = "anchor.transcript.manualTopic"
 
-    private let defaults: UserDefaults
+    /// Pinned by a test; `nil` follows whichever account is signed in.
+    private let pinnedDefaults: UserDefaults?
+    private var defaults: UserDefaults { pinnedDefaults ?? AccountScope.shared.defaults }
+    private var scopeObserver: Any?
 
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
+    init(defaults: UserDefaults? = nil) {
+        self.pinnedDefaults = defaults
+        restoreManualTopic()
+        scopeObserver = AccountScope.observe { [weak self] in self?.accountDidChange() }
+    }
+
+    /// A typed topic describes one teacher's lesson. Reloaded for the account
+    /// that just signed in, which for a new one means nothing at all.
+    ///
+    /// Cleared *first*, and that is the whole substance of this method:
+    /// `restoreManualTopic` returns early when the incoming account has nothing
+    /// stored, so on its own it would leave the previous teacher's topic on the
+    /// chip above a new teacher's class.
+    private func accountDidChange() {
+        guard pinnedDefaults == nil else { return }
+        manualTopic = nil
         restoreManualTopic()
     }
 

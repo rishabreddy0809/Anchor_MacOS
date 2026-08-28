@@ -75,22 +75,24 @@ actor GoogleClassroomService: ClassroomDataProviding {
 
     // MARK: - Endpoints
 
-    /// The signed-in account's active courses.
+    /// The active courses the signed-in account **teaches**.
     ///
-    /// Teaching comes first, since that is who Anchor is for. The student
-    /// fallback exists because signing in with an account that is *enrolled* in
-    /// the class rather than teaching it returns a perfectly successful, empty
-    /// list — which is indistinguishable, from the UI, from being connected to
-    /// nothing at all. Showing those classes (flagged as such) is far better
-    /// than an empty screen that looks like a broken connection.
+    /// There used to be a student fallback: if the account taught nothing,
+    /// Anchor fetched the classes it was *enrolled* in and showed them flagged,
+    /// on the reasoning that an empty list is indistinguishable from a broken
+    /// connection. The reasoning was right and the remedy was wrong. Anchor
+    /// cannot do anything with a class you attend — Google shows a student
+    /// nobody's work but their own — so those cards were unmonitorable,
+    /// unscorable, and took up the whole screen with classes the teacher had
+    /// not come here for. Home's own empty row had meanwhile always said
+    /// "classes you're enrolled in as a student aren't shown", which was
+    /// simply false.
+    ///
+    /// So the honest empty list is the answer, and `emptyCoursesRow` is what
+    /// keeps it distinguishable from a broken connection: it names the account
+    /// and says which classes Anchor lists and which it does not.
     func courses() async throws -> [ClassroomCourse] {
-        let teaching = try await courses(role: "teacherId")
-        guard teaching.isEmpty else { return teaching }
-        return try await courses(role: "studentId").map {
-            var course = $0
-            course.enrolledAsStudent = true
-            return course
-        }
+        try await courses(role: "teacherId")
     }
 
     private func courses(role: String) async throws -> [ClassroomCourse] {

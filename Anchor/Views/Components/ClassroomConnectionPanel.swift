@@ -358,11 +358,7 @@ struct ClassroomConnectionPanel: View {
                     .font(.system(size: 11))
                     .lineLimit(1)
 
-                if course.enrolledAsStudent {
-                    Text("enrolled as a student")
-                        .font(.system(size: 9.5))
-                        .foregroundStyle(.tertiary)
-                } else if let error = classroom.lastSyncError(courseID: course.id) {
+                if let error = classroom.lastSyncError(courseID: course.id) {
                     // No spinner for a sync in progress — it runs on its own
                     // clock and the teacher isn't waiting on it. A failure is
                     // worth a line, because the "synced 3 min ago" below would
@@ -380,9 +376,6 @@ struct ClassroomConnectionPanel: View {
         }
         .toggleStyle(.checkbox)
         .controlSize(.small)
-        // Google shows a student nobody's coursework but their own, so there is
-        // nothing here to sync.
-        .disabled(course.enrolledAsStudent)
     }
 
     private func monitorBinding(for course: ClassroomCourse) -> Binding<Bool> {

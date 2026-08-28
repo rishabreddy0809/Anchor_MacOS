@@ -113,13 +113,25 @@ final class CalendarService: ObservableObject {
     private static let selectionKey = "anchor.calendar.selectedIdentifiers"
 
     private let store = EKEventStore()
-    private let defaults: UserDefaults
+    /// Pinned by a test; `nil` follows whichever account is signed in.
+    private let pinnedDefaults: UserDefaults?
+    private var defaults: UserDefaults { pinnedDefaults ?? AccountScope.shared.defaults }
+    private var scopeObserver: Any?
 
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
-        let stored = defaults.stringArray(forKey: Self.selectionKey) ?? []
+    init(defaults: UserDefaults? = nil) {
+        self.pinnedDefaults = defaults
+        let stored = (defaults ?? AccountScope.shared.defaults)
+            .stringArray(forKey: Self.selectionKey) ?? []
         self.selectedCalendarIDs = Set(stored)
         self.access = Self.currentAccess()
+        scopeObserver = AccountScope.observe { [weak self] in self?.accountDidChange() }
+    }
+
+    /// Which calendars hold a teacher's classes is their answer, not the Mac's.
+    /// The assignment's own `didSet` refreshes the schedule.
+    private func accountDidChange() {
+        guard pinnedDefaults == nil else { return }
+        selectedCalendarIDs = Set(defaults.stringArray(forKey: Self.selectionKey) ?? [])
     }
 
     // MARK: - Authorization

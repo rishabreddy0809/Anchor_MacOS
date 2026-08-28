@@ -586,9 +586,9 @@ struct AcademicSection: View {
             return Reason(
                 symbol: "person.crop.circle.badge.checkmark",
                 title: "This is your own account",
-                detail: "\(email) is the Google account Anchor is signed in with. Teachers "
-                    + "aren't on their class's student roster, so there's no coursework "
-                    + "to show against them.",
+                detail: "\(email) is the Google account Classroom is connected with. "
+                    + "Teachers aren't on their class's student roster, so there's no "
+                    + "coursework to show against them.",
                 showsSettingsLink: false
             )
         }

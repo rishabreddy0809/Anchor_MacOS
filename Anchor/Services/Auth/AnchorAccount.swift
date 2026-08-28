@@ -71,6 +71,47 @@ nonisolated struct AnchorAccount: Codable, Equatable, Sendable {
         return "Signed in"
     }
 
+    /// The line under the teacher's name in the Settings profile card.
+    ///
+    /// Static, pure, and taking nothing but an account — and that signature is
+    /// the actual guard, not the string it returns.
+    ///
+    /// Until 2026-08-27 the profile card built this line from
+    /// `GoogleCredentialsStore.tokens?.accountEmail ?? ZoomOAuthStore.accountLabel`
+    /// — the Classroom grant, falling back to the Zoom one. Both are
+    /// *connections*; neither is who the teacher is signed in to Anchor as. The
+    /// card was written before Anchor had accounts and nobody revisited it when
+    /// they landed, so a teacher signed in as one Google account with Classroom
+    /// connected as another saw the other one, directly under their own name,
+    /// and reasonably concluded the sign-in had gone to the wrong account.
+    ///
+    /// No assertion about the returned `String` would have caught that. Being
+    /// unable to reach a connection store from in here does.
+    static func profileSubtitle(for account: AnchorAccount?) -> String {
+        guard let account else { return "Not signed in" }
+        let email = account.email?.trimmed ?? ""
+        return email.isEmpty ? "Signed in via \(account.provider.label)" : email
+    }
+
+    /// The Classroom card's detail line: the connected address, and a plain
+    /// word when it is not the one the teacher signed in with.
+    ///
+    /// Stated rather than flagged as an error. The two grants are deliberately
+    /// independent — a teacher may sign in to Anchor personally and teach from
+    /// a school Google account — but until now a mismatch was invisible, and an
+    /// unexplained address is what caused the confusion above.
+    ///
+    /// `signedInGoogleEmail` is `googleEmail`, not `email`: a password
+    /// account's address is frequently not a Google one, and comparing it
+    /// against a Google grant would report a mismatch on every such account.
+    static func connectionDetail(connected: String?, signedInGoogleEmail: String?) -> String? {
+        guard let connected, !connected.trimmed.isEmpty else { return nil }
+        guard let signedIn = signedInGoogleEmail,
+              signedIn.trimmed.lowercased() != connected.trimmed.lowercased()
+        else { return connected }
+        return "\(connected) — not the account you signed in with"
+    }
+
     /// First word of the display name, matching `TeacherProfileStore.firstName`
     /// so a greeting reads the same whichever of the two supplied the name.
     var firstName: String? {

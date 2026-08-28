@@ -83,23 +83,18 @@ nonisolated enum ZoomConfig {
     /// both paths; Pro or Basic gets the bot alone, and `ZoomCapabilities`
     /// should be the thing that says so rather than a roster that silently
     /// stays empty.
-    static let requiredScopes: [(classic: String, granular: String, purpose: String)] = [
-        ("user:read:admin",
-         "user:read:user:admin",
-         "Verify the connection and identify the host"),
-        ("user:read:admin",
-         "user:read:token:admin",
-         "Mint the bot's ZAK so the Meeting SDK can join as its Zoom user"),
-        ("meeting:read:admin",
-         "meeting:read:list_meetings:admin",
-         "Find the live meeting and read its details"),
-        ("dashboard_meetings:read:admin",
-         "dashboard:read:list_meeting_participants:admin",
-         "Read live participants (needs a Business/Education/Enterprise plan)"),
-        ("report:read:admin",
-         "report:read:list_meeting_participants:admin",
-         "Read participant reports after a meeting ends")
-    ]
+    // The five-entry `requiredScopes` table that stood here until 2026-08-28
+    // is gone. It had **no callers**, and it listed five scopes while the table
+    // Anchor actually checks a grant against —
+    // `ZoomOAuthConfig.requiredScopes` — listed three. Two tables that disagree
+    // and cannot drift-check each other are worse than one, and the dead one
+    // was the more complete, which is the direction that misleads: a reader
+    // confirming "does Anchor verify the ZAK scope?" would have found it here
+    // and concluded yes.
+    //
+    // The two it had and the live one did not are now *in* the live one, so a
+    // missing ZAK or report scope is reported instead of discovered in a class.
+    // For what a school admin must add, see `ADMIN-SETUP.md` step 1.4.
 
     // MARK: - Keychain
 

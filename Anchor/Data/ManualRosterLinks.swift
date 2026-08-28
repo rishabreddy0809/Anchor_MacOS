@@ -39,11 +39,24 @@ final class ManualRosterLinks: ObservableObject {
     /// The same shape, for meeting-local keys. Never written to disk.
     @Published private(set) var session: [String: [String: String]] = [:]
 
-    private let defaults: UserDefaults
+    /// Pinned by a test; `nil` follows whichever account is signed in.
+    private let pinnedDefaults: UserDefaults?
+    private var defaults: UserDefaults { pinnedDefaults ?? AccountScope.shared.defaults }
+    private var scopeObserver: Any?
     private static let storageKey = "anchor.classroom.manualLinks"
 
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
+    init(defaults: UserDefaults? = nil) {
+        self.pinnedDefaults = defaults
+        load()
+        scopeObserver = AccountScope.observe { [weak self] in self?.accountDidChange() }
+    }
+
+    /// Links name students in one teacher's Classroom courses. Carrying them
+    /// across an account switch would map a stranger's roster onto this one.
+    private func accountDidChange() {
+        guard pinnedDefaults == nil else { return }
+        durable = [:]
+        session = [:]
         load()
     }
 

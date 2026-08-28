@@ -298,3 +298,106 @@ final class ZoomTokenExchangeTests: XCTestCase {
         )
     }
 }
+
+// MARK: - Scope coverage for a school deployment
+
+/// Pins that Anchor verifies every scope `ADMIN-SETUP.md` step 1.4 asks a
+/// school's Zoom admin to add.
+///
+/// Found 2026-08-28 while checking the per-school route was complete. Three
+/// things were wrong at once and each hid the next:
+///
+///   * `ZoomOAuthConfig.requiredScopes` listed three scopes. Step 1.4 asks for
+///     five. `user:read:zak` and the report scope were never checked.
+///   * `ZoomOAuthConfig.degradedScopes` — the function that reports a missing
+///     *optional* scope — had **no callers at all**, so even the one optional
+///     scope it did know about was computed and thrown away.
+///   * A second, five-entry scope table in `ZoomConfig` had no callers either,
+///     and being the more complete of the two it read as reassurance.
+///
+/// Net effect on a school: an admin who missed the ZAK scope got a connection
+/// Anchor called healthy, and an assistant that silently joined the class as an
+/// anonymous guest rather than as the teacher — `MeetingBot` mints the ZAK with
+/// `try?` and falls back, correctly, without anywhere to report it.
+@MainActor
+final class ZoomScopeCoverageTests: XCTestCase {
+
+    /// Every scope ADMIN-SETUP asks for is one Anchor actually looks for.
+    func testEveryScopeTheAdminIsAskedToAddIsVerified() {
+        let checked = Set(ZoomOAuthConfig.requiredScopes.flatMap(\.names))
+
+        for scope in [
+            "user:read:user",
+            "meeting:read:list_meetings",
+            "user:read:zak",
+            "dashboard:read:list_meeting_participants:admin",
+            "report:read:list_meeting_participants:admin"
+        ] {
+            XCTAssertTrue(
+                checked.contains(scope),
+                "\(scope) is in ADMIN-SETUP.md step 1.4 but nothing verifies a grant carries it."
+            )
+        }
+    }
+
+    /// The two Anchor cannot work at all without stay required; everything else
+    /// must stay optional, or a teacher whose admin skipped a Business-only
+    /// scope is refused a sign-in that would have worked.
+    func testOnlyTheTwoIndispensableScopesBlockASignIn() {
+        let required = ZoomOAuthConfig.requiredScopes.filter { !$0.isOptional }
+
+        XCTAssertEqual(required.count, 2)
+        XCTAssertEqual(
+            Set(required.map(\.displayName)),
+            ["user:read:user", "meeting:read:list_meetings"]
+        )
+    }
+
+    /// A full grant is quiet.
+    func testAFullGrantProducesNoWarning() {
+        let granted: Set<String> = [
+            "user:read:user",
+            "meeting:read:list_meetings",
+            "user:read:zak",
+            "dashboard:read:list_meeting_participants:admin",
+            "report:read:list_meeting_participants:admin"
+        ]
+
+        XCTAssertTrue(ZoomOAuthConfig.missingScopes(in: granted).isEmpty)
+        XCTAssertTrue(ZoomOAuthConfig.degradedScopes(in: granted).isEmpty)
+    }
+
+    /// The ZAK case, which is the one that used to pass silently. A grant good
+    /// enough to connect, missing the scope the assistant needs to join as the
+    /// teacher, must be reported as degraded rather than as fine.
+    func testAMissingZakScopeIsReportedRatherThanSwallowed() {
+        let granted: Set<String> = ["user:read:user", "meeting:read:list_meetings"]
+
+        XCTAssertTrue(
+            ZoomOAuthConfig.missingScopes(in: granted).isEmpty,
+            "This grant is good enough to connect — it must not block sign-in."
+        )
+        XCTAssertTrue(
+            ZoomOAuthConfig.degradedScopes(in: granted).map(\.displayName)
+                .contains("user:read:zak"),
+            "A missing ZAK scope must be reported; the bot degrades to a guest join without it."
+        )
+    }
+
+    /// Zoom issues admin-suffixed spellings to some apps. A school's grant must
+    /// satisfy the same requirement.
+    func testAdminSpellingsSatisfyTheSameRequirement() {
+        let granted: Set<String> = [
+            "user:read:user:admin",
+            "meeting:read:list_meetings:admin",
+            "user:read:zak:admin"
+        ]
+
+        XCTAssertTrue(ZoomOAuthConfig.missingScopes(in: granted).isEmpty)
+        XCTAssertFalse(
+            ZoomOAuthConfig.degradedScopes(in: granted).map(\.displayName)
+                .contains("user:read:zak"),
+            "user:read:zak:admin satisfies the ZAK requirement."
+        )
+    }
+}

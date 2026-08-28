@@ -25,13 +25,28 @@
 //  as it was. That is worth saying on screen, because "sign in to continue" on
 //  an app holding months of a teacher's classes otherwise reads as a threat.
 //
+//  ── Why this screen does not present its own sign-in sheet ──────────────────
+//
+//  It used to, and the bug that produced is worth keeping in view. The instant
+//  a sign-in succeeded, `requiresSignIn` went false and this whole view was
+//  removed from the hierarchy — **taking its sheet down with it**, mid-dismiss,
+//  in the same runloop turn that `MainWindowView` was trying to raise the
+//  onboarding sheet. AppKit will not present a sheet while another is going
+//  away, so onboarding was silently dropped and a brand new account landed
+//  straight in the app it had never been walked through.
+//
+//  So the button opens the walkthrough instead, and `MainWindowView` presents
+//  it — a view that is still there on both sides of the transition. There is
+//  no second sheet and no swap. `OnboardingView` already contains the account
+//  step, so nothing is lost, and a teacher who turns out to have onboarded
+//  before is shown the door immediately rather than walked round again.
+//
 
 import SwiftUI
 
 struct SignedOutGate: View {
     @ObservedObject private var accounts = AccountStore.shared
-
-    @State private var isPresentingSignIn = false
+    @ObservedObject private var onboarding = OnboardingStore.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -61,7 +76,7 @@ struct SignedOutGate: View {
                         .frame(maxWidth: 380)
                 }
 
-                Button("Sign in or create an account") { isPresentingSignIn = true }
+                Button("Sign in or create an account") { onboarding.present() }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
 
@@ -82,8 +97,5 @@ struct SignedOutGate: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.background)
-        .sheet(isPresented: $isPresentingSignIn) {
-            SignInSheet()
-        }
     }
 }

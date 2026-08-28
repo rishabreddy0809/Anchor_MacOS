@@ -59,6 +59,15 @@ security delete-generic-password -s com.anchor.google.classroom
 
 # Onboarding state, settings, and the archive pointer.
 defaults delete Rishab-Reddy.Anchor
+
+# Per-account state, one defaults domain and one directory per teacher who has
+# ever signed in on this Mac. Added 2026-08-27 with account scoping — see
+# AccountScope.swift. `defaults delete Rishab-Reddy.Anchor` does NOT reach
+# these, because they are separate domains.
+for d in $(defaults domains | tr ',' '\n' | tr -d ' ' | grep '^com.anchor.account.'); do
+  defaults delete "$d"
+done
+rm -rf ~/Library/Application\ Support/Anchor
 ```
 
 Each `security` call deletes **one** item and exits non-zero when there is
@@ -67,7 +76,17 @@ nothing left, so run each until it reports `could not be found`. Then confirm:
 ```bash
 security dump-keychain 2>/dev/null | grep -c 'com\.anchor\.'   # expect 0
 defaults read Rishab-Reddy.Anchor 2>&1 | head -1               # expect "does not exist"
+defaults domains | tr ',' '\n' | grep -c 'com.anchor.account.' # expect 0
 ```
+
+**Or don't clean the Mac at all — sign in with a Google account that has never
+used Anchor.** Since account scoping landed, onboarding, the teacher's name,
+monitored courses, the session archive and both OAuth grants are keyed to the
+signed-in uid, so a second account gets the fresh-install path without any of
+the above. That is now the fastest honest way to walk Pass A, and it is also
+the case worth *testing*: sign in as the second account, confirm you get the
+walkthrough and an empty Home, then sign back in as the first and confirm its
+classes and connections are exactly where they were left.
 
 **The fifth item, added 2026-08-24 with Anchor accounts.** Firebase keeps the
 signed-in session in the login Keychain under its own item, not under a

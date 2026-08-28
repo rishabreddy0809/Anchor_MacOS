@@ -139,6 +139,27 @@ is rewritten each time.
 >    the app's published state. A teacher on Basic still cannot grant them after
 >    publication, so the REST participant path stays closed for them and the bot
 >    remains the only live-signal source.
+>
+>    **Corrected 2026-08-28 — the gate has two ends, and only one was written
+>    here.** The sentence above is true and incomplete, and the missing half is
+>    the one that decides what is worth publishing. The same plan tier also
+>    governs whether those scopes can be **added to the app in the first place**,
+>    which is the *developer's* account, not the installer's. `ship-checklist.md`
+>    line 101 confirmed it by absence on 2026-08-19: on Anchor's own Basic
+>    account (`5173035880`) the **Add Scopes** modal says *"The following scopes
+>    are available based on your account privileges"* and contains **no Dashboard
+>    category and no Report category at all**.
+>
+>    So publishing from a Basic account ships an app carrying exactly three
+>    scopes — `meeting:read:list_meetings`, `user:read:user`, `user:read:zak` —
+>    **permanently**. A Business or Education teacher who installs it still gets
+>    no participant data, not because their plan refuses it but because the app
+>    never asked for it. Read only the first paragraph and you would expect
+>    publication plus a Business teacher to work; it does not.
+>
+>    **This is a third reason the per-school route wins, and the only one that is
+>    about money.** An app created under the *school's* Business or Education
+>    account can carry all five scopes, because the picker offers them there.
 > 2. **It does not ship the Meeting SDK secret.** That is an HS256 signing key
 >    (`MeetingSDKTokenProvider.token()` signs locally), so an unprovisioned
 >    install still has no bot. Closing that for individual teachers needs a

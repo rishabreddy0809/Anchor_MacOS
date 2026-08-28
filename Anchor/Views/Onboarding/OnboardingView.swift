@@ -62,6 +62,24 @@ struct OnboardingView: View {
         }
         .frame(width: 600, height: 640)
         .background(.background)
+        .onChange(of: accounts.account?.uid) { _, uid in
+            guard OnboardingStore.shouldFinishOnSignIn(
+                uid: uid,
+                hasCompletedOnboarding: onboarding.hasCompletedOnboarding
+            ) else { return }
+            // This teacher has done all this before. `OnboardingStore` reloaded
+            // their completion record the moment the account changed — before
+            // `AccountStore` published the new state, so by the time this runs
+            // the answer is theirs and not the previous account's.
+            //
+            // It is what lets the signed-out gate open the walkthrough for
+            // *everybody*. Before sign-in there is no account and so no record
+            // to consult, so the flow cannot know which kind of teacher is
+            // about to arrive; this is where it finds out. A new account walks
+            // the rest of the steps, a returning one is dropped straight into
+            // the app it already knows.
+            onboarding.finish()
+        }
     }
 
     // MARK: - Chrome
@@ -600,8 +618,8 @@ private struct ToolsStep: View {
     private var subtitle: String {
         if accounts.account?.googleEmail != nil {
             return "Anchor reads a live class from Zoom, and optionally your coursework "
-                + "and calendar. You're signed in with Google, so Classroom already knows "
-                + "which account to use."
+                + "and calendar. You're signed in with Google, so Classroom will use "
+                + "that account."
         }
         return "Anchor reads a live class from Zoom, and optionally your coursework and "
             + "calendar. Connect what you want now, or leave any of it for later."

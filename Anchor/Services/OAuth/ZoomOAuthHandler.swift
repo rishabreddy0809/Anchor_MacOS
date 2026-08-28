@@ -296,9 +296,39 @@ nonisolated struct ZoomOAuthConfig: Sendable {
             purpose: "Find the class that is running now",
             isOptional: false
         ),
+        // Optional, and the bot degrades **silently** without it: `MeetingBot`
+        // mints the ZAK with `try?` and falls back to an anonymous guest join,
+        // because a guest join is a valid outcome for an open meeting and
+        // failing there would turn a working join into an error. That is the
+        // right call at the join site and the wrong thing to leave unsaid — the
+        // assistant then appears in the class as a guest rather than as the
+        // teacher, and nothing anywhere says why.
+        //
+        // `ADMIN-SETUP.md` step 1.4 tells the school admin to add this scope.
+        // Until 2026-08-28 nothing verified they had, so missing it produced a
+        // connection Anchor called healthy and a bot that quietly joined wrong.
+        // Classic name first, granular second — `displayName` shows the last,
+        // and the granular one is what the Marketplace picker lists and what
+        // `ADMIN-SETUP.md` step 1.4 tells the admin to look for. Both are
+        // accepted: the table this replaced recorded the ZAK scope as
+        // `user:read:token` while step 1.4 says `user:read:zak`, the two were
+        // never reconciled, and a grant carrying either must satisfy this.
+        ZoomOAuthScope(
+            names: ["user:read:token", "user:read:zak"],
+            purpose: "Let the assistant join as you rather than as a guest",
+            isOptional: true
+        ),
         ZoomOAuthScope(
             names: ["dashboard_meetings:read:admin", "dashboard:read:list_meeting_participants:admin"],
             purpose: "Read live participants without the bot joining "
+                + "(needs an account admin on a Business or Education plan)",
+            isOptional: true
+        ),
+        // Also in `ADMIN-SETUP.md` step 1.4, also previously unverified. Feeds
+        // the session record after a class ends.
+        ZoomOAuthScope(
+            names: ["report:read:admin", "report:read:list_meeting_participants:admin"],
+            purpose: "Read the participant report after a class ends "
                 + "(needs an account admin on a Business or Education plan)",
             isOptional: true
         )
@@ -349,6 +379,15 @@ final class ZoomOAuthStore: ObservableObject {
     private static let clientSecretAccount = "oauth-client-secret"
 
     private let keychain = KeychainStore(service: ZoomOAuthStore.service)
+    private var scopeObserver: Any?
+
+    /// The teacher's own Zoom grant, kept under the signed-in account.
+    ///
+    /// The client id and secret below are *not* scoped: they are a school's
+    /// Marketplace registration, provisioned once per Mac. See `AccountScope`.
+    private var scopedTokenAccount: String {
+        AccountScope.shared.keychainAccount(Self.tokenAccount)
+    }
 
     @Published private(set) var tokens: ZoomOAuthTokens?
     /// Overrides for the shipped registration; `nil` falls back to
@@ -359,6 +398,52 @@ final class ZoomOAuthStore: ObservableObject {
 
     var isConnected: Bool { tokens != nil }
     var accountLabel: String? { tokens?.accountLabel }
+
+    /// Optional Zoom permissions the grant did not come back with.
+    ///
+    /// `ZoomOAuthConfig.degradedScopes` existed from the beginning and **had no
+    /// callers**, so a school that granted only the two required scopes
+    /// connected successfully and was never told the participant path was shut
+    /// — the exact guessing `ZoomCapabilities` was written to prevent. Wired up
+    /// 2026-08-28.
+    var degradedScopes: [ZoomOAuthScope] {
+        guard let tokens else { return [] }
+        return ZoomOAuthConfig.degradedScopes(in: tokens.grantedScopes)
+    }
+
+    /// What a partial grant costs, in Anchor's own terms — one clause per
+    /// missing permission, ready for a view to put a sentence around.
+    ///
+    /// Deliberately **not** the finished sentence.
+    /// `TeacherFacingSourceScanTests` refuses prose outside a view that tells a
+    /// teacher to do something only a developer or an admin can, and it was
+    /// right to catch the first draft of this: "your Zoom admin can add these in
+    /// the Marketplace — some need a Business or Education plan" is an
+    /// instruction for the person on the setup call, not for the teacher whose
+    /// class is about to start. The data belongs here; the wording belongs where
+    /// it is read.
+    var degradedCapabilities: [String] {
+        degradedScopes.map(\.purpose)
+    }
+
+    /// Names the missing scopes on stderr, for the admin who is still standing
+    /// at the Terminal they ran `ADMIN-SETUP.md` step 3 from.
+    ///
+    /// This is the other half of the sentence Settings shows. The teacher is
+    /// told what stopped working and that it is not their doing; the person who
+    /// can actually fix it is told which scope to add, and gets it in the same
+    /// window that already prints the provisioning result. Only fixed scope
+    /// names cross — never a token, never anything about a class.
+    func reportDegradedScopesToOperator() {
+        let missing = degradedScopes
+        guard !missing.isEmpty else { return }
+        AnchorDiag.operatorMessage(
+            "Zoom granted a partial scope set. Missing: "
+                + missing.map(\.displayName).joined(separator: ", ")
+                + ". Add them to the Zoom Marketplace app and reconnect; the "
+                + "dashboard and report scopes need a Business or Education plan."
+        )
+    }
 
     var clientID: String? {
         clientIDOverride ?? OAuthClientDefaults.value(OAuthClientDefaults.zoomClientID)
@@ -412,11 +497,31 @@ final class ZoomOAuthStore: ObservableObject {
 
     init() {
         load()
+        scopeObserver = AccountScope.observe { [weak self] in self?.accountDidChange() }
+    }
+
+    /// The Zoom half of the same migration. See
+    /// `GoogleCredentialsStore.adoptUnscopedGrant` and `AccountScope`.
+    func adoptUnscopedGrant(into scope: AccountScopeIdentity) {
+        try? keychain.adopt(
+            account: Self.tokenAccount,
+            into: scope.keychainAccount(Self.tokenAccount)
+        )
+    }
+
+    /// Swaps in the incoming teacher's Zoom grant, or none. The outgoing
+    /// teacher's stays under their own uid.
+    private func accountDidChange() {
+        tokens = nil
+        lastError = nil
+        if let data = (try? keychain.read(account: scopedTokenAccount)) ?? nil {
+            tokens = try? JSONDecoder().decode(ZoomOAuthTokens.self, from: data)
+        }
     }
 
     private func load() {
         // `read` returns Data?? through `try?` — flatten before unwrapping.
-        if let data = (try? keychain.read(account: Self.tokenAccount)) ?? nil {
+        if let data = (try? keychain.read(account: scopedTokenAccount)) ?? nil {
             tokens = try? JSONDecoder().decode(ZoomOAuthTokens.self, from: data)
         }
         if let data = (try? keychain.read(account: Self.clientIDAccount)) ?? nil {
@@ -449,8 +554,8 @@ final class ZoomOAuthStore: ObservableObject {
     func save(_ newTokens: ZoomOAuthTokens) -> Bool {
         tokens = newTokens
         do {
-            try keychain.save(try JSONEncoder().encode(newTokens), account: Self.tokenAccount)
-            guard let stored = (try? keychain.read(account: Self.tokenAccount)) ?? nil,
+            try keychain.save(try JSONEncoder().encode(newTokens), account: scopedTokenAccount)
+            guard let stored = (try? keychain.read(account: scopedTokenAccount)) ?? nil,
                   !stored.isEmpty else {
                 lastError = "Signed in to Zoom, but the credential could not be saved to the "
                     + "Keychain — you'll have to reconnect next time Anchor launches."
@@ -477,7 +582,7 @@ final class ZoomOAuthStore: ObservableObject {
     func disconnect() {
         tokens = nil
         lastError = nil
-        try? keychain.delete(account: Self.tokenAccount)
+        try? keychain.delete(account: scopedTokenAccount)
     }
 
     // MARK: Client overrides
@@ -953,6 +1058,22 @@ actor ZoomUserTokenProvider: ZoomTokenProviding {
     /// Revokes at Zoom where possible, then forgets the grant locally either
     /// way — a teacher who clicks Disconnect must not be left connected because
     /// the network was down.
+    /// Drops in-flight work without touching the grant.
+    ///
+    /// The account-switch counterpart to `disconnect()`, and the distinction is
+    /// the whole point: `disconnect()` revokes the token with Zoom and deletes
+    /// it, which is right when a teacher says "disconnect" and catastrophic
+    /// when they merely sign out. The outgoing teacher's grant is theirs and
+    /// stays in the Keychain under their own uid, so signing back in finds Zoom
+    /// still connected.
+    ///
+    /// Only the refresh task needs clearing — tokens themselves are read
+    /// through `ZoomOAuthStore`, which is already per-account.
+    func forgetCachedTokens() {
+        refreshTask?.cancel()
+        refreshTask = nil
+    }
+
     func disconnect() async {
         refreshTask?.cancel()
         refreshTask = nil

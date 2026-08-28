@@ -10,7 +10,11 @@
 //
 //  ── What this store does NOT persist ────────────────────────────────────────
 //
-//  Nothing. Firebase keeps the session in the login Keychain under its own
+//  Nothing of its own — but it does decide, on every sign-in and sign-out,
+//  *whose* data the rest of the app is looking at. See `adopt(_:)` below and
+//  `AccountScope`, which is where the uid Firebase mints actually gets used.
+//
+//  Firebase keeps the session in the login Keychain under its own
 //  service, refreshes the token on its own schedule, and restores it at launch
 //  — so a second copy here could only ever disagree with it. That is a
 //  deliberate departure from `ZoomCredentialsStore`, which persists because
@@ -46,10 +50,12 @@ final class AccountStore: ObservableObject {
     @Published var lastError: AccountError?
 
     private let service: FirebaseAuthService
+    private let scope: AccountScope
     private var listenerHandle: Any?
 
-    private init(service: FirebaseAuthService = .shared) {
+    private init(service: FirebaseAuthService = .shared, scope: AccountScope = .shared) {
         self.service = service
+        self.scope = scope
     }
 
     // MARK: - Lifecycle
@@ -68,8 +74,7 @@ final class AccountStore: ObservableObject {
 
         listenerHandle = service.observeAuthState { [weak self] account in
             guard let self else { return }
-            self.state = account.map(AccountState.signedIn) ?? .signedOut
-            self.mirrorNameIntoProfile(account)
+            self.adopt(account)
         }
     }
 
@@ -129,7 +134,7 @@ final class AccountStore: ObservableObject {
     func signOut() {
         do {
             try service.signOut()
-            state = .signedOut
+            adopt(nil)
         } catch let error as AccountError {
             lastError = error
         } catch {
@@ -162,15 +167,31 @@ final class AccountStore: ObservableObject {
         defer { isBusy = false }
 
         do {
-            let account = try await work()
-            state = .signedIn(account)
-            mirrorNameIntoProfile(account)
+            adopt(try await work())
         } catch let error as AccountError {
             guard !error.isCancellation else { return }
             lastError = error
         } catch {
             lastError = .unknown(error.localizedDescription)
         }
+    }
+
+    /// Takes Anchor from one account to another, in the one order that works.
+    ///
+    /// **The scope moves first.** `AccountScope.activate` republishes every
+    /// per-teacher store synchronously, so by the time `state` changes and the
+    /// window swaps `SignedOutGate` for the tabs, those tabs are already
+    /// reading the new teacher's classes. Publishing `state` first would put
+    /// one frame of the previous teacher's roster on screen — and, worse, would
+    /// let `mirrorNameIntoProfile` write the incoming teacher's name into the
+    /// outgoing teacher's profile.
+    ///
+    /// This is the whole fix for "signing in with a second Google account shows
+    /// the first account's data". Everything else is stores learning to reload.
+    private func adopt(_ account: AnchorAccount?) {
+        scope.activate(uid: account?.uid)
+        state = account.map(AccountState.signedIn) ?? .signedOut
+        mirrorNameIntoProfile(account)
     }
 
     /// Copies a Google-supplied name into `TeacherProfileStore` when the teacher

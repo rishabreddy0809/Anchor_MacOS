@@ -84,6 +84,32 @@ nonisolated struct KeychainStore: Sendable {
         }
     }
 
+    /// Moves an item to a different account name, once.
+    ///
+    /// Copy, verify, then delete — never delete-first. `AccountScope` uses this
+    /// to hand a credential that predates account scoping to the first teacher
+    /// who signs in, and a half-finished migration that leaves the original
+    /// where it was is recoverable where one that deleted first is not.
+    ///
+    /// Does nothing when the source is absent, or when the destination already
+    /// holds something: a destination with a value belongs to an account that
+    /// has already connected, and its own grant has to win.
+    ///
+    /// Lives here rather than in `AccountScope` so that the migration reuses
+    /// each store's existing `KeychainStore` instead of building its own — see
+    /// `PrivacyDisclosureTests.testEveryKeychainServiceIsClassified`, which
+    /// counts construction sites precisely so an undisclosed credential store
+    /// cannot appear unnoticed.
+    func adopt(account: String, into destination: String) throws {
+        guard account != destination else { return }
+        guard let data = try read(account: account) else { return }
+        guard try read(account: destination) == nil else { return }
+
+        try save(data, account: destination)
+        guard try read(account: destination) == data else { return }
+        try delete(account: account)
+    }
+
     func delete(account: String) throws {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,

@@ -2,6 +2,20 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Firebase Auth keeps the signed-in session in the Keychain, and on macOS
+	     it fails with error 17995 ("An error occurred when accessing the
+	     keychain") unless the app declares an access group. Anchor is not
+	     sandboxed and had no group at all, so every sign-in died at the point
+	     Firebase tried to persist the session -- after Google consent, which is
+	     the worst place for it.
+	     $(AppIdentifierPrefix)$(CFBundleIdentifier) is the group an app already
+	     gets implicitly, so declaring it explicitly changes nothing about where
+	     items live and leaves the existing com.anchor.* Keychain entries -- the
+	     Zoom grant, the Google refresh token -- exactly where they are. -->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)$(CFBundleIdentifier)</string>
+	</array>
 	<!--
 	  Anchor runs with Hardened Runtime enabled. The Zoom Meeting SDK ships
 	  ~35 frameworks and dylibs signed by Zoom, not by us, and it loads several

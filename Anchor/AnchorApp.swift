@@ -65,7 +65,7 @@ struct SessionCommands: Commands {
                 Button("Disconnect from Zoom") { zoom.stop() }
             } else {
                 Button("Connect to Zoom") { zoom.start() }
-                    .disabled(!ZoomViewModel.hasAnyZoomCredential)
+                    .disabled(!ZoomViewModel.hasTeacherZoomConnection)
             }
         }
     }
