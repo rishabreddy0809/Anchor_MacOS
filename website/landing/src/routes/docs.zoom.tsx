@@ -49,6 +49,8 @@ function ZoomDocs() {
       title="Anchor and Zoom"
       summary="Anchor is a Mac app that helps a teacher see who is struggling during a live class. This page covers connecting it to Zoom, what it reads, and how to remove it."
       sections={SECTIONS}
+      eyebrow="Documentation"
+      lastUpdated="August 28, 2026"
     >
       <LegalSectionBody id="what" index={1} heading="What the integration does">
         <p>
@@ -67,7 +69,7 @@ function ZoomDocs() {
         <ul>
           <li>A Mac running {MIN_MACOS} or later, with Anchor installed.</li>
           <li>
-            A Zoom account you are allowed to connect. You approve the connection yourself, and no
+            A Zoom account you are allowed to connect. You approve the connection yourself. No
             administrator has to do it for you, and nothing is installed on any student's computer.
           </li>
           <li>

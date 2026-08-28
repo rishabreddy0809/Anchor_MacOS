@@ -20,11 +20,17 @@ export function LegalPage({
   summary,
   sections,
   children,
+  eyebrow = "Legal",
+  lastUpdated,
 }: {
   title: string;
   summary: string;
   sections: LegalSection[];
   children: ReactNode;
+  /** Overridden by pages that reuse this layout but are not legal documents. */
+  eyebrow?: string;
+  /** Overridden where the page has its own revision date. */
+  lastUpdated?: string;
 }) {
   return (
     <div className="min-h-screen bg-background">
@@ -41,10 +47,12 @@ export function LegalPage({
             Back to site
           </Link>
 
-          <p className="eyebrow mt-8 text-muted-foreground">Legal</p>
+          <p className="eyebrow mt-8 text-muted-foreground">{eyebrow}</p>
           <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">{title}</h1>
           <p className="mt-5 text-lg text-muted-foreground">{summary}</p>
-          <p className="mt-4 text-sm text-muted-foreground">Last updated {LEGAL_LAST_UPDATED}</p>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Last updated {lastUpdated ?? LEGAL_LAST_UPDATED}
+          </p>
 
           <nav
             aria-label="On this page"
