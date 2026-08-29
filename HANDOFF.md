@@ -881,6 +881,147 @@ endpoint, the live privacy page, the deployed bounce page, the setup document.
   engagement AUC 0.7933 → 0.7930. The ~10% gap to the Bayes ceiling is
   irreducible noise. The next gain is academic coverage or real labels.
 
+## Session 2026-08-27/28 — account scoping, and the Marketplace submission
+
+Two commits on `main` (fast-forwarded from `ship/pilot-readiness`, both refs at
+the same hash): `91a7d12` and `719b327`. **390 tests**, up from 347. Debug and
+Release both build; `npm run build` clean.
+
+### What was actually wrong
+
+Reported as *"I sign in with a different Google account and it shows the same
+details"*. Firebase was never the bug — both accounts minted their own uid.
+**Nothing below the sign-in screen knew the uid existed.** `AccountScope`
+(`Anchor/Services/Auth/AccountScope.swift`) now answers three questions per
+account — which `UserDefaults` suite, which Application Support directory, which
+Keychain account name — and posts `didChange`. Eleven stores reload on it.
+`AccountStore.adopt(_:)` activates the scope **before** publishing `state`, so
+the window swaps to the tabs with the right teacher's data already loaded.
+
+Nothing is destroyed on a switch, and the first account to sign in adopts the
+data that predates scoping, so an existing teacher does not meet an empty app.
+**Deployment configuration is deliberately not scoped**: Zoom S2S and bot
+credentials, the Meeting SDK pair, and the OAuth client overrides a school
+provisions once per Mac. See the header of `AccountScope.swift` for the
+grant-versus-configuration line, which is the judgement call to re-make whenever
+a credential is added.
+
+### Six more defects found while testing that one
+
+- **The Settings profile card named the wrong account.** It read
+  `googleCredentials.tokens?.accountEmail ?? oauth.accountLabel` — the Classroom
+  grant falling back to Zoom's. Under a name, beside an avatar, that reads as
+  "you are signed in as this". Now `AnchorAccount.profileSubtitle(for:)`, which
+  takes an account and nothing else so there is no connection to reach for.
+- **Classroom could silently grant the wrong Google account.** `prompt=consent`
+  alone re-consents whichever account the browser is signed into, with no
+  picker. Now pinned by `login_hint` when Anchor knows the account, and
+  `select_account` when it does not, with the picker reopening if a grant is
+  already held for a different address.
+- **`ZoomViewModel` never reset**, so a new account saw the previous teacher's
+  Zoom as connected. Resets on scope change **without** revoking — signing out
+  is not disconnecting.
+- **`hasAnyZoomCredential` counted the shared S2S credential** as a teacher's own
+  connection. Renamed `hasTeacherZoomConnection`, reads only the OAuth grant.
+  This deliberately overrides the per-school route; `ADMIN-SETUP.md` records it.
+- **`GoogleClassroomService` fell back to `studentId`** when the account taught
+  nothing, showing classes Anchor can neither monitor nor score — while Home's
+  empty row already promised those were not shown.
+- **`ZoomOAuthConfig` verified three of the five scopes `ADMIN-SETUP.md` asks a
+  school admin to add.** A missing `user:read:zak` left the assistant joining as
+  an anonymous guest with nothing said. `degradedScopes` had **no callers at
+  all**.
+
+### The onboarding bug, which was a SwiftUI presentation race
+
+`SignedOutGate` presented its own sign-in sheet. The instant sign-in succeeded,
+`requiresSignIn` went false and SwiftUI removed the gate **and its sheet**,
+mid-dismiss, in the same runloop turn `MainWindowView` tried to raise the
+onboarding sheet. AppKit drops the second one. The gate now opens the
+walkthrough itself, presented by `MainWindowView`, which survives the
+transition. `OnboardingStore.shouldFinishOnSignIn(uid:hasCompletedOnboarding:)`
+closes it immediately for a returning account.
+
+**`OnboardingStore.accountDidChange` must not touch `isPresented`.** An earlier
+version dismissed the sheet there, which tore the flow down at the exact moment
+a teacher signed in on the account step.
+
+### What is live in production
+
+- **`ZOOM_MEETING_SDK_KEY` / `_SECRET` are set on `anchor-landing`** and
+  redeployed. `POST /api/zoom/sdk-token` went 503 → 401. Verified with a bogus
+  bearer: `401 "That Zoom sign-in is no longer valid"`, which proves it reached
+  Zoom's `/users/me` rather than merely passing a config check. **This unblocks
+  the bot for any teacher without a locally provisioned secret.**
+  **Rotate that secret** — it was pasted through a chat transcript, which
+  `ZOOM_INTEGRATION.md` §1 treats as compromised.
+- **`/docs/zoom` is live** (`website/landing/src/routes/docs.zoom.tsx`), which is
+  the Documentation URL the Marketplace listing requires.
+
+### Marketplace submission — 18 required fields down to 2
+
+`App Listing` is complete: icon (light+dark), Company Name `Anchor`, Long
+Description, cover image, six 1200×780 gallery shots, all four URLs, K-12
+vertical, Direct Landing URL, both No answers.
+
+**Turning off "Available in the EU" removed nine fields** — business bank
+account digits, Trade Register/DUNS, bank name, an identification document of
+the trader, and a declaration of compliance with union law. That is EU DSA
+trader verification and it needs a registered business. Revisit only with an
+accountant.
+
+**Production public client is now enabled**, which minted a third identifier:
+
+```
+Production Public Client ID:  WPt3o72QXaDfZgYreKjWw
+```
+
+That must replace `OAuthClientDefaults.zoomPublicClientID` (currently ships
+`kzU8QEfESJKsvxA3EzCe9A`, the **Development** public client). Zoom demanded a
+written justification for the toggle; one is saved, grounded in RFC 8252 and
+PKCE/RFC 7636.
+
+### Still open, in order
+
+1. **OAuth Allow List on Production** — empty. Must hold
+   `https://anchor-oauth-bounce.vercel.app/oauth/zoom`, matching the Redirect
+   URL character for character.
+2. **Technology Stack text (Technical Design → Overview) is factually false.**
+   It says *"There is no backend service, no database and no hosted
+   infrastructure other than a single static redirect page."* The signing
+   endpoint has existed since 2026-08-25 and went live 08-28. The submission
+   form carries a warranty that all statements are true, and this is the section
+   Zoom reviews for security. Replacement text: `MARKETPLACE-SUBMISSION.md` §4b.
+3. **The build.** `zoomPublicClientID` → the Production id, then Developer ID
+   cert, sign, notarize, staple, host the `.dmg`. This is the only real gate: it
+   is both what lets a reviewer sign in and the download URL the form asks for.
+4. Regenerate the Authorization URL (banner has been up since the config
+   changed). **Do not copy the console's generated OAuth URL** — it is built
+   with the confidential id, which is wrong for a PKCE flow.
+
+### Two things about this codebase's tooling, learned the hard way
+
+- **Zoom's Marketplace forms do not persist reliably under browser automation.**
+  The Technical Design fields accepted a file, showed it, reported 5/5 and
+  "Ready", and reverted on every reload — four attempts. The App Listing forms
+  saved fine. **Reload before believing any of it.** Twice in this session a
+  "done" was reported off on-screen state that had not round-tripped.
+- **`/docs/zoom` renders client-side.** `curl` returns 200 with the right
+  `<title>` and an empty-looking body, so a content grep against curl output
+  proves nothing. Check it in a browser.
+
+New docs: `MARKETPLACE-SUBMISSION.md` (submission prep, corrected copy, the
+Production credential trap) and `LICENCE-DESIGN.md` (Stripe via the Vercel
+Marketplace `payments` category, `GET /api/licence` gated on a Firebase ID
+token, fails open with a 14-day grace, never destroys history).
+
+Dated corrections were added where docs had gone stale: `ship-checklist.md` §5
+and §138, `ZOOM_INTEGRATION.md` §2 (the participant-scope gate has **two ends** —
+the developer's plan governs whether the scopes can be added to the app at all,
+not just the installer's), `ADMIN-SETUP.md`, `QA-PROTOCOL.md` §0.
+
+---
+
 ## Style
 
 Very high comment density; every comment explains **why**, never what. Commit
