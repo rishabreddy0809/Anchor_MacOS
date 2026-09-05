@@ -256,4 +256,4 @@ scripts/          Dev and provisioning helpers
 
 ---
 
-Built by Rishab Reddy Paili.
+Contributed to by Rishab Reddy Paili and Aariz Khan.
