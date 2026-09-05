@@ -3,7 +3,7 @@
 **See what your students aren't saying.**
 
 Anchor is a macOS menu bar app that detects struggling students in real time
-during Zoom classes — while the teacher can still do something about it.
+during Zoom classes, while the teacher can still do something about it.
 
 In an online class, the student who is lost is the one who goes quiet. They
 don't unmute, they don't raise a hand, they don't type in chat. The signal that
